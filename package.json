@@ -1,0 +1,21 @@
+{
+  "name": "@nerwo/contracts",
+  "version": "1.0.0",
+  "description": "Nerwo Platform: Smart contracts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Gianluigi Tiesi <sherpya@gmail.com>",
+  "license": "MIT",
+  "devDependencies": {
+    "@ethersproject/contracts": "^5.7.0",
+    "@nomicfoundation/hardhat-toolbox": "^2.0.1",
+    "@nomiclabs/hardhat-etherscan": "^3.1.6",
+    "@types/chai": "^4.3.4",
+    "@types/mocha": "^10.0.1",
+    "@types/node": "^18.14.0",
+    "dotenv": "^16.0.3",
+    "hardhat": "^2.12.7",
+    "hardhat-abi-exporter": "^2.10.1"
+  }
+}
