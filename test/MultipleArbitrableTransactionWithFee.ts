@@ -66,7 +66,6 @@ describe('MultipleArbitrableTransactionWithFee', function () {
 
   it('Creating transaction, then pay', async () => {
     const platformBalance = await platform.getBalance();
-    const senderBalance = await sender.getBalance();
     const receiverBalance = await receiver.getBalance();
 
     const amount = ethers.utils.parseEther('0.001');
