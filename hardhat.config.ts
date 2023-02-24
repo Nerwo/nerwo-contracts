@@ -9,7 +9,7 @@ dotenv.config();
 const config: HardhatUserConfig = {
   solidity: '0.4.24',
   networks: {
-    mumbai: {
+    goerli: {
       url: process.env.RPC_URL,
       accounts: [process.env.PRIVATE_KEY],
     },
