@@ -12,6 +12,8 @@ const RECEIVER_WINS = 2;
 const FEE_TIMEOUT = 302400;
 const FEE_RECIPIENT_BASISPOINT = 550;
 
+const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
+
 async function findEventByName(txResponse: ContractTransaction, name: string): Promise<Event> {
   const txReceipt = await txResponse.wait();
 
@@ -40,13 +42,15 @@ describe('MultipleArbitrableTransactionWithFee', function () {
     [, platform, court, sender, receiver] = await ethers.getSigners();
 
     contract = await MultipleArbitrableTransactionWithFeeFactory.deploy(
-      arbitrator.address,
+      ZERO_ADDRESS,
       [], // _arbitratorExtraData
-      platform.address,
-      FEE_RECIPIENT_BASISPOINT,
-      FEE_TIMEOUT);
+      ZERO_ADDRESS,
+      0,
+      0);
     await contract.deployed();
 
+    await contract.transferOwnership(platform.address);
+    await contract.connect(platform).setArbitrator(arbitrator.address, [], platform.address, FEE_RECIPIENT_BASISPOINT, FEE_TIMEOUT);
   });
 
   async function createTransaction(amount: BigNumber): Promise<BigNumber> {
