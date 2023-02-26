@@ -78,7 +78,7 @@ contract MultipleArbitrableTransactionWithFee is MultipleArbitrableTransaction {
         transaction.amount -= _amount;
 
         uint feeAmount = calculateFeeRecipientAmount(_amount);
-        feeRecipient.send(feeAmount);
+        feeRecipient.transfer(feeAmount);
         transaction.receiver.send(_amount - feeAmount);
 
         emit Payment(_transactionID, _amount, msg.sender);
@@ -93,15 +93,15 @@ contract MultipleArbitrableTransactionWithFee is MultipleArbitrableTransaction {
         require(now - transaction.lastInteraction >= transaction.timeoutPayment, "The timeout has not passed yet.");
         require(transaction.status == Status.NoDispute, "The transaction shouldn't be disputed.");
 
+        transaction.status = Status.Resolved;
         uint amount = transaction.amount;
         transaction.amount = 0;
         uint feeAmount = calculateFeeRecipientAmount(amount);
-        feeRecipient.send(feeAmount);
+
+        feeRecipient.transfer(feeAmount);
         transaction.receiver.send(amount - feeAmount);
 
         emit FeeRecipientPayment(_transactionID, feeAmount);
-
-        transaction.status = Status.Resolved;
     }
 
     /** @dev Execute a ruling of a dispute. It reimburses the fee to the winning party.
@@ -121,6 +121,7 @@ contract MultipleArbitrableTransactionWithFee is MultipleArbitrableTransaction {
         transaction.receiverFee = 0;
 
         uint feeAmount;
+        transaction.status = Status.Resolved;
 
         // Give the arbitration fee back.
         // Note that we use send to prevent a party from blocking the execution.
@@ -129,7 +130,7 @@ contract MultipleArbitrableTransactionWithFee is MultipleArbitrableTransaction {
         } else if (_ruling == RECEIVER_WINS) {
             feeAmount = calculateFeeRecipientAmount(amount);
 
-            feeRecipient.send(feeAmount);
+            feeRecipient.transfer(feeAmount);
             transaction.receiver.send(receiverArbitrationFee + amount - feeAmount);
 
             emit FeeRecipientPayment(_transactionID, feeAmount);
@@ -139,13 +140,11 @@ contract MultipleArbitrableTransactionWithFee is MultipleArbitrableTransaction {
             feeAmount = calculateFeeRecipientAmount(split_amount);
 
             transaction.sender.send(split_arbitration + split_amount);
-            feeRecipient.send(feeAmount);
+            feeRecipient.transfer(feeAmount);
             transaction.receiver.send(split_arbitration + split_amount - feeAmount);
 
             emit FeeRecipientPayment(_transactionID, feeAmount);
         }
-
-        transaction.status = Status.Resolved;
     }
 
     /* Ownable */
