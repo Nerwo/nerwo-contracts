@@ -3,6 +3,7 @@ declare global {
         interface ProcessEnv {
             RPC_URL: string;
             PRIVATE_KEY: string;
+            HARDHAT_MNEMONIC: string;
             ETHERSCAN_API_KEY: string;
             NERWO_COURT_ADDRESS: string;
             NERWO_PLATFORM_ADDRESS: string;
