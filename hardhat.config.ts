@@ -2,6 +2,7 @@ import { HardhatUserConfig } from 'hardhat/config';
 import { HARDHAT_NETWORK_MNEMONIC } from 'hardhat/internal/core/config/default-config';
 import '@nomicfoundation/hardhat-toolbox';
 import '@nomiclabs/hardhat-etherscan';
+import '@openzeppelin/hardhat-upgrades';
 import 'hardhat-abi-exporter';
 import 'hardhat-deploy';
 
