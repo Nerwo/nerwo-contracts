@@ -13,6 +13,8 @@ import "../kleros/IArbitrator.sol";
  *  Note that this contract supports appeals. The ruling given by the arbitrator can be appealed by crowdfunding a desired choice.
  */
 contract NerwoCentralizedArbitratorV1 is IArbitrator, UUPSUpgradeable, OwnableUpgradeable, VersionAware {
+    string constant CONTRACT_NAME = "NerwoCentralizedArbitrator: V1";
+
     enum DisputeStatus {
         Waiting,
         Appealable,
@@ -67,7 +69,7 @@ contract NerwoCentralizedArbitratorV1 is IArbitrator, UUPSUpgradeable, OwnableUp
      */
     function initialize(uint256 _arbitrationPrice) external initializer {
         arbitrationPrice = _arbitrationPrice;
-        versionAwareContractName = "NerwoCentralizedArbitrator: V1";
+        versionAwareContractName = CONTRACT_NAME;
         ///@dev as there is no constructor, we need to initialise the OwnableUpgradeable explicitly
         __Ownable_init();
     }
@@ -87,7 +89,7 @@ contract NerwoCentralizedArbitratorV1 is IArbitrator, UUPSUpgradeable, OwnableUp
     function _authorizeUpgrade(address) internal override onlyOwner {}
 
     function getContractNameWithVersion() public pure override returns (string memory) {
-        return "NerwoCentralizedArbitrator: V1";
+        return CONTRACT_NAME;
     }
 
     /** @dev Set the arbitration price. Only callable by the owner.

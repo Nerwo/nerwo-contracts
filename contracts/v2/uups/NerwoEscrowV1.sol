@@ -17,11 +17,11 @@ import {VersionAware} from "../VersionAware.sol";
 import "../kleros/IArbitrator.sol";
 import "../kleros/IArbitrable.sol";
 
-contract MultipleArbitrableTransactionWithFeeV1 is IArbitrable, UUPSUpgradeable, OwnableUpgradeable, VersionAware {
+contract NerwoEscrowV1 is IArbitrable, UUPSUpgradeable, OwnableUpgradeable, VersionAware {
     // **************************** //
     // *    Contract variables    * //
     // **************************** //
-    string constant CONTRACT_NAME = "MultipleArbitrableTransactionWithFee: V1";
+    string constant CONTRACT_NAME = "NerwoEscrow: V1";
 
     uint8 constant AMOUNT_OF_CHOICES = 2;
     uint8 constant SENDER_WINS = 1;
@@ -155,7 +155,7 @@ contract MultipleArbitrableTransactionWithFeeV1 is IArbitrable, UUPSUpgradeable,
      *  @param _feeTimeout Arbitration fee timeout for the parties.
      */
     function initialize(
-        IArbitrator _arbitrator,
+        address _arbitrator,
         bytes calldata _arbitratorExtraData,
         address _feeRecipient,
         uint _feeRecipientBasisPoint,
@@ -167,8 +167,29 @@ contract MultipleArbitrableTransactionWithFeeV1 is IArbitrable, UUPSUpgradeable,
         __Ownable_init();
     }
 
+    // Here only to test upgrade
+    /** @dev reinitializer
+     *  @param _arbitrator The arbitrator of the contract.
+     *  @param _arbitratorExtraData Extra data for the arbitrator.
+     *  @param _feeRecipient Address which receives a share of receiver payment.
+     *  @param _feeRecipientBasisPoint The share of fee to be received by the feeRecipient, down to 2 decimal places as 550 = 5.5%.
+     *  @param _feeTimeout Arbitration fee timeout for the parties.
+     */
+    function initialize2(
+        address _arbitrator,
+        bytes calldata _arbitratorExtraData,
+        address _feeRecipient,
+        uint _feeRecipientBasisPoint,
+        uint _feeTimeout
+    ) external reinitializer(2) {
+        _setArbitrator(_arbitrator, _arbitratorExtraData, _feeRecipient, _feeRecipientBasisPoint, _feeTimeout);
+        versionAwareContractName = "NerwoEscrow: V2";
+        ///@dev as there is no constructor, we need to initialise the OwnableUpgradeable explicitly
+        __Ownable_init();
+    }
+
     function setArbitrator(
-        IArbitrator _arbitrator,
+        address _arbitrator,
         bytes calldata _arbitratorExtraData,
         address _feeRecipient,
         uint _feeRecipientBasisPoint,
@@ -182,13 +203,13 @@ contract MultipleArbitrableTransactionWithFeeV1 is IArbitrable, UUPSUpgradeable,
      * Internal function without access restriction.
      */
     function _setArbitrator(
-        IArbitrator _arbitrator,
+        address _arbitrator,
         bytes calldata _arbitratorExtraData,
         address _feeRecipient,
         uint _feeRecipientBasisPoint,
         uint _feeTimeout
     ) internal {
-        arbitrator = _arbitrator;
+        arbitrator = IArbitrator(_arbitrator);
         arbitratorExtraData = _arbitratorExtraData;
         feeTimeout = _feeTimeout;
         feeRecipient = payable(_feeRecipient);
@@ -205,8 +226,8 @@ contract MultipleArbitrableTransactionWithFeeV1 is IArbitrable, UUPSUpgradeable,
     /** @dev Calculate the amount to be paid in wei according to feeRecipientBasisPoint for a particular amount.
      *  @param _amount Amount to pay in wei.
      */
-    function calculateFeeRecipientAmount(uint _amount) internal view returns (uint feeAmount) {
-        feeAmount = (_amount * feeRecipientBasisPoint) / 10000;
+    function calculateFeeRecipientAmount(uint _amount) internal view returns (uint) {
+        return (_amount * feeRecipientBasisPoint) / 10000;
     }
 
     /** @dev Change Fee Recipient.
@@ -260,11 +281,12 @@ contract MultipleArbitrableTransactionWithFeeV1 is IArbitrable, UUPSUpgradeable,
         require(transaction.status == Status.NoDispute, "The transaction shouldn't be disputed.");
         require(_amount <= transaction.amount, "The amount paid has to be less than or equal to the transaction.");
 
-        transaction.amount -= _amount;
+        transaction.amount -= _amount; // reentrancy safe
 
         uint feeAmount = calculateFeeRecipientAmount(_amount);
-        feeRecipient.send(feeAmount);
-        transaction.receiver.send(_amount - feeAmount);
+        feeRecipient.transfer(feeAmount);
+
+        transaction.receiver.call{value: _amount - feeAmount}("");
 
         emit Payment(_transactionID, _amount, _msgSender());
         emit FeeRecipientPayment(_transactionID, feeAmount);
@@ -283,8 +305,9 @@ contract MultipleArbitrableTransactionWithFeeV1 is IArbitrable, UUPSUpgradeable,
             "The amount reimbursed has to be less or equal than the transaction."
         );
 
-        payable(transaction.sender).transfer(_amountReimbursed);
-        transaction.amount -= _amountReimbursed;
+        transaction.amount -= _amountReimbursed; // reentrancy safe
+        transaction.sender.call{value: _amountReimbursed}("");
+
         emit Payment(_transactionID, _amountReimbursed, _msgSender());
     }
 
@@ -293,21 +316,23 @@ contract MultipleArbitrableTransactionWithFeeV1 is IArbitrable, UUPSUpgradeable,
      */
     function executeTransaction(uint _transactionID) public {
         Transaction storage transaction = transactions[_transactionID];
+        require(transaction.status == Status.NoDispute, "The transaction shouldn't be disputed.");
         require(
             block.timestamp - transaction.lastInteraction >= transaction.timeoutPayment,
             "The timeout has not passed yet."
         );
-        require(transaction.status == Status.NoDispute, "The transaction shouldn't be disputed.");
+
+        transaction.status = Status.Resolved; // reentrancy safe
 
         uint amount = transaction.amount;
-        transaction.amount = 0;
+        transaction.amount = 0; // reentrancy saf
+
         uint feeAmount = calculateFeeRecipientAmount(amount);
-        feeRecipient.send(feeAmount);
-        transaction.receiver.send(amount - feeAmount);
+        feeRecipient.transfer(feeAmount);
+
+        transaction.receiver.call{value: amount - feeAmount}("");
 
         emit FeeRecipientPayment(_transactionID, feeAmount);
-
-        transaction.status = Status.Resolved;
     }
 
     /** @dev Reimburse sender if receiver fails to pay the fee.
@@ -319,9 +344,12 @@ contract MultipleArbitrableTransactionWithFeeV1 is IArbitrable, UUPSUpgradeable,
         require(block.timestamp - transaction.lastInteraction >= feeTimeout, "Timeout time has not passed yet.");
 
         if (transaction.receiverFee != 0) {
-            payable(transaction.receiver).send(transaction.receiverFee);
-            transaction.receiverFee = 0;
+            uint receiverFee = transaction.receiverFee;
+            transaction.receiverFee = 0; // reentrancy safe
+            transaction.receiver.call{value: receiverFee}("");
         }
+
+        // reentrancy safe -> Status.Resolved
         executeRuling(_transactionID, SENDER_WINS);
     }
 
@@ -334,9 +362,12 @@ contract MultipleArbitrableTransactionWithFeeV1 is IArbitrable, UUPSUpgradeable,
         require(block.timestamp - transaction.lastInteraction >= feeTimeout, "Timeout time has not passed yet.");
 
         if (transaction.senderFee != 0) {
-            transaction.sender.send(transaction.senderFee);
-            transaction.senderFee = 0;
+            uint senderFee = transaction.senderFee;
+            transaction.senderFee = 0; // reentrancy safe
+            transaction.sender.call{value: senderFee}("");
         }
+
+        // reentrancy safe -> Status.Resolved
         executeRuling(_transactionID, RECEIVER_WINS);
     }
 
@@ -347,15 +378,15 @@ contract MultipleArbitrableTransactionWithFeeV1 is IArbitrable, UUPSUpgradeable,
      */
     function payArbitrationFeeBySender(uint _transactionID) public payable {
         Transaction storage transaction = transactions[_transactionID];
-        uint arbitrationCost = arbitrator.arbitrationCost(arbitratorExtraData);
-
         require(
             transaction.status < Status.DisputeCreated,
             "Dispute has already been created or because the transaction has been executed."
         );
         require(_msgSender() == transaction.sender, "The caller must be the sender.");
 
+        uint arbitrationCost = arbitrator.arbitrationCost(arbitratorExtraData);
         transaction.senderFee += msg.value;
+
         // Require that the total pay at least the arbitration cost.
         require(transaction.senderFee >= arbitrationCost, "The sender fee must cover arbitration costs.");
 
@@ -367,6 +398,7 @@ contract MultipleArbitrableTransactionWithFeeV1 is IArbitrable, UUPSUpgradeable,
             emit HasToPayFee(_transactionID, Party.Receiver);
         } else {
             // The receiver has also paid the fee. We create the dispute.
+            // reentrancy safe -> Status.DisputeCreated
             raiseDispute(_transactionID, arbitrationCost);
         }
     }
@@ -377,14 +409,13 @@ contract MultipleArbitrableTransactionWithFeeV1 is IArbitrable, UUPSUpgradeable,
      */
     function payArbitrationFeeByReceiver(uint _transactionID) public payable {
         Transaction storage transaction = transactions[_transactionID];
-        uint arbitrationCost = arbitrator.arbitrationCost(arbitratorExtraData);
-
         require(
             transaction.status < Status.DisputeCreated,
             "Dispute has already been created or because the transaction has been executed."
         );
         require(_msgSender() == transaction.receiver, "The caller must be the receiver.");
 
+        uint arbitrationCost = arbitrator.arbitrationCost(arbitratorExtraData);
         transaction.receiverFee += msg.value;
         // Require that the total paid to be at least the arbitration cost.
         require(transaction.receiverFee >= arbitrationCost, "The receiver fee must cover arbitration costs.");
@@ -396,6 +427,7 @@ contract MultipleArbitrableTransactionWithFeeV1 is IArbitrable, UUPSUpgradeable,
             emit HasToPayFee(_transactionID, Party.Sender);
         } else {
             // The sender has also paid the fee. We create the dispute.
+            // reentrancy safe -> Status.DisputeCreated
             raiseDispute(_transactionID, arbitrationCost);
         }
     }
@@ -405,8 +437,10 @@ contract MultipleArbitrableTransactionWithFeeV1 is IArbitrable, UUPSUpgradeable,
      *  @param _arbitrationCost Amount to pay the arbitrator.
      */
     function raiseDispute(uint _transactionID, uint _arbitrationCost) internal {
+        // reentrancy check in callers
         Transaction storage transaction = transactions[_transactionID];
-        transaction.status = Status.DisputeCreated;
+        transaction.status = Status.DisputeCreated; // reentrancy safe
+
         transaction.disputeId = arbitrator.createDispute{value: _arbitrationCost}(
             AMOUNT_OF_CHOICES,
             arbitratorExtraData
@@ -418,14 +452,14 @@ contract MultipleArbitrableTransactionWithFeeV1 is IArbitrable, UUPSUpgradeable,
         if (transaction.senderFee > _arbitrationCost) {
             uint extraFeeSender = transaction.senderFee - _arbitrationCost;
             transaction.senderFee = _arbitrationCost;
-            transaction.sender.send(extraFeeSender);
+            transaction.sender.call{value: extraFeeSender}("");
         }
 
         // Refund receiver if it overpaid.
         if (transaction.receiverFee > _arbitrationCost) {
             uint extraFeeReceiver = transaction.receiverFee - _arbitrationCost;
             transaction.receiverFee = _arbitrationCost;
-            transaction.receiver.send(extraFeeReceiver);
+            transaction.receiver.call{value: extraFeeReceiver}("");
         }
     }
 
@@ -450,13 +484,15 @@ contract MultipleArbitrableTransactionWithFeeV1 is IArbitrable, UUPSUpgradeable,
      *  @param _ruling Ruling given by the arbitrator. Note that 0 is reserved for "Not able/wanting to make a decision".
      */
     function rule(uint _disputeID, uint _ruling) public {
+        require(_msgSender() == address(arbitrator), "The caller must be the arbitrator.");
+
         uint transactionID = disputeIDtoTransactionID[_disputeID];
         Transaction storage transaction = transactions[transactionID];
-        require(_msgSender() == address(arbitrator), "The caller must be the arbitrator.");
         require(transaction.status == Status.DisputeCreated, "The dispute has already been resolved.");
 
         emit Ruling(IArbitrator(_msgSender()), _disputeID, _ruling);
 
+        // reentrancy safe -> Status.Resolved
         executeRuling(transactionID, _ruling);
     }
 
@@ -465,8 +501,10 @@ contract MultipleArbitrableTransactionWithFeeV1 is IArbitrable, UUPSUpgradeable,
      *  @param _ruling Ruling given by the arbitrator. 1 : Reimburse the receiver. 2 : Pay the sender.
      */
     function executeRuling(uint _transactionID, uint _ruling) internal {
-        Transaction storage transaction = transactions[_transactionID];
+        // reentrancy check in callers
         require(_ruling <= AMOUNT_OF_CHOICES, "Invalid ruling.");
+
+        Transaction storage transaction = transactions[_transactionID];
 
         uint amount = transaction.amount;
         uint senderArbitrationFee = transaction.senderFee;
@@ -475,33 +513,33 @@ contract MultipleArbitrableTransactionWithFeeV1 is IArbitrable, UUPSUpgradeable,
         transaction.amount = 0;
         transaction.senderFee = 0;
         transaction.receiverFee = 0;
+        transaction.status = Status.Resolved; // reentrancy safe
 
         uint feeAmount;
 
         // Give the arbitration fee back.
         // Note that we use send to prevent a party from blocking the execution.
         if (_ruling == SENDER_WINS) {
-            transaction.sender.send(senderArbitrationFee + amount);
+            transaction.sender.call{value: senderArbitrationFee + amount}("");
         } else if (_ruling == RECEIVER_WINS) {
             feeAmount = calculateFeeRecipientAmount(amount);
+            feeRecipient.transfer(feeAmount);
 
-            feeRecipient.send(feeAmount);
-            transaction.receiver.send(receiverArbitrationFee + amount - feeAmount);
+            transaction.receiver.call{value: receiverArbitrationFee + amount - feeAmount}("");
 
             emit FeeRecipientPayment(_transactionID, feeAmount);
         } else {
             uint split_arbitration = senderArbitrationFee / 2;
             uint split_amount = amount / 2;
-            feeAmount = calculateFeeRecipientAmount(split_amount);
 
-            transaction.sender.send(split_arbitration + split_amount);
-            feeRecipient.send(feeAmount);
-            transaction.receiver.send(split_arbitration + split_amount - feeAmount);
+            feeAmount = calculateFeeRecipientAmount(split_amount);
+            feeRecipient.transfer(feeAmount);
+
+            transaction.sender.call{value: split_arbitration + split_amount}("");
+            transaction.receiver.call{value: split_arbitration + split_amount - feeAmount}("");
 
             emit FeeRecipientPayment(_transactionID, feeAmount);
         }
-
-        transaction.status = Status.Resolved;
     }
 
     // **************************** //
