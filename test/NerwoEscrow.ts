@@ -138,7 +138,7 @@ describe('NerwoEscrow', function () {
       "The transaction shouldn't be disputed.");
 
     await expect(arbitrator.connect(court).giveRuling(_disputeID, constants.SENDER_WINS)).to.be.rejectedWith(
-      'wnable: caller is not the owner');
+      'Ownable: caller is not the owner');
 
     await arbitrator.transferOwnership(court.address);
 
