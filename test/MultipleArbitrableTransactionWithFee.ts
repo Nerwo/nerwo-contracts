@@ -2,32 +2,15 @@ import { expect } from 'chai';
 import { ethers } from 'hardhat';
 import { BigNumber } from 'ethers';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
-import { ContractTransaction, Event } from '@ethersproject/contracts';
 
 import { CentralizedArbitrator, MultipleArbitrableTransactionWithFee } from '../typechain-types';
 
-const SENDER_WINS = 1;
-const RECEIVER_WINS = 2;
-
-const FEE_TIMEOUT = 302400;
-const FEE_RECIPIENT_BASISPOINT = 550;
-
-const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
-
-async function findEventByName(txResponse: ContractTransaction, name: string): Promise<Event> {
-  const txReceipt = await txResponse.wait();
-
-  expect(txReceipt.events).to.be.an('array').that.is.not.empty;
-
-  const event = txReceipt.events!.find(event => event.event === name);
-  expect(event).to.not.be.undefined;
-
-  return event!;
-}
+import * as constants from './constants';
+import * as utils from './utils';
 
 describe('MultipleArbitrableTransactionWithFee', function () {
   const arbitrationPrice = ethers.utils.parseEther('0.0001');
-  let contract: MultipleArbitrableTransactionWithFee;
+  let escrow: MultipleArbitrableTransactionWithFee;
   let arbitrator: CentralizedArbitrator;
   let platform: SignerWithAddress, court: SignerWithAddress;
   let sender: SignerWithAddress, receiver: SignerWithAddress;
@@ -41,24 +24,27 @@ describe('MultipleArbitrableTransactionWithFee', function () {
 
     [, platform, court, sender, receiver] = await ethers.getSigners();
 
-    contract = await MultipleArbitrableTransactionWithFeeFactory.deploy(
-      ZERO_ADDRESS,
+    escrow = await MultipleArbitrableTransactionWithFeeFactory.deploy(
+      constants.ZERO_ADDRESS,
       [], // _arbitratorExtraData
-      ZERO_ADDRESS,
+      constants.ZERO_ADDRESS,
       0,
       0);
-    await contract.deployed();
+    await escrow.deployed();
 
-    await contract.transferOwnership(platform.address);
-    await contract.connect(platform).setArbitrator(arbitrator.address, [], platform.address, FEE_RECIPIENT_BASISPOINT, FEE_TIMEOUT);
+    await escrow.transferOwnership(platform.address);
+    await escrow.connect(platform).setArbitrator(arbitrator.address,
+      [], platform.address,
+      constants.FEE_RECIPIENT_BASISPOINT,
+      constants.FEE_TIMEOUT);
   });
 
   async function createTransaction(amount: BigNumber): Promise<BigNumber> {
-    const txResponse = await contract.connect(sender).createTransaction(
+    const txResponse = await escrow.connect(sender).createTransaction(
       1500, receiver.address, 'evidence',
       { value: amount });
 
-    const event = await findEventByName(txResponse, 'TransactionCreated');
+    const event = await utils.findEventByName(txResponse, 'TransactionCreated');
     expect(event.args).to.not.be.empty;
     const { _transactionID } = event.args!;
     return _transactionID;
@@ -71,10 +57,10 @@ describe('MultipleArbitrableTransactionWithFee', function () {
     const amount = ethers.utils.parseEther('0.001');
     const _transactionID = await createTransaction(amount);
 
-    await contract.connect(sender).pay(_transactionID, amount);
+    await escrow.connect(sender).pay(_transactionID, amount);
 
     const platformGain = (await platform.getBalance()).sub(platformBalance);
-    const expectedFee = amount.mul(FEE_RECIPIENT_BASISPOINT).div(10000);
+    const expectedFee = amount.mul(constants.FEE_RECIPIENT_BASISPOINT).div(10000);
     expect(platformGain).to.be.equal(expectedFee);
 
     const receiverGain = (await receiver.getBalance()).sub(receiverBalance);
@@ -83,11 +69,11 @@ describe('MultipleArbitrableTransactionWithFee', function () {
 
   async function createDispute(_transactionID: BigNumber, senderFee: BigNumber,
     receiverFee: BigNumber): Promise<BigNumber> {
-    await contract.connect(receiver).payArbitrationFeeByReceiver(_transactionID, { value: receiverFee });
-    const txResponse = await contract.connect(sender).payArbitrationFeeBySender(
+    await escrow.connect(receiver).payArbitrationFeeByReceiver(_transactionID, { value: receiverFee });
+    const txResponse = await escrow.connect(sender).payArbitrationFeeBySender(
       _transactionID, { value: senderFee });
 
-    const event = await findEventByName(txResponse, 'Dispute');
+    const event = await utils.findEventByName(txResponse, 'Dispute');
     expect(event.args).to.not.be.empty;
     const { _disputeID } = event.args!;
     return _disputeID;
@@ -102,10 +88,10 @@ describe('MultipleArbitrableTransactionWithFee', function () {
     const receiverArbitrationFee = receiverFee <= arbitrationPrice ? receiverFee : arbitrationPrice;
     let _disputeID = await createDispute(_transactionID, senderFee, receiverFee);
 
-    await expect(contract.connect(sender).pay(_transactionID, amount)).to.revertedWith(
+    await expect(escrow.connect(sender).pay(_transactionID, amount)).to.revertedWith(
       "The transaction shouldn't be disputed.");
 
-    await expect(arbitrator.connect(court).giveRuling(_disputeID, SENDER_WINS)).to.be.rejectedWith(
+    await expect(arbitrator.connect(court).giveRuling(_disputeID, constants.SENDER_WINS)).to.be.rejectedWith(
       'Can only be called by the owner.');
 
     await arbitrator.transferOwnership(court.address);
@@ -114,7 +100,7 @@ describe('MultipleArbitrableTransactionWithFee', function () {
     let senderBalance = await sender.getBalance();
     let receiverBalance = await receiver.getBalance();
 
-    await arbitrator.connect(court).giveRuling(_disputeID, SENDER_WINS);
+    await arbitrator.connect(court).giveRuling(_disputeID, constants.SENDER_WINS);
 
     // SENDER_WINS -> no platform fee
     expect(await platform.getBalance()).to.be.equal(platformBalance);
@@ -133,10 +119,10 @@ describe('MultipleArbitrableTransactionWithFee', function () {
     receiverBalance = await receiver.getBalance();
 
     // RECEIVER_WINS -> platform gains
-    await arbitrator.connect(court).giveRuling(_disputeID, RECEIVER_WINS);
+    await arbitrator.connect(court).giveRuling(_disputeID, constants.RECEIVER_WINS);
 
     const platformGain = (await platform.getBalance()).sub(platformBalance);
-    const feeAmount = amount.mul(FEE_RECIPIENT_BASISPOINT).div(10000);
+    const feeAmount = amount.mul(constants.FEE_RECIPIENT_BASISPOINT).div(10000);
     expect(platformGain).to.be.equal(feeAmount);
 
     expect(await sender.getBalance()).to.be.equal(senderBalance);

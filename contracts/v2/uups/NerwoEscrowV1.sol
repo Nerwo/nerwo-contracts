@@ -188,6 +188,10 @@ contract NerwoEscrowV1 is IArbitrable, UUPSUpgradeable, OwnableUpgradeable, Vers
         __Ownable_init();
     }
 
+    function getBalance() public view returns (uint256) {
+        return address(this).balance;
+    }
+
     function setArbitrator(
         address _arbitrator,
         bytes calldata _arbitratorExtraData,
