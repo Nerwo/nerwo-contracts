@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8;
+pragma solidity ^0.8.0;
 
-import "./IArbitrable.sol";
+import {IArbitrable} from "./IArbitrable.sol";
 
 /**
  * @title Arbitrator

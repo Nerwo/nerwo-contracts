@@ -5,15 +5,11 @@ pragma solidity ^0.8;
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {VersionAware} from "../VersionAware.sol";
+import {IArbitrator} from "../kleros/IArbitrator.sol";
+import {IArbitrable} from "../kleros/IArbitrable.sol";
 
-import "../kleros/IArbitrator.sol";
-
-/** @title Centralized Arbitrator
- *  @dev This is a centralized arbitrator deciding alone on the result of disputes. It illustrates how IArbitrator interface can be implemented.
- *  Note that this contract supports appeals. The ruling given by the arbitrator can be appealed by crowdfunding a desired choice.
- */
 contract NerwoCentralizedArbitratorV1 is IArbitrator, UUPSUpgradeable, OwnableUpgradeable, VersionAware {
-    string constant CONTRACT_NAME = "NerwoCentralizedArbitrator: V1";
+    string private constant CONTRACT_NAME = "NerwoCentralizedArbitrator: V1";
 
     enum DisputeStatus {
         Waiting,
@@ -21,8 +17,8 @@ contract NerwoCentralizedArbitratorV1 is IArbitrator, UUPSUpgradeable, OwnableUp
         Solved
     }
 
-    uint arbitrationPrice; // Not public because arbitrationCost already acts as an accessor.
-    uint constant NOT_PAYABLE_VALUE = (2 ** 256 - 2) / 2; // High value to be sure that the appeal is too expensive.
+    uint private arbitrationPrice; // Not public because arbitrationCost already acts as an accessor.
+    uint private constant NOT_PAYABLE_VALUE = (2 ** 256 - 2) / 2; // High value to be sure that the appeal is too expensive.
     uint private constant UINT_MAX = 2 ** 256 - 1;
 
     struct Dispute {
@@ -100,19 +96,19 @@ contract NerwoCentralizedArbitratorV1 is IArbitrator, UUPSUpgradeable, OwnableUp
     }
 
     /** @dev Cost of arbitration. Accessor to arbitrationPrice.
-     *  @param _extraData Not used by this contract.
+     *  _extraData Not used by this contract.
      *  @return fee Amount to be paid.
      */
-    function arbitrationCost(bytes calldata _extraData) public view returns (uint fee) {
+    function arbitrationCost(bytes calldata) public view returns (uint fee) {
         return arbitrationPrice;
     }
 
     /** @dev Cost of appeal. If appeal is not possible, it's a high value which can never be paid.
      *  @param _disputeID ID of the dispute to be appealed.
-     *  @param _extraData Not used by this contract.
+     *  _extraData Not used by this contract.
      *  @return fee Amount to be paid.
      */
-    function appealCost(uint _disputeID, bytes calldata _extraData) public view returns (uint fee) {
+    function appealCost(uint _disputeID, bytes calldata) public view returns (uint fee) {
         Dispute storage dispute = disputes[_disputeID];
         if (dispute.status == DisputeStatus.Appealable) return dispute.appealCost;
         else return NOT_PAYABLE_VALUE;
@@ -121,10 +117,10 @@ contract NerwoCentralizedArbitratorV1 is IArbitrator, UUPSUpgradeable, OwnableUp
     /** @dev Create a dispute. Must be called by the arbitrable contract.
      *  Must be paid at least arbitrationCost().
      *  @param _choices Amount of choices the arbitrator can make in this dispute. When ruling <= choices.
-     *  @param _extraData Can be used to give additional info on the dispute to be created.
+     *  _extraData Can be used to give additional info on the dispute to be created.
      *  @return disputeID ID of the dispute created.
      */
-    function createDispute(uint _choices, bytes calldata _extraData) public payable returns (uint disputeID) {
+    function createDispute(uint _choices, bytes calldata) public payable returns (uint disputeID) {
         // Create the dispute and return its number.
         disputes.push(
             Dispute({
@@ -147,6 +143,7 @@ contract NerwoCentralizedArbitratorV1 is IArbitrator, UUPSUpgradeable, OwnableUp
      *  @param _disputeID ID of the dispute to rule.
      *  @param _ruling Ruling given by the arbitrator. Note that 0 means "Not able/wanting to make a decision".
      */
+    // FIXME add non reentrant?
     function giveRuling(uint _disputeID, uint _ruling) external onlyOwner {
         Dispute storage dispute = disputes[_disputeID];
         require(_ruling <= dispute.choices, "Invalid ruling.");
@@ -155,7 +152,8 @@ contract NerwoCentralizedArbitratorV1 is IArbitrator, UUPSUpgradeable, OwnableUp
         dispute.ruling = _ruling;
         dispute.status = DisputeStatus.Solved;
 
-        payable(_msgSender()).send(dispute.fees); // Avoid blocking.
+        // FIXME: ignore?
+        payable(_msgSender()).call{value: dispute.fees}("");
         dispute.arbitrated.rule(_disputeID, _ruling);
     }
 
@@ -231,7 +229,9 @@ contract NerwoCentralizedArbitratorV1 is IArbitrator, UUPSUpgradeable, OwnableUp
         );
 
         dispute.status = DisputeStatus.Solved;
-        payable(_msgSender()).send(dispute.fees); // Avoid blocking.
+        // FIXME: add non reentrant?
+        // FIXME: really called by?
+        payable(_msgSender()).call{value: dispute.fees}("");
         dispute.arbitrated.rule(_disputeID, dispute.ruling);
     }
 

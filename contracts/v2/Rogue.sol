@@ -2,9 +2,10 @@
 /**
  *  @authors: [@sherpya]
  */
-pragma solidity ^0.8;
+pragma solidity ^0.8.0;
 
-import "hardhat/console.sol";
+/* solhint-disable no-console */
+import {console} from "hardhat/console.sol";
 
 enum Status {
     NoDispute,
@@ -64,16 +65,11 @@ contract Rogue {
     fallback() external payable {
         // The fallback function can have the "payable" modifier
         // which means it can accept ether.
-        revert();
+        revert("fallback()");
     }
 
     receive() external payable {
-        console.log(
-            "Rogue: receive() action %s - transactionID %s - amount %s",
-            uint(action),
-            transactionID,
-            amount
-        );
+        console.log("Rogue: receive() action %s - transactionID %s - amount %s", uint(action), transactionID, amount);
 
         Escrow caller = Escrow(msg.sender);
 
@@ -88,7 +84,7 @@ contract Rogue {
             caller.payArbitrationFeeBySender{value: amount}(transactionID);
             console.log("Rogue: receive() called payArbitrationFeeBySender()");
         } else {
-            revert();
+            revert("Rogue: invalid action");
         }
     }
 
@@ -135,3 +131,4 @@ contract Rogue {
         return address(this).balance;
     }
 }
+/* solhint-enable no-console */

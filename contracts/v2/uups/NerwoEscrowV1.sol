@@ -14,18 +14,18 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {VersionAware} from "../VersionAware.sol";
 
-import "../kleros/IArbitrator.sol";
-import "../kleros/IArbitrable.sol";
+import {IArbitrator} from "../kleros/IArbitrator.sol";
+import {IArbitrable} from "../kleros/IArbitrable.sol";
 
 contract NerwoEscrowV1 is IArbitrable, UUPSUpgradeable, OwnableUpgradeable, VersionAware {
     // **************************** //
     // *    Contract variables    * //
     // **************************** //
-    string constant CONTRACT_NAME = "NerwoEscrow: V1";
+    string private constant CONTRACT_NAME = "NerwoEscrow: V1";
 
-    uint8 constant AMOUNT_OF_CHOICES = 2;
-    uint8 constant SENDER_WINS = 1;
-    uint8 constant RECEIVER_WINS = 2;
+    uint8 private constant AMOUNT_OF_CHOICES = 2;
+    uint8 private constant SENDER_WINS = 1;
+    uint8 private constant RECEIVER_WINS = 2;
 
     enum Party {
         Sender,
@@ -533,14 +533,14 @@ contract NerwoEscrowV1 is IArbitrable, UUPSUpgradeable, OwnableUpgradeable, Vers
 
             emit FeeRecipientPayment(_transactionID, feeAmount);
         } else {
-            uint split_arbitration = senderArbitrationFee / 2;
-            uint split_amount = amount / 2;
+            uint splitArbitration = senderArbitrationFee / 2;
+            uint splitAmount = amount / 2;
 
-            feeAmount = calculateFeeRecipientAmount(split_amount);
+            feeAmount = calculateFeeRecipientAmount(splitAmount);
             feeRecipient.transfer(feeAmount);
 
-            transaction.sender.call{value: split_arbitration + split_amount}("");
-            transaction.receiver.call{value: split_arbitration + split_amount - feeAmount}("");
+            transaction.sender.call{value: splitArbitration + splitAmount}("");
+            transaction.receiver.call{value: splitArbitration + splitAmount - feeAmount}("");
 
             emit FeeRecipientPayment(_transactionID, feeAmount);
         }
