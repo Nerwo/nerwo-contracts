@@ -329,7 +329,7 @@ contract NerwoEscrowV1 is IArbitrable, UUPSUpgradeable, OwnableUpgradeable, Vers
         transaction.status = Status.Resolved; // reentrancy safe
 
         uint amount = transaction.amount;
-        transaction.amount = 0; // reentrancy saf
+        transaction.amount = 0; // reentrancy safe
 
         uint feeAmount = calculateFeeRecipientAmount(amount);
         feeRecipient.transfer(feeAmount);
