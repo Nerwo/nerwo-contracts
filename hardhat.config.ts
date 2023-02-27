@@ -3,6 +3,7 @@ import { HARDHAT_NETWORK_MNEMONIC } from 'hardhat/internal/core/config/default-c
 import '@nomicfoundation/hardhat-toolbox';
 import '@nomiclabs/hardhat-etherscan';
 import '@openzeppelin/hardhat-upgrades';
+import 'hardhat-gas-reporter';
 import 'hardhat-abi-exporter';
 import 'hardhat-deploy';
 
@@ -18,6 +19,9 @@ const config: HardhatUserConfig = {
   },
   namedAccounts: {
     deployer: 0,
+  },
+  gasReporter: {
+    enabled: (process.env.REPORT_GAS) ? true : false
   },
   networks: {
     goerli: {
