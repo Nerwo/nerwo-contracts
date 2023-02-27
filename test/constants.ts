@@ -11,3 +11,6 @@ export const TIMEOUT_PAYMENT = 1500;
 export const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
 
 export const ARBITRATOR_PRICE = ethers.utils.parseEther(process.env.NERWO_ARBITRATION_PRICE);
+
+export const ACTION_NONE = 0;
+export const ACTION_PAY = 1;

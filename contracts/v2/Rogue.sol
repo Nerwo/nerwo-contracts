@@ -11,6 +11,11 @@ interface Escrow {
 }
 
 contract Rogue {
+    uint constant ACTION_NONE = 0;
+    uint constant ACTION_PAY = 1;
+    uint constant ACTION_MAX = 2;
+
+    uint action = ACTION_NONE;
     uint transactionID = 0;
     uint amount = 0;
 
@@ -22,9 +27,18 @@ contract Rogue {
 
     receive() external payable {
         Escrow escrow = Escrow(msg.sender);
-        //console.log("Calling pay(%s, %s)", transactionID, amount);
-        escrow.pay(transactionID, amount);
-        //console.log("Called pay()");
+        if (action == ACTION_NONE) {
+            //
+        } else if (action == ACTION_PAY) {
+            //console.log("Calling pay(%s, %s)", transactionID, amount);
+            escrow.pay(transactionID, amount);
+            //console.log("Called pay()");
+        }
+    }
+
+    function setAction(uint _action) public {
+        require(_action < ACTION_MAX, "Invalid action");
+        action = _action;
     }
 
     function setTransaction(uint _transactionID, uint _amount) public {

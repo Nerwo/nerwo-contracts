@@ -95,6 +95,7 @@ describe('NerwoEscrow', function () {
     const amount = ethers.utils.parseEther('0.001');
     const _transactionID = await createTransaction(sender, rogue, amount);
 
+    rogue.setAction(constants.ACTION_PAY);
     rogue.setTransaction(_transactionID, amount.div(2));
     await escrow.connect(sender).pay(_transactionID, amount.div(2));
 
