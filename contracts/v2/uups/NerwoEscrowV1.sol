@@ -135,13 +135,6 @@ contract NerwoEscrowV1 is IArbitrable, UUPSUpgradeable, OwnableUpgradeable, Vers
     // *    Modifying the state   * //
     // **************************** //
 
-    /** @dev Constructor.
-     *  @param _arbitrator The arbitrator of the contract.
-     *  @param _arbitratorExtraData Extra data for the arbitrator.
-     *  @param _feeTimeout Arbitration fee timeout for the parties.
-     */
-    //}
-
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
