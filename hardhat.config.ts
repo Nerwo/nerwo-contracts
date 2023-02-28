@@ -21,7 +21,10 @@ const config: HardhatUserConfig = {
     deployer: 0,
   },
   gasReporter: {
-    enabled: (process.env.REPORT_GAS) ? true : false
+    enabled: (process.env.REPORT_GAS) ? true : false,
+    excludeContracts: [
+      'AutoAppealableArbitrator',
+      'MultipleArbitrableTransaction', 'MultipleArbitrableTransactionWithFee']
   },
   networks: {
     goerli: {
