@@ -271,10 +271,10 @@ contract NerwoEscrowV1 is IArbitrable, UUPSUpgradeable, OwnableUpgradeable, Vers
             })
         );
 
-        emit MetaEvidence(transactions.length - 1, _metaEvidence);
-        emit TransactionCreated(transactions.length - 1, _msgSender(), _receiver, msg.value);
+        transactionID = transactions.length - 1;
 
-        return transactions.length - 1;
+        emit MetaEvidence(transactionID, _metaEvidence);
+        emit TransactionCreated(transactionID, _msgSender(), _receiver, msg.value);
     }
 
     /** @dev Send to recipent, emit a log when fails
