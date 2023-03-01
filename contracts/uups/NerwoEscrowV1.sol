@@ -196,13 +196,7 @@ contract NerwoEscrowV1 is IArbitrable, UUPSUpgradeable, OwnableUpgradeable, Vers
     }
 
     // Here only to test upgrade
-    /** @dev reinitializer
-     *  @param _arbitrator The arbitrator of the contract.
-     *  @param _arbitratorExtraData Extra data for the arbitrator.
-     *  @param _feeRecipient Address which receives a share of receiver payment.
-     *  @param _feeRecipientBasisPoint The share of fee to be received by the feeRecipient, down to 2 decimal places as 550 = 5.5%.
-     *  @param _feeTimeout Arbitration fee timeout for the parties.
-     */
+    /*
     function initialize2(
         address _arbitrator,
         bytes calldata _arbitratorExtraData,
@@ -215,7 +209,7 @@ contract NerwoEscrowV1 is IArbitrable, UUPSUpgradeable, OwnableUpgradeable, Vers
         versionAwareContractName = "NerwoEscrow: V2";
         ///@dev as there is no constructor, we need to initialise the OwnableUpgradeable explicitly
         __Ownable_init();
-    }
+    }*/
 
     function getBalance() public view returns (uint256) {
         return address(this).balance;

@@ -1,58 +1,37 @@
 import { expect } from 'chai';
-import { ethers, upgrades } from 'hardhat';
+import { deployments, ethers } from 'hardhat';
 import { BigNumber } from 'ethers';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { BaseContract } from '@ethersproject/contracts';
 
 import { NerwoCentralizedArbitratorV1, NerwoEscrowV1, Rogue } from '../typechain-types';
 
-import * as constants from './constants';
+import * as constants from '../constants';
 import * as utils from './utils';
 
 describe('NerwoEscrow', function () {
   const arbitrationPrice = ethers.utils.parseEther('0.0001');
   let escrow: NerwoEscrowV1;
   let arbitrator: NerwoCentralizedArbitratorV1;
-  let platform: SignerWithAddress, court: SignerWithAddress;
+  let deployer: SignerWithAddress, platform: SignerWithAddress, court: SignerWithAddress;
   let sender: SignerWithAddress, receiver: SignerWithAddress;
   let rogue: Rogue;
 
   this.beforeEach(async () => {
-    const NerwoCentralizedArbitratorV1 = await ethers.getContractFactory("NerwoCentralizedArbitratorV1");
-    arbitrator = await upgrades.deployProxy(NerwoCentralizedArbitratorV1, [constants.ARBITRATOR_PRICE], {
-      kind: 'uups',
-      initializer: 'initialize',
-    }) as NerwoCentralizedArbitratorV1;
-    await arbitrator.deployed();
+    [deployer, platform, court, sender, receiver] = await ethers.getSigners();
 
-    const ARGS = [
-      constants.ZERO_ADDRESS,
-      [], // _arbitratorExtraData
-      constants.ZERO_ADDRESS,
-      0,
-      0
-    ];
+    process.env.NERWO_COURT_ADDRESS = deployer.address;
+    await deployments.fixture(['NerwoCentralizedArbitratorV1', 'NerwoEscrowV1']);
 
-    const NerwoEscrowV1 = await ethers.getContractFactory("NerwoEscrowV1");
-    escrow = await upgrades.deployProxy(NerwoEscrowV1, ARGS, {
-      kind: 'uups',
-      initializer: 'initialize',
-    }) as NerwoEscrowV1;
-    await escrow.deployed();
+    let deployment = await deployments.get('NerwoCentralizedArbitratorV1');
+    arbitrator = await ethers.getContractAt('NerwoCentralizedArbitratorV1', deployment.address);
+
+    deployment = await deployments.get('NerwoEscrowV1');
+    escrow = await ethers.getContractAt('NerwoEscrowV1', deployment.address);
 
     const Rogue = await ethers.getContractFactory("Rogue");
     rogue = await Rogue.deploy(escrow.address);
     await rogue.deployed();
-
-    [, platform, court, sender, receiver] = await ethers.getSigners();
-
-    await escrow.transferOwnership(platform.address);
-    await escrow.connect(platform).setArbitrator(
-      arbitrator.address,
-      [],
-      platform.address,
-      constants.FEE_RECIPIENT_BASISPOINT,
-      constants.FEE_TIMEOUT);
   });
 
   async function logBalance(name: string, target: SignerWithAddress | Rogue) {

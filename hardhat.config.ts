@@ -16,6 +16,7 @@ const config: HardhatUserConfig = {
   },
   namedAccounts: {
     deployer: 0,
+    platform: 1
   },
   gasReporter: {
     enabled: (process.env.REPORT_GAS) ? true : false,
@@ -24,7 +25,12 @@ const config: HardhatUserConfig = {
   networks: {
     goerli: {
       url: process.env.RPC_URL,
-      accounts: [process.env.PRIVATE_KEY]
+      accounts: [process.env.PRIVATE_KEY],
+      verify: {
+        etherscan: {
+          apiKey: process.env.ETHERSCAN_API_KEY
+        }
+      }
     },
     hardhat: {
       accounts: {
