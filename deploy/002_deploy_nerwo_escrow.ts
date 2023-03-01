@@ -2,8 +2,10 @@ import { DeployFunction } from 'hardhat-deploy/types';
 import * as constants from '../constants';
 
 const func: DeployFunction = async function ({ deployments: { get, deploy }, getNamedAccounts }) {
-  const { deployer, platform } = await getNamedAccounts();
+  let { deployer, platform } = await getNamedAccounts();
   const arbitrator = await get('NerwoCentralizedArbitratorV1');
+
+  platform = platform || deployer;
 
   await deploy('NerwoEscrowV1', {
     from: deployer,

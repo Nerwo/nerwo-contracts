@@ -19,12 +19,14 @@ const func: DeployFunction = async function ({ deployments: { deploy, execute },
     log: true
   });
 
-  await execute('NerwoCentralizedArbitratorV1', {
-    from: deployer,
-    log: true
-  },
-    'transferOwnership',
-    process.env.NERWO_COURT_ADDRESS);
+  if (deployer != process.env.NERWO_COURT_ADDRESS) {
+    await execute('NerwoCentralizedArbitratorV1', {
+      from: deployer,
+      log: true
+    },
+      'transferOwnership',
+      process.env.NERWO_COURT_ADDRESS);
+  }
 };
 
 export default func;
