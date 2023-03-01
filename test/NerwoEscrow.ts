@@ -125,7 +125,10 @@ describe('NerwoEscrow', function () {
     _receiver: SignerWithAddress,
     senderFee: BigNumber,
     receiverFee: BigNumber): Promise<BigNumber> {
-    await escrow.connect(_receiver).payArbitrationFeeByReceiver(_transactionID, { value: receiverFee });
+
+    await expect(await escrow.connect(_receiver).payArbitrationFeeByReceiver(
+      _transactionID, { value: receiverFee })).to.emit(escrow, 'HasToPayFee');
+
     const txResponse = await escrow.connect(_sender).payArbitrationFeeBySender(
       _transactionID, { value: senderFee });
 
@@ -153,7 +156,8 @@ describe('NerwoEscrow', function () {
     let senderBalance = await sender.getBalance();
     let receiverBalance = await receiver.getBalance();
 
-    await arbitrator.connect(court).giveRuling(_disputeID, constants.SENDER_WINS);
+    await expect(arbitrator.connect(court).giveRuling(_disputeID, constants.SENDER_WINS))
+      .to.emit(escrow, 'Ruling');
 
     // SENDER_WINS -> no platform fee
     expect(await platform.getBalance()).to.be.equal(platformBalance);
@@ -172,7 +176,8 @@ describe('NerwoEscrow', function () {
     receiverBalance = await receiver.getBalance();
 
     // RECEIVER_WINS -> platform gains
-    await arbitrator.connect(court).giveRuling(_disputeID, constants.RECEIVER_WINS);
+    await expect(arbitrator.connect(court).giveRuling(_disputeID, constants.RECEIVER_WINS))
+      .to.emit(escrow, 'Ruling');
 
     const platformGain = (await platform.getBalance()).sub(platformBalance);
     const feeAmount = amount.mul(constants.FEE_RECIPIENT_BASISPOINT).div(10000);
