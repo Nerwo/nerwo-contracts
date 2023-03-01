@@ -65,6 +65,10 @@ describe('NerwoEscrow', function () {
       constants.FEE_TIMEOUT);
   });
 
+  async function logBalance(name: string, target: SignerWithAddress | Rogue) {
+    console.log(`${name} balance: ${ethers.utils.formatEther(await target.getBalance())}`);
+  }
+
   async function createTransaction(
     _sender: SignerWithAddress,
     _receiver: SignerWithAddress | BaseContract,
@@ -82,41 +86,44 @@ describe('NerwoEscrow', function () {
   }
 
   it('Creating transaction, then pay', async () => {
-    const platformBalance = await platform.getBalance();
-    const receiverBalance = await receiver.getBalance();
-
     const amount = ethers.utils.parseEther('0.001');
+    const platformFee = amount.mul(constants.FEE_RECIPIENT_BASISPOINT).div(10000);
+
     const _transactionID = await createTransaction(sender, receiver, amount);
 
-    await escrow.connect(sender).pay(_transactionID, amount);
-
-    const platformGain = (await platform.getBalance()).sub(platformBalance);
-    const expectedFee = amount.mul(constants.FEE_RECIPIENT_BASISPOINT).div(10000);
-    expect(platformGain).to.be.equal(expectedFee);
-
-    const receiverGain = (await receiver.getBalance()).sub(receiverBalance);
-    expect(receiverGain).to.be.equal(amount.sub(expectedFee));
+    await expect(escrow.connect(sender).pay(_transactionID, amount))
+      .to.changeEtherBalances(
+        [platform, receiver],
+        [platformFee, amount.sub(platformFee)]
+      )
+      .to.not.emit(escrow, 'SendFailed');
   });
 
   it('Creating transaction with rogue, then pay', async () => {
-    const platformBalance = await platform.getBalance();
-    const rogueBalance = await rogue.getBalance();
+    const amount = ethers.utils.parseEther('0.002');
+    const payAmount = amount.div(2);
+    const platformFee = payAmount.mul(constants.FEE_RECIPIENT_BASISPOINT).div(10000);
 
-    const amount = ethers.utils.parseEther('0.001');
     const _transactionID = await createTransaction(sender, rogue, amount);
 
-    const payAmount = amount.div(2);
     await rogue.setAction(constants.RogueAction.Pay);
     await rogue.setTransaction(_transactionID);
-    await rogue.setAmount(payAmount)
-    await escrow.connect(sender).pay(_transactionID, payAmount);
+    await rogue.setAmount(payAmount);
 
-    const platformGain = (await platform.getBalance()).sub(platformBalance);
-    const expectedFee = amount.div(2).mul(constants.FEE_RECIPIENT_BASISPOINT).div(10000);
-    expect(platformGain).to.be.equal(expectedFee);
+    await expect(escrow.connect(sender).pay(_transactionID, payAmount))
+      .to.changeEtherBalances(
+        [platform, rogue],
+        [platformFee, 0]
+      )
+      .to.emit(escrow, 'SendFailed');
 
-    const rogueGain = (await rogue.getBalance()).sub(rogueBalance);
-    expect(rogueGain).to.be.equal(BigNumber.from(0));
+    await rogue.setAction(constants.RogueAction.None);
+    await expect(escrow.connect(sender).pay(_transactionID, payAmount))
+      .to.changeEtherBalances(
+        [platform, rogue],
+        [platformFee, payAmount.sub(platformFee)]
+      )
+      .to.not.emit(escrow, 'SendFailed');
   });
 
   async function createDispute(
@@ -152,17 +159,13 @@ describe('NerwoEscrow', function () {
 
     await arbitrator.transferOwnership(court.address);
 
-    let platformBalance = await platform.getBalance();
-    let senderBalance = await sender.getBalance();
-    let receiverBalance = await receiver.getBalance();
-
-    await expect(arbitrator.connect(court).giveRuling(_disputeID, constants.SENDER_WINS))
-      .to.emit(escrow, 'Ruling');
-
     // SENDER_WINS -> no platform fee
-    expect(await platform.getBalance()).to.be.equal(platformBalance);
-    expect(await sender.getBalance()).to.be.equal(senderBalance.add(arbitrationPrice).add(amount));
-    expect(await receiver.getBalance()).to.be.equal(receiverBalance);
+    await expect(arbitrator.connect(court).giveRuling(_disputeID, constants.SENDER_WINS))
+      .to.changeEtherBalances(
+        [platform, sender, receiver],
+        [0, arbitrationPrice.add(amount), 0]
+      )
+      .to.emit(escrow, 'Ruling');
 
     // new Transaction
     amount = ethers.utils.parseEther('0.005');
@@ -171,88 +174,72 @@ describe('NerwoEscrow', function () {
     // new Dispute
     _disputeID = await createDispute(_transactionID, sender, receiver, arbitrationPrice, arbitrationPrice);
 
-    platformBalance = await platform.getBalance();
-    senderBalance = await sender.getBalance();
-    receiverBalance = await receiver.getBalance();
-
+    const feeAmount = amount.mul(constants.FEE_RECIPIENT_BASISPOINT).div(10000);
     // RECEIVER_WINS -> platform gains
     await expect(arbitrator.connect(court).giveRuling(_disputeID, constants.RECEIVER_WINS))
+      .to.changeEtherBalances(
+        [platform, sender, receiver],
+        [feeAmount, 0, arbitrationPrice.add(amount).sub(feeAmount)]
+      )
       .to.emit(escrow, 'Ruling');
-
-    const platformGain = (await platform.getBalance()).sub(platformBalance);
-    const feeAmount = amount.mul(constants.FEE_RECIPIENT_BASISPOINT).div(10000);
-    expect(platformGain).to.be.equal(feeAmount);
-
-    expect(await sender.getBalance()).to.be.equal(senderBalance);
-
-    const receiverGain = (await receiver.getBalance()).sub(receiverBalance);
-    const expectedGain = arbitrationPrice.add(amount).sub(feeAmount);
-    expect(receiverGain).to.be.equal(expectedGain);
   });
 
   it('Creating arbitrage transaction with rogue', async () => {
     await arbitrator.transferOwnership(court.address);
 
-    const escrowBalance = await escrow.getBalance();
-
     // fund rogue contract
     const rogueFunds = ethers.utils.parseEther('10.0');
-    await sender.sendTransaction({ to: rogue.address, value: rogueFunds });
-    let rogueBalanceCheck = await rogue.getBalance();
-    expect(rogueBalanceCheck).to.be.equal(rogueFunds);
+    await expect(sender.sendTransaction({ to: rogue.address, value: rogueFunds }))
+      .to.changeEtherBalance(rogue, rogueFunds);
 
-    let amount = ethers.utils.parseEther('0.002');
+    let amount = ethers.utils.parseEther('0.007');
     await rogue.setAmount(amount);
-    let txResponse = await rogue.createTransaction(
+    let tx = await rogue.createTransaction(
       constants.TIMEOUT_PAYMENT,
       receiver.address,
       'evidence');
 
-    let event = await utils.findEventByName(txResponse, 'TransactionCreated');
+    let event = await utils.findEventByName(tx, 'TransactionCreated');
 
     expect(event.args).to.not.be.empty;
     const { _transactionID } = event.args!;
-
-    let escrowBalanceCheck = escrowBalance.add(amount);
-    expect(await escrow.getBalance()).to.be.equal(escrowBalanceCheck);
-
-    rogueBalanceCheck = rogueBalanceCheck.sub(amount);
-    expect(await rogue.getBalance()).to.be.equal(rogueBalanceCheck);
 
     await expect(escrow.connect(receiver).payArbitrationFeeByReceiver(_transactionID, {
       value: arbitrationPrice.mul(2)
     })).to.be.rejectedWith('The receiver fee must cover arbitration costs.');
 
-    await escrow.connect(receiver).payArbitrationFeeByReceiver(_transactionID, { value: arbitrationPrice });
-    escrowBalanceCheck = escrowBalanceCheck.add(arbitrationPrice);
-    expect(await escrow.getBalance()).to.be.equal(escrowBalanceCheck);
+    await expect(escrow.connect(receiver).payArbitrationFeeByReceiver(
+      _transactionID, { value: arbitrationPrice }))
+      .to.changeEtherBalances(
+        [escrow, receiver],
+        [arbitrationPrice, -arbitrationPrice]
+      );
 
     await rogue.setAction(constants.RogueAction.PayArbitrationFeeBySender);
     await rogue.setTransaction(_transactionID);
-
     await rogue.setAmount(arbitrationPrice.mul(2));
-    await expect(rogue.payArbitrationFeeBySender(_transactionID)).to.be.rejectedWith('The sender fee must cover arbitration costs.');
+
+    await expect(rogue.payArbitrationFeeBySender(_transactionID))
+      .to.be.rejectedWith('The sender fee must cover arbitration costs.');
 
     await rogue.setAmount(arbitrationPrice);
-    console.log(`Rogue balance before: ${ethers.utils.formatEther(await rogue.getBalance())}`);
-    txResponse = await rogue.payArbitrationFeeBySender(_transactionID);
-    event = await utils.findEventByName(txResponse, 'Dispute');
-    expect(event.args).to.not.be.empty;
-    const { _disputeID } = event.args!;
-    console.log(`Rogue balance after: ${ethers.utils.formatEther(await rogue.getBalance())}`);
-    console.log(`Escrow balance: ${ethers.utils.formatEther(await escrow.getBalance())}`);
 
-    /*
-    let platformBalance = await platform.getBalance();
-    let senderBalance = await sender.getBalance();
-    let receiverBalance = await receiver.getBalance();
+    let _disputeID: BigNumber | undefined;
 
-    await arbitrator.connect(court).giveRuling(_disputeID, constants.SENDER_WINS);
+    await expect(async () => {
+      tx = await rogue.payArbitrationFeeBySender(_transactionID);
+      event = await utils.findEventByName(tx, 'Dispute');
+      ({ _disputeID } = event.args!);
+      return tx;
+    }).to.changeEtherBalance(rogue, -arbitrationPrice);
 
-    // SENDER_WINS -> no platform fee
-    expect(await platform.getBalance()).to.be.equal(platformBalance);
-    expect(await sender.getBalance()).to.be.equal(senderBalance.add(receiverArbitrationFee).add(amount));
-    expect(await receiver.getBalance()).to.be.equal(receiverBalance);
-    */
+    expect(_disputeID).to.not.be.undefined;
+
+    await rogue.setAction(constants.RogueAction.Revert);
+    await expect(arbitrator.connect(court).giveRuling(_disputeID!, constants.SENDER_WINS))
+      .to.changeEtherBalances(
+        [platform, rogue, receiver],
+        [0, 0, 0])
+      .to.emit(escrow, 'SendFailed');
   });
 });
