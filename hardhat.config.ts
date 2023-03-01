@@ -23,7 +23,8 @@ const config: HardhatUserConfig = {
   gasReporter: {
     enabled: (process.env.REPORT_GAS) ? true : false,
     excludeContracts: [
-      'AutoAppealableArbitrator',
+      'Rogue',
+      'AutoAppealableArbitrator', 'CentralizedArbitrator',
       'MultipleArbitrableTransaction', 'MultipleArbitrableTransactionWithFee']
   },
   networks: {
