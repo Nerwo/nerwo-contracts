@@ -55,9 +55,11 @@ contract NerwoEscrowV1 is IArbitrable, UUPSUpgradeable, OwnableUpgradeable, Vers
     Transaction[] public transactions;
     bytes public arbitratorExtraData; // Extra data to set up the arbitration.
     IArbitrator public arbitrator; // Address of the arbitrator contract.
+
     uint public feeTimeout; // Time in seconds a party can take to pay arbitration fees before being considered unresponding and lose the dispute.
-    address payable public feeRecipient; // Address which receives a share of receiver payment.
-    uint public feeRecipientBasisPoint; // The share of fee to be received by the feeRecipient, down to 2 decimal places as 550 = 5.5%.
+
+    address payable private feeRecipient; // Address which receives a share of receiver payment.
+    uint private feeRecipientBasisPoint; // The share of fee to be received by the feeRecipient, down to 2 decimal places as 550 = 5.5%.
 
     mapping(uint => uint) public disputeIDtoTransactionID; // One-to-one relationship between the dispute and the transaction.
 
@@ -311,7 +313,7 @@ contract NerwoEscrowV1 is IArbitrable, UUPSUpgradeable, OwnableUpgradeable, Vers
     /** @dev Transfer the transaction's amount to the receiver if the timeout has passed.
      *  @param _transactionID The index of the transaction.
      */
-    function executeTransaction(uint _transactionID) public {
+    function executeTransaction(uint _transactionID) external {
         Transaction storage transaction = transactions[_transactionID];
         require(transaction.status == Status.NoDispute, "The transaction shouldn't be disputed.");
         require(
@@ -467,7 +469,7 @@ contract NerwoEscrowV1 is IArbitrable, UUPSUpgradeable, OwnableUpgradeable, Vers
      *  @param _disputeID ID of the dispute in the Arbitrator contract.
      *  @param _ruling Ruling given by the arbitrator. Note that 0 is reserved for "Not able/wanting to make a decision".
      */
-    function rule(uint _disputeID, uint _ruling) public {
+    function rule(uint _disputeID, uint _ruling) external {
         require(_msgSender() == address(arbitrator), "The caller must be the arbitrator.");
 
         uint transactionID = disputeIDtoTransactionID[_disputeID];
