@@ -152,8 +152,8 @@ contract NerwoCentralizedArbitratorV1 is IArbitrator, UUPSUpgradeable, OwnableUp
         dispute.ruling = _ruling;
         dispute.status = DisputeStatus.Solved;
 
-        // FIXME: ignore?
-        payable(_msgSender()).call{value: dispute.fees}("");
+        (bool success,) = payable(_msgSender()).call{value: dispute.fees}("");
+        require(success, "Failed to send dispute fee.");
         dispute.arbitrated.rule(_disputeID, _ruling);
     }
 
@@ -215,24 +215,6 @@ contract NerwoCentralizedArbitratorV1 is IArbitrator, UUPSUpgradeable, OwnableUp
         dispute.fees += msg.value;
         dispute.status = DisputeStatus.Waiting;
         emit AppealDecision(_disputeID, IArbitrable(_msgSender()));
-    }
-
-    /** @dev Execute the ruling of a dispute after the appeal period has passed. UNTRUSTED.
-     *  @param _disputeID ID of the dispute to execute.
-     */
-    function executeRuling(uint _disputeID) external {
-        Dispute storage dispute = disputes[_disputeID];
-        require(dispute.status == DisputeStatus.Appealable, "The dispute must be appealable.");
-        require(
-            block.timestamp >= dispute.appealPeriodEnd,
-            "The dispute must be executed after its appeal period has ended."
-        );
-
-        dispute.status = DisputeStatus.Solved;
-        // FIXME: add non reentrant?
-        // FIXME: really called by?
-        payable(_msgSender()).call{value: dispute.fees}("");
-        dispute.arbitrated.rule(_disputeID, dispute.ruling);
     }
 
     /** @dev Return the status of a dispute (in the sense of ERC792, not the Dispute property).

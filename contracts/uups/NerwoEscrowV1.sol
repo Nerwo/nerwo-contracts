@@ -12,6 +12,7 @@ pragma solidity ^0.8.0;
 
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+
 import {VersionAware} from "../VersionAware.sol";
 
 import {IArbitrator} from "../kleros/IArbitrator.sol";
@@ -26,6 +27,10 @@ contract NerwoEscrowV1 is IArbitrable, UUPSUpgradeable, OwnableUpgradeable, Vers
     uint8 private constant AMOUNT_OF_CHOICES = 2;
     uint8 private constant SENDER_WINS = 1;
     uint8 private constant RECEIVER_WINS = 2;
+
+    // ReentrancyGuard
+    uint256 private constant _NOT_ENTERED = 1;
+    uint256 private constant _ENTERED = 2;
 
     enum Party {
         Sender,
@@ -51,6 +56,9 @@ contract NerwoEscrowV1 is IArbitrable, UUPSUpgradeable, OwnableUpgradeable, Vers
         uint lastInteraction; // Last interaction for the dispute procedure.
         Status status;
     }
+
+    // ReentrancyGuard
+    uint256 private _status;
 
     Transaction[] public transactions;
     bytes public arbitratorExtraData; // Extra data to set up the arbitration.
@@ -144,6 +152,23 @@ contract NerwoEscrowV1 is IArbitrable, UUPSUpgradeable, OwnableUpgradeable, Vers
     // *    Modifying the state   * //
     // **************************** //
 
+    /**
+     * @dev Prevents a contract from calling itself, directly or indirectly.
+     * Calling a `nonReentrant` function from another `nonReentrant`
+     * function is not supported. It is possible to prevent this from happening
+     * by making the `nonReentrant` function external, and making it call a
+     * `private` function that does the actual work.
+     */
+    modifier nonReentrant() {
+        // On the first call to nonReentrant, _status will be _NOT_ENTERED
+        require(_status != _ENTERED, "ReentrancyGuard: reentrant call");
+
+        // Any calls to nonReentrant after this point will fail
+        _status = _ENTERED;
+        _;
+        _status = _NOT_ENTERED;
+    }
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
@@ -163,6 +188,7 @@ contract NerwoEscrowV1 is IArbitrable, UUPSUpgradeable, OwnableUpgradeable, Vers
         uint _feeRecipientBasisPoint,
         uint _feeTimeout
     ) external initializer {
+        _status = _NOT_ENTERED;
         versionAwareContractName = CONTRACT_NAME;
         _setArbitrator(_arbitrator, _arbitratorExtraData, _feeRecipient, _feeRecipientBasisPoint, _feeTimeout);
         ///@dev as there is no constructor, we need to initialise the OwnableUpgradeable explicitly
@@ -184,6 +210,7 @@ contract NerwoEscrowV1 is IArbitrable, UUPSUpgradeable, OwnableUpgradeable, Vers
         uint _feeRecipientBasisPoint,
         uint _feeTimeout
     ) external reinitializer(2) {
+        _status = _NOT_ENTERED;
         _setArbitrator(_arbitrator, _arbitratorExtraData, _feeRecipient, _feeRecipientBasisPoint, _feeTimeout);
         versionAwareContractName = "NerwoEscrow: V2";
         ///@dev as there is no constructor, we need to initialise the OwnableUpgradeable explicitly
@@ -292,7 +319,7 @@ contract NerwoEscrowV1 is IArbitrable, UUPSUpgradeable, OwnableUpgradeable, Vers
      *  @param _transactionID The index of the transaction.
      *  @param _amount Amount to pay in wei.
      */
-    function pay(uint _transactionID, uint _amount) public {
+    function pay(uint _transactionID, uint _amount) public nonReentrant {
         Transaction storage transaction = transactions[_transactionID];
         require(transaction.sender == _msgSender(), "The caller must be the sender.");
         require(transaction.status == Status.NoDispute, "The transaction shouldn't be disputed.");
@@ -313,7 +340,7 @@ contract NerwoEscrowV1 is IArbitrable, UUPSUpgradeable, OwnableUpgradeable, Vers
      *  @param _transactionID The index of the transaction.
      *  @param _amountReimbursed Amount to reimburse in wei.
      */
-    function reimburse(uint _transactionID, uint _amountReimbursed) public {
+    function reimburse(uint _transactionID, uint _amountReimbursed) public nonReentrant {
         Transaction storage transaction = transactions[_transactionID];
         require(transaction.receiver == _msgSender(), "The caller must be the receiver.");
         require(transaction.status == Status.NoDispute, "The transaction shouldn't be disputed.");
@@ -331,7 +358,7 @@ contract NerwoEscrowV1 is IArbitrable, UUPSUpgradeable, OwnableUpgradeable, Vers
     /** @dev Transfer the transaction's amount to the receiver if the timeout has passed.
      *  @param _transactionID The index of the transaction.
      */
-    function executeTransaction(uint _transactionID) external {
+    function executeTransaction(uint _transactionID) external nonReentrant {
         Transaction storage transaction = transactions[_transactionID];
         require(transaction.status == Status.NoDispute, "The transaction shouldn't be disputed.");
         require(
@@ -354,7 +381,7 @@ contract NerwoEscrowV1 is IArbitrable, UUPSUpgradeable, OwnableUpgradeable, Vers
     /** @dev Reimburse sender if receiver fails to pay the fee.
      *  @param _transactionID The index of the transaction.
      */
-    function timeOutBySender(uint _transactionID) public {
+    function timeOutBySender(uint _transactionID) public nonReentrant {
         Transaction storage transaction = transactions[_transactionID];
         require(transaction.status == Status.WaitingReceiver, "The transaction is not waiting on the receiver.");
         require(block.timestamp - transaction.lastInteraction >= feeTimeout, "Timeout time has not passed yet.");
@@ -366,13 +393,13 @@ contract NerwoEscrowV1 is IArbitrable, UUPSUpgradeable, OwnableUpgradeable, Vers
         }
 
         // reentrancy safe -> Status.Resolved
-        executeRuling(_transactionID, SENDER_WINS);
+        _executeRuling(_transactionID, SENDER_WINS);
     }
 
     /** @dev Pay receiver if sender fails to pay the fee.
      *  @param _transactionID The index of the transaction.
      */
-    function timeOutByReceiver(uint _transactionID) public {
+    function timeOutByReceiver(uint _transactionID) public nonReentrant {
         Transaction storage transaction = transactions[_transactionID];
         require(transaction.status == Status.WaitingSender, "The transaction is not waiting on the sender.");
         require(block.timestamp - transaction.lastInteraction >= feeTimeout, "Timeout time has not passed yet.");
@@ -384,7 +411,7 @@ contract NerwoEscrowV1 is IArbitrable, UUPSUpgradeable, OwnableUpgradeable, Vers
         }
 
         // reentrancy safe -> Status.Resolved
-        executeRuling(_transactionID, RECEIVER_WINS);
+        _executeRuling(_transactionID, RECEIVER_WINS);
     }
 
     /** @dev Pay the arbitration fee to raise a dispute. To be called by the sender. UNTRUSTED.
@@ -392,7 +419,7 @@ contract NerwoEscrowV1 is IArbitrable, UUPSUpgradeable, OwnableUpgradeable, Vers
      *  This is not a vulnerability as the arbitrator can rule in favor of one party anyway.
      *  @param _transactionID The index of the transaction.
      */
-    function payArbitrationFeeBySender(uint _transactionID) public payable {
+    function payArbitrationFeeBySender(uint _transactionID) public payable nonReentrant {
         Transaction storage transaction = transactions[_transactionID];
         require(
             transaction.status < Status.DisputeCreated,
@@ -415,7 +442,7 @@ contract NerwoEscrowV1 is IArbitrable, UUPSUpgradeable, OwnableUpgradeable, Vers
         } else {
             // The receiver has also paid the fee. We create the dispute.
             // reentrancy safe -> Status.DisputeCreated
-            raiseDispute(_transactionID, arbitrationCost);
+            _raiseDispute(_transactionID, arbitrationCost);
         }
     }
 
@@ -423,7 +450,7 @@ contract NerwoEscrowV1 is IArbitrable, UUPSUpgradeable, OwnableUpgradeable, Vers
      *  Note that this function mirrors payArbitrationFeeBySender.
      *  @param _transactionID The index of the transaction.
      */
-    function payArbitrationFeeByReceiver(uint _transactionID) public payable {
+    function payArbitrationFeeByReceiver(uint _transactionID) public payable nonReentrant {
         Transaction storage transaction = transactions[_transactionID];
         require(
             transaction.status < Status.DisputeCreated,
@@ -445,7 +472,7 @@ contract NerwoEscrowV1 is IArbitrable, UUPSUpgradeable, OwnableUpgradeable, Vers
         } else {
             // The sender has also paid the fee. We create the dispute.
             // reentrancy safe -> Status.DisputeCreated
-            raiseDispute(_transactionID, arbitrationCost);
+            _raiseDispute(_transactionID, arbitrationCost);
         }
     }
 
@@ -453,7 +480,7 @@ contract NerwoEscrowV1 is IArbitrable, UUPSUpgradeable, OwnableUpgradeable, Vers
      *  @param _transactionID The index of the transaction.
      *  @param _arbitrationCost Amount to pay the arbitrator.
      */
-    function raiseDispute(uint _transactionID, uint _arbitrationCost) internal {
+    function _raiseDispute(uint _transactionID, uint _arbitrationCost) internal {
         // reentrancy check in callers
         Transaction storage transaction = transactions[_transactionID];
         transaction.status = Status.DisputeCreated; // reentrancy safe
@@ -486,7 +513,7 @@ contract NerwoEscrowV1 is IArbitrable, UUPSUpgradeable, OwnableUpgradeable, Vers
      *  @param _disputeID ID of the dispute in the Arbitrator contract.
      *  @param _ruling Ruling given by the arbitrator. Note that 0 is reserved for "Not able/wanting to make a decision".
      */
-    function rule(uint _disputeID, uint _ruling) external {
+    function rule(uint _disputeID, uint _ruling) external nonReentrant {
         require(_msgSender() == address(arbitrator), "The caller must be the arbitrator.");
 
         uint transactionID = disputeIDtoTransactionID[_disputeID];
@@ -496,14 +523,14 @@ contract NerwoEscrowV1 is IArbitrable, UUPSUpgradeable, OwnableUpgradeable, Vers
         emit Ruling(IArbitrator(_msgSender()), _disputeID, _ruling);
 
         // reentrancy safe -> Status.Resolved
-        executeRuling(transactionID, _ruling);
+        _executeRuling(transactionID, _ruling);
     }
 
     /** @dev Execute a ruling of a dispute. It reimburses the fee to the winning party.
      *  @param _transactionID The index of the transaction.
      *  @param _ruling Ruling given by the arbitrator. 1 : Reimburse the receiver. 2 : Pay the sender.
      */
-    function executeRuling(uint _transactionID, uint _ruling) internal {
+    function _executeRuling(uint _transactionID, uint _ruling) internal {
         // reentrancy check in callers
         require(_ruling <= AMOUNT_OF_CHOICES, "Invalid ruling.");
 

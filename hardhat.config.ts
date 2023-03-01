@@ -12,20 +12,14 @@ dotenv.config();
 
 const config: HardhatUserConfig = {
   solidity: {
-    compilers: [
-      { version: '0.4.24' },
-      { version: '0.8.19' }
-    ]
+    version: '0.8.19'
   },
   namedAccounts: {
     deployer: 0,
   },
   gasReporter: {
     enabled: (process.env.REPORT_GAS) ? true : false,
-    excludeContracts: [
-      'Rogue',
-      'AutoAppealableArbitrator', 'CentralizedArbitrator',
-      'MultipleArbitrableTransaction', 'MultipleArbitrableTransactionWithFee']
+    excludeContracts: ['Rogue']
   },
   networks: {
     goerli: {
@@ -35,8 +29,7 @@ const config: HardhatUserConfig = {
     hardhat: {
       accounts: {
         mnemonic: process.env.HARDHAT_MNEMONIC || HARDHAT_NETWORK_MNEMONIC
-      },
-      deploy: ['deploy-hardhat']
+      }
     }
   },
   etherscan: {
