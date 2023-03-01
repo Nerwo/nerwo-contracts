@@ -382,15 +382,15 @@ contract NerwoEscrowV1 is IArbitrable, UUPSUpgradeable, OwnableUpgradeable, Vers
         require(_msgSender() == transaction.sender, "The caller must be the sender.");
 
         uint arbitrationCost = arbitrator.arbitrationCost(arbitratorExtraData);
-        transaction.senderFee += msg.value;
+        transaction.senderFee = msg.value;
 
         // Require that the total pay at least the arbitration cost.
-        require(transaction.senderFee >= arbitrationCost, "The sender fee must cover arbitration costs.");
+        require(transaction.senderFee == arbitrationCost, "The sender fee must cover arbitration costs.");
 
         transaction.lastInteraction = block.timestamp;
 
         // The receiver still has to pay. This can also happen if he has paid, but arbitrationCost has increased.
-        if (transaction.receiverFee < arbitrationCost) {
+        if (transaction.receiverFee == 0) {
             transaction.status = Status.WaitingReceiver;
             emit HasToPayFee(_transactionID, Party.Receiver);
         } else {
@@ -413,13 +413,14 @@ contract NerwoEscrowV1 is IArbitrable, UUPSUpgradeable, OwnableUpgradeable, Vers
         require(_msgSender() == transaction.receiver, "The caller must be the receiver.");
 
         uint arbitrationCost = arbitrator.arbitrationCost(arbitratorExtraData);
-        transaction.receiverFee += msg.value;
+        transaction.receiverFee = msg.value;
+
         // Require that the total paid to be at least the arbitration cost.
-        require(transaction.receiverFee >= arbitrationCost, "The receiver fee must cover arbitration costs.");
+        require(transaction.receiverFee == arbitrationCost, "The receiver fee must cover arbitration costs.");
 
         transaction.lastInteraction = block.timestamp;
         // The sender still has to pay. This can also happen if he has paid, but arbitrationCost has increased.
-        if (transaction.senderFee < arbitrationCost) {
+        if (transaction.senderFee == 0) {
             transaction.status = Status.WaitingSender;
             emit HasToPayFee(_transactionID, Party.Sender);
         } else {
@@ -444,20 +445,6 @@ contract NerwoEscrowV1 is IArbitrable, UUPSUpgradeable, OwnableUpgradeable, Vers
         );
         disputeIDtoTransactionID[transaction.disputeId] = _transactionID;
         emit Dispute(arbitrator, transaction.disputeId, _transactionID, _transactionID);
-
-        // Refund sender if it overpaid.
-        if (transaction.senderFee > _arbitrationCost) {
-            uint extraFeeSender = transaction.senderFee - _arbitrationCost;
-            transaction.senderFee = _arbitrationCost;
-            transaction.sender.call{value: extraFeeSender}("");
-        }
-
-        // Refund receiver if it overpaid.
-        if (transaction.receiverFee > _arbitrationCost) {
-            uint extraFeeReceiver = transaction.receiverFee - _arbitrationCost;
-            transaction.receiverFee = _arbitrationCost;
-            transaction.receiver.call{value: extraFeeReceiver}("");
-        }
     }
 
     /** @dev Submit a reference to evidence. EVENT.

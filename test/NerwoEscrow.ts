@@ -139,10 +139,7 @@ describe('NerwoEscrow', function () {
     let amount = ethers.utils.parseEther('0.002');
     let _transactionID = await createTransaction(sender, receiver, amount);
 
-    const senderFee = ethers.utils.parseEther('0.0001');
-    const receiverFee = ethers.utils.parseEther('0.0002');
-    const receiverArbitrationFee = receiverFee <= arbitrationPrice ? receiverFee : arbitrationPrice;
-    let _disputeID = await createDispute(_transactionID, sender, receiver, senderFee, receiverFee);
+    let _disputeID = await createDispute(_transactionID, sender, receiver, arbitrationPrice, arbitrationPrice);
 
     await expect(escrow.connect(sender).pay(_transactionID, amount)).to.revertedWith(
       "The transaction shouldn't be disputed.");
@@ -160,7 +157,7 @@ describe('NerwoEscrow', function () {
 
     // SENDER_WINS -> no platform fee
     expect(await platform.getBalance()).to.be.equal(platformBalance);
-    expect(await sender.getBalance()).to.be.equal(senderBalance.add(receiverArbitrationFee).add(amount));
+    expect(await sender.getBalance()).to.be.equal(senderBalance.add(arbitrationPrice).add(amount));
     expect(await receiver.getBalance()).to.be.equal(receiverBalance);
 
     // new Transaction
@@ -168,7 +165,7 @@ describe('NerwoEscrow', function () {
     _transactionID = await createTransaction(sender, receiver, amount);
 
     // new Dispute
-    _disputeID = await createDispute(_transactionID, sender, receiver, senderFee, receiverFee);
+    _disputeID = await createDispute(_transactionID, sender, receiver, arbitrationPrice, arbitrationPrice);
 
     platformBalance = await platform.getBalance();
     senderBalance = await sender.getBalance();
@@ -184,7 +181,7 @@ describe('NerwoEscrow', function () {
     expect(await sender.getBalance()).to.be.equal(senderBalance);
 
     const receiverGain = (await receiver.getBalance()).sub(receiverBalance);
-    const expectedGain = receiverArbitrationFee.add(amount).sub(feeAmount);
+    const expectedGain = arbitrationPrice.add(amount).sub(feeAmount);
     expect(receiverGain).to.be.equal(expectedGain);
   });
 
@@ -217,18 +214,21 @@ describe('NerwoEscrow', function () {
     rogueBalanceCheck = rogueBalanceCheck.sub(amount);
     expect(await rogue.getBalance()).to.be.equal(rogueBalanceCheck);
 
-    const receiverFee = ethers.utils.parseEther('0.0002');
-    const receiverArbitrationFee = receiverFee <= arbitrationPrice ? receiverFee : arbitrationPrice;
+    await expect(escrow.connect(receiver).payArbitrationFeeByReceiver(_transactionID, {
+      value: arbitrationPrice.mul(2)
+    })).to.be.rejectedWith('The receiver fee must cover arbitration costs.');
 
-    await escrow.connect(receiver).payArbitrationFeeByReceiver(_transactionID, { value: receiverFee });
-    escrowBalanceCheck = escrowBalanceCheck.add(receiverFee);
+    await escrow.connect(receiver).payArbitrationFeeByReceiver(_transactionID, { value: arbitrationPrice });
+    escrowBalanceCheck = escrowBalanceCheck.add(arbitrationPrice);
     expect(await escrow.getBalance()).to.be.equal(escrowBalanceCheck);
 
-    amount = ethers.utils.parseEther('1.0');
     await rogue.setAction(constants.RogueAction.PayArbitrationFeeBySender);
     await rogue.setTransaction(_transactionID);
-    await rogue.setAmount(amount);
 
+    await rogue.setAmount(arbitrationPrice.mul(2));
+    await expect(rogue.payArbitrationFeeBySender(_transactionID)).to.be.rejectedWith('The sender fee must cover arbitration costs.');
+
+    await rogue.setAmount(arbitrationPrice);
     console.log(`Rogue balance before: ${ethers.utils.formatEther(await rogue.getBalance())}`);
     txResponse = await rogue.payArbitrationFeeBySender(_transactionID);
     event = await utils.findEventByName(txResponse, 'Dispute');
