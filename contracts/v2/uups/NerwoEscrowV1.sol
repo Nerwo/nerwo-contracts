@@ -132,6 +132,13 @@ contract NerwoEscrowV1 is IArbitrable, UUPSUpgradeable, OwnableUpgradeable, Vers
         string _evidence
     );
 
+    /** @dev To be emitted if a transfer to a party fails
+     *  @param recipient The target of the failed operation
+     *  @param amount The amount
+     *  @param data Failed call data
+     */
+    event SendFailed(address recipient, uint amount, bytes data);
+
     // **************************** //
     // *    Arbitrable functions  * //
     // *    Modifying the state   * //
@@ -270,6 +277,17 @@ contract NerwoEscrowV1 is IArbitrable, UUPSUpgradeable, OwnableUpgradeable, Vers
         return transactions.length - 1;
     }
 
+    /** @dev Send to recipent, emit a log when fails
+     *  @param target To address to send to
+     *  @param amount Transaction amount
+     */
+    function _sendTo(address payable target, uint amount) internal {
+        (bool success, bytes memory data) = target.call{value: amount}("");
+        if (!success) {
+            emit SendFailed(target, amount, data);
+        }
+    }
+
     /** @dev Pay receiver. To be called if the good or service is provided.
      *  @param _transactionID The index of the transaction.
      *  @param _amount Amount to pay in wei.
@@ -285,7 +303,7 @@ contract NerwoEscrowV1 is IArbitrable, UUPSUpgradeable, OwnableUpgradeable, Vers
         uint feeAmount = calculateFeeRecipientAmount(_amount);
         feeRecipient.transfer(feeAmount);
 
-        transaction.receiver.call{value: _amount - feeAmount}("");
+        _sendTo(transaction.receiver, _amount - feeAmount);
 
         emit Payment(_transactionID, _amount, _msgSender());
         emit FeeRecipientPayment(_transactionID, feeAmount);
@@ -305,7 +323,7 @@ contract NerwoEscrowV1 is IArbitrable, UUPSUpgradeable, OwnableUpgradeable, Vers
         );
 
         transaction.amount -= _amountReimbursed; // reentrancy safe
-        transaction.sender.call{value: _amountReimbursed}("");
+        _sendTo(transaction.sender, _amountReimbursed);
 
         emit Payment(_transactionID, _amountReimbursed, _msgSender());
     }
@@ -328,8 +346,7 @@ contract NerwoEscrowV1 is IArbitrable, UUPSUpgradeable, OwnableUpgradeable, Vers
 
         uint feeAmount = calculateFeeRecipientAmount(amount);
         feeRecipient.transfer(feeAmount);
-
-        transaction.receiver.call{value: amount - feeAmount}("");
+        _sendTo(transaction.receiver, amount - feeAmount);
 
         emit FeeRecipientPayment(_transactionID, feeAmount);
     }
@@ -345,7 +362,7 @@ contract NerwoEscrowV1 is IArbitrable, UUPSUpgradeable, OwnableUpgradeable, Vers
         if (transaction.receiverFee != 0) {
             uint receiverFee = transaction.receiverFee;
             transaction.receiverFee = 0; // reentrancy safe
-            transaction.receiver.call{value: receiverFee}("");
+            _sendTo(transaction.receiver, receiverFee);
         }
 
         // reentrancy safe -> Status.Resolved
@@ -363,7 +380,7 @@ contract NerwoEscrowV1 is IArbitrable, UUPSUpgradeable, OwnableUpgradeable, Vers
         if (transaction.senderFee != 0) {
             uint senderFee = transaction.senderFee;
             transaction.senderFee = 0; // reentrancy safe
-            transaction.sender.call{value: senderFee}("");
+            _sendTo(transaction.sender, senderFee);
         }
 
         // reentrancy safe -> Status.Resolved
@@ -506,12 +523,12 @@ contract NerwoEscrowV1 is IArbitrable, UUPSUpgradeable, OwnableUpgradeable, Vers
         // Give the arbitration fee back.
         // Note that we use send to prevent a party from blocking the execution.
         if (_ruling == SENDER_WINS) {
-            transaction.sender.call{value: senderArbitrationFee + amount}("");
+            _sendTo(transaction.sender, senderArbitrationFee + amount);
         } else if (_ruling == RECEIVER_WINS) {
             feeAmount = calculateFeeRecipientAmount(amount);
             feeRecipient.transfer(feeAmount);
 
-            transaction.receiver.call{value: receiverArbitrationFee + amount - feeAmount}("");
+            _sendTo(transaction.receiver, receiverArbitrationFee + amount - feeAmount);
 
             emit FeeRecipientPayment(_transactionID, feeAmount);
         } else {
@@ -521,8 +538,8 @@ contract NerwoEscrowV1 is IArbitrable, UUPSUpgradeable, OwnableUpgradeable, Vers
             feeAmount = calculateFeeRecipientAmount(splitAmount);
             feeRecipient.transfer(feeAmount);
 
-            transaction.sender.call{value: splitArbitration + splitAmount}("");
-            transaction.receiver.call{value: splitArbitration + splitAmount - feeAmount}("");
+            _sendTo(transaction.sender, splitArbitration + splitAmount);
+            _sendTo(transaction.receiver, splitArbitration + splitAmount - feeAmount);
 
             emit FeeRecipientPayment(_transactionID, feeAmount);
         }
