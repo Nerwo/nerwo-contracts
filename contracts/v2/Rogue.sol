@@ -83,6 +83,9 @@ contract Rogue {
             console.log("Rogue: receive() calling payArbitrationFeeBySender pay(%s, %s)", transactionID, amount);
             caller.payArbitrationFeeBySender{value: amount}(transactionID);
             console.log("Rogue: receive() called payArbitrationFeeBySender()");
+        } else if (action == Action.Revert) {
+            console.log("Rogue: reverting");
+            revert("Rogue: reverted");
         } else {
             revert("Rogue: invalid action");
         }
