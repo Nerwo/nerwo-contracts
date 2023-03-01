@@ -189,7 +189,6 @@ contract MultipleArbitrableTransactionWithFee is MultipleArbitrableTransaction {
 
     /**
      * @dev modifies Arbitrator and paramameters
-     * Internal function without access restriction.
      */
     function setArbitrator(
         Arbitrator _arbitrator,
