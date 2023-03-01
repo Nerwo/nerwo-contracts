@@ -1,5 +1,5 @@
 import { expect } from 'chai';
-import { ethers, upgrades } from 'hardhat';
+import { userConfig, ethers, upgrades } from 'hardhat';
 import { BigNumber } from 'ethers';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { BaseContract } from '@ethersproject/contracts';
@@ -8,6 +8,16 @@ import { NerwoCentralizedArbitratorV1, NerwoEscrowV1, Rogue } from '../typechain
 
 import * as constants from './constants';
 import * as utils from './utils';
+
+// Wait so the reporter has time to fetch and return prices from APIs.
+// https://github.com/cgewecke/eth-gas-reporter/issues/254
+if (userConfig.gasReporter?.enabled) {
+  describe('eth-gas-reporter workaround', () => {
+    it('should kill time', (done) => {
+      setTimeout(done, 2000);
+    });
+  });
+}
 
 describe('NerwoEscrow', function () {
   const arbitrationPrice = ethers.utils.parseEther('0.0001');
