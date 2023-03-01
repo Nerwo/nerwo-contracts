@@ -117,7 +117,7 @@ contract NerwoEscrowV1 is IArbitrable, UUPSUpgradeable, OwnableUpgradeable, Vers
         uint _evidenceGroupID
     );
 
-    /** @dev To be raised when evidence are submitted. Should point to the ressource (evidences are not to be stored on chain due to gas considerations).
+    /** @dev To be raised when evidence are submitted. Should point to the resource (evidences are not to be stored on chain due to gas considerations).
      *  @param _arbitrator The arbitrator of the contract.
      *  @param _evidenceGroupID Unique identifier of the evidence group the evidence belongs to.
      *  @param _party The address of the party submiting the evidence. Note that 0x0 refers to evidence not submitted by any party.
