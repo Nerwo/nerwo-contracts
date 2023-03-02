@@ -37,6 +37,7 @@ contract NerwoCentralizedArbitratorV1 is IArbitrator, UUPSUpgradeable, OwnableUp
         require(msg.value >= arbitrationCost(_extraData), "Not enough ETH to cover arbitration costs.");
         _;
     }
+
     modifier requireAppealFee(uint256 _disputeID, bytes calldata _extraData) {
         require(msg.value >= appealCost(_disputeID, _extraData), "Not enough ETH to cover appeal costs.");
         _;
@@ -117,7 +118,7 @@ contract NerwoCentralizedArbitratorV1 is IArbitrator, UUPSUpgradeable, OwnableUp
      *  _extraData Can be used to give additional info on the dispute to be created.
      *  @return disputeID ID of the dispute created.
      */
-    function createDispute(uint256 _choices, bytes calldata) public payable returns (uint256 disputeID) {
+    function createDispute(uint256 _choices, bytes calldata) external payable returns (uint256 disputeID) {
         // Create the dispute and return its number.
         disputes.push(
             Dispute({
@@ -198,7 +199,7 @@ contract NerwoCentralizedArbitratorV1 is IArbitrator, UUPSUpgradeable, OwnableUp
     function appeal(
         uint256 _disputeID,
         bytes calldata _extraData
-    ) public payable requireAppealFee(_disputeID, _extraData) {
+    ) external payable requireAppealFee(_disputeID, _extraData) {
         Dispute storage dispute = disputes[_disputeID];
         require(dispute.status == DisputeStatus.Appealable, "The dispute must be appealable.");
         require(
@@ -215,7 +216,7 @@ contract NerwoCentralizedArbitratorV1 is IArbitrator, UUPSUpgradeable, OwnableUp
      *  @param _disputeID ID of the dispute to rule.
      *  @return status The status of the dispute.
      */
-    function disputeStatus(uint256 _disputeID) public view returns (DisputeStatus status) {
+    function disputeStatus(uint256 _disputeID) external view returns (DisputeStatus status) {
         Dispute storage dispute = disputes[_disputeID];
         if (disputes[_disputeID].status == DisputeStatus.Appealable && block.timestamp >= dispute.appealPeriodEnd)
             // If the appeal period is over, consider it solved even if rule has not been called yet.
@@ -227,7 +228,7 @@ contract NerwoCentralizedArbitratorV1 is IArbitrator, UUPSUpgradeable, OwnableUp
      *  @param _disputeID ID of the dispute.
      *  @return ruling The ruling which have been given or which would be given if no appeals are raised.
      */
-    function currentRuling(uint256 _disputeID) public view returns (uint256 ruling) {
+    function currentRuling(uint256 _disputeID) external view returns (uint256 ruling) {
         return disputes[_disputeID].ruling;
     }
 
@@ -235,7 +236,7 @@ contract NerwoCentralizedArbitratorV1 is IArbitrator, UUPSUpgradeable, OwnableUp
      *  @param _disputeID ID of the dispute.
      *  @return start end The start and end of the period.
      */
-    function appealPeriod(uint256 _disputeID) public view returns (uint256 start, uint256 end) {
+    function appealPeriod(uint256 _disputeID) external view returns (uint256 start, uint256 end) {
         Dispute storage dispute = disputes[_disputeID];
         return (dispute.appealPeriodStart, dispute.appealPeriodEnd);
     }

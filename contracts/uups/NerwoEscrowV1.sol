@@ -95,7 +95,12 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
      *  @param _receiver The address of the receiver.
      *  @param _amount The initial amount in the transaction.
      */
-    event TransactionCreated(uint256 _transactionID, address indexed _sender, address indexed _receiver, uint256 _amount);
+    event TransactionCreated(
+        uint256 _transactionID,
+        address indexed _sender,
+        address indexed _receiver,
+        uint256 _amount
+    );
 
     /** @dev To be emitted when a fee is received by the feeRecipient.
      *  @param _transactionID The index of the transaction.
@@ -212,7 +217,7 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
         __Ownable_init();
     }*/
 
-    function getBalance() public view returns (uint256) {
+    function getBalance() external view returns (uint256) {
         return address(this).balance;
     }
 
@@ -222,7 +227,7 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
         address _feeRecipient,
         uint256 _feeRecipientBasisPoint,
         uint256 _feeTimeout
-    ) public onlyOwner {
+    ) external onlyOwner {
         _setArbitrator(_arbitrator, _arbitratorExtraData, _feeRecipient, _feeRecipientBasisPoint, _feeTimeout);
     }
 
@@ -261,7 +266,7 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
     /** @dev Change Fee Recipient.
      *  @param _newFeeRecipient Address of the new Fee Recipient.
      */
-    function changeFeeRecipient(address _newFeeRecipient) public {
+    function changeFeeRecipient(address _newFeeRecipient) external {
         require(_msgSender() == feeRecipient, "The caller must be the current Fee Recipient");
         feeRecipient = payable(_newFeeRecipient);
 
@@ -278,7 +283,7 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
         uint256 _timeoutPayment,
         address _receiver,
         string calldata _metaEvidence
-    ) public payable returns (uint256 transactionID) {
+    ) external payable returns (uint256 transactionID) {
         transactions.push(
             Transaction({
                 sender: payable(_msgSender()),
@@ -314,7 +319,7 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
      *  @param _transactionID The index of the transaction.
      *  @param _amount Amount to pay in wei.
      */
-    function pay(uint256 _transactionID, uint256 _amount) public nonReentrant {
+    function pay(uint256 _transactionID, uint256 _amount) external nonReentrant {
         Transaction storage transaction = transactions[_transactionID];
         require(transaction.sender == _msgSender(), "The caller must be the sender.");
         require(transaction.status == Status.NoDispute, "The transaction shouldn't be disputed.");
@@ -335,7 +340,7 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
      *  @param _transactionID The index of the transaction.
      *  @param _amountReimbursed Amount to reimburse in wei.
      */
-    function reimburse(uint256 _transactionID, uint256 _amountReimbursed) public nonReentrant {
+    function reimburse(uint256 _transactionID, uint256 _amountReimbursed) external nonReentrant {
         Transaction storage transaction = transactions[_transactionID];
         require(transaction.receiver == _msgSender(), "The caller must be the receiver.");
         require(transaction.status == Status.NoDispute, "The transaction shouldn't be disputed.");
@@ -376,7 +381,7 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
     /** @dev Reimburse sender if receiver fails to pay the fee.
      *  @param _transactionID The index of the transaction.
      */
-    function timeOutBySender(uint256 _transactionID) public nonReentrant {
+    function timeOutBySender(uint256 _transactionID) external nonReentrant {
         Transaction storage transaction = transactions[_transactionID];
         require(transaction.status == Status.WaitingReceiver, "The transaction is not waiting on the receiver.");
         require(block.timestamp - transaction.lastInteraction >= feeTimeout, "Timeout time has not passed yet.");
@@ -394,7 +399,7 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
     /** @dev Pay receiver if sender fails to pay the fee.
      *  @param _transactionID The index of the transaction.
      */
-    function timeOutByReceiver(uint256 _transactionID) public nonReentrant {
+    function timeOutByReceiver(uint256 _transactionID) external nonReentrant {
         Transaction storage transaction = transactions[_transactionID];
         require(transaction.status == Status.WaitingSender, "The transaction is not waiting on the sender.");
         require(block.timestamp - transaction.lastInteraction >= feeTimeout, "Timeout time has not passed yet.");
@@ -414,7 +419,7 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
      *  This is not a vulnerability as the arbitrator can rule in favor of one party anyway.
      *  @param _transactionID The index of the transaction.
      */
-    function payArbitrationFeeBySender(uint256 _transactionID) public payable nonReentrant {
+    function payArbitrationFeeBySender(uint256 _transactionID) external payable nonReentrant {
         Transaction storage transaction = transactions[_transactionID];
         require(
             transaction.status < Status.DisputeCreated,
@@ -445,7 +450,7 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
      *  Note that this function mirrors payArbitrationFeeBySender.
      *  @param _transactionID The index of the transaction.
      */
-    function payArbitrationFeeByReceiver(uint256 _transactionID) public payable nonReentrant {
+    function payArbitrationFeeByReceiver(uint256 _transactionID) external payable nonReentrant {
         Transaction storage transaction = transactions[_transactionID];
         require(
             transaction.status < Status.DisputeCreated,
@@ -492,7 +497,7 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
      *  @param _transactionID The index of the transaction.
      *  @param _evidence A link to an evidence using its URI.
      */
-    function submitEvidence(uint256 _transactionID, string calldata _evidence) public {
+    function submitEvidence(uint256 _transactionID, string calldata _evidence) external {
         Transaction storage transaction = transactions[_transactionID];
         require(
             _msgSender() == transaction.sender || _msgSender() == transaction.receiver,
@@ -574,7 +579,7 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
     /** @dev Getter to know the count of transactions.
      *  @return countTransactions The count of transactions.
      */
-    function getCountTransactions() public view returns (uint256 countTransactions) {
+    function getCountTransactions() external view returns (uint256 countTransactions) {
         return transactions.length;
     }
 
@@ -585,7 +590,7 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
      *  @return transactionIDs The transaction IDs.
      */
     // FIXME: return calldata?
-    function getTransactionIDsByAddress(address _address) public view returns (uint256[] memory transactionIDs) {
+    function getTransactionIDsByAddress(address _address) external view returns (uint256[] memory transactionIDs) {
         uint256 count = 0;
         for (uint256 i = 0; i < transactions.length; i++) {
             if (transactions[i].sender == _address || transactions[i].receiver == _address) count++;
