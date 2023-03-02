@@ -31,7 +31,7 @@ contract NerwoCentralizedArbitratorV1 is IArbitrator, UUPSUpgradeable, OwnableUp
         uint256 appealCost; // The cost to appeal. 0 before it is appealable.
     }
 
-    Dispute[] public disputes;
+    Dispute[] private disputes;
 
     modifier requireArbitrationFee(bytes calldata _extraData) {
         require(msg.value >= arbitrationCost(_extraData), "Not enough ETH to cover arbitration costs.");

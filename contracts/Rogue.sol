@@ -7,29 +7,7 @@ pragma solidity ^0.8.0;
 /* solhint-disable no-console */
 import {console} from "hardhat/console.sol";
 
-enum Status {
-    NoDispute,
-    WaitingSender,
-    WaitingReceiver,
-    DisputeCreated,
-    Resolved
-}
-
-struct Transaction {
-    Status status;
-    address payable sender;
-    address payable receiver;
-    uint64 timeoutPayment; // Time in seconds after which the transaction can be automatically executed if not disputed.
-    uint64 lastInteraction; // Last interaction for the dispute procedure.
-    uint256 amount;
-    uint256 disputeId; // If dispute exists, the ID of the dispute.
-    uint256 senderFee; // Total fees paid by the sender.
-    uint256 receiverFee; // Total fees paid by the receiver.
-}
-
 interface Escrow {
-    function transactions(uint _transactionID) external returns (Transaction calldata transaction);
-
     function createTransaction(
         uint _timeoutPayment,
         address _receiver,
@@ -56,7 +34,6 @@ contract Rogue {
     uint public amount = 0;
 
     event TransactionCreated(uint _transactionID, address indexed _sender, address indexed _receiver, uint _amount);
-    event Dispute(address indexed _arbitrator, uint indexed _disputeID, uint _metaEvidenceID, uint _evidenceGroupID);
 
     constructor(address _escrow) {
         escrow = Escrow(_escrow);
@@ -120,14 +97,8 @@ contract Rogue {
     }
 
     function payArbitrationFeeBySender(uint _transactionID) external payable {
-        Transaction memory transaction = escrow.transactions(_transactionID);
-        require(transaction.sender == address(this), "I'm not the transaction sender");
-
         console.log("Rogue: payArbitrationFeeBySender %s", amount);
-
         escrow.payArbitrationFeeBySender{value: amount}(_transactionID);
-
-        emit Dispute(address(0), transaction.disputeId, 0, 0);
     }
 
     function getBalance() public view returns (uint256) {

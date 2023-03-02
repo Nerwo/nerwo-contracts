@@ -197,8 +197,10 @@ describe('NerwoEscrow', function () {
 
     await expect(async () => {
       tx = await rogue.payArbitrationFeeBySender(_transactionID);
-      event = await utils.findEventByName(tx, 'Dispute');
-      ({ _disputeID } = event.args!);
+      const events = await escrow.queryFilter(escrow.filters.Dispute(), tx.blockNumber, tx.blockNumber);
+      expect(events).to.be.an('array').that.lengthOf(1);
+      expect(events[0].args!).is.not.undefined;
+      ({ _disputeID } = events[0].args!);
       return tx;
     }).to.changeEtherBalance(rogue, -arbitrationPrice);
 

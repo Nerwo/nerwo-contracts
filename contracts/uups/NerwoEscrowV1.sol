@@ -61,14 +61,14 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
     // ReentrancyGuard
     uint256 private _status;
 
-    Transaction[] public transactions;
+    Transaction[] private transactions;
     bytes public arbitratorExtraData; // Extra data to set up the arbitration.
     IArbitrator public arbitrator; // Address of the arbitrator contract.
 
     uint256 public feeTimeout; // Time in seconds a party can take to pay arbitration fees before being considered unresponding and lose the dispute.
 
-    address payable private feeRecipient; // Address which receives a share of receiver payment.
-    uint256 private feeRecipientBasisPoint; // The share of fee to be received by the feeRecipient, down to 2 decimal places as 550 = 5.5%.
+    address payable public feeRecipient; // Address which receives a share of receiver payment.
+    uint256 public feeRecipientBasisPoint; // The share of fee to be received by the feeRecipient, down to 2 decimal places as 550 = 5.5%.
 
     mapping(uint256 => uint256) public disputeIDtoTransactionID; // One-to-one relationship between the dispute and the transaction.
 
