@@ -22,15 +22,11 @@ contract NerwoCentralizedArbitratorV1 is IArbitrator, UUPSUpgradeable, OwnableUp
 
     struct Dispute {
         IArbitrable arbitrated; // The contract requiring arbitration.
-
         DisputeStatus status; // The status of the dispute.
-
         uint8 choices; // The amount of possible choices, 0 excluded.
         uint8 ruling; // The current ruling.
-
         uint64 appealPeriodStart; // The start of the appeal period. 0 before it is appealable.
         uint64 appealPeriodEnd; // The end of the appeal Period. 0 before it is appealable.
-
         uint256 fees; // The total amount of fees collected by the arbitrator.
         uint256 appealCost; // The cost to appeal. 0 before it is appealable.
     }
