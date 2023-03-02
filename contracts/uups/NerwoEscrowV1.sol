@@ -47,15 +47,15 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
     }
 
     struct Transaction {
+        Status status;
         address payable sender;
         address payable receiver;
-        uint256 amount;
         uint64 timeoutPayment; // Time in seconds after which the transaction can be automatically executed if not disputed.
+        uint64 lastInteraction; // Last interaction for the dispute procedure.
+        uint256 amount;
         uint256 disputeId; // If dispute exists, the ID of the dispute.
         uint256 senderFee; // Total fees paid by the sender.
         uint256 receiverFee; // Total fees paid by the receiver.
-        uint64 lastInteraction; // Last interaction for the dispute procedure.
-        Status status;
     }
 
     // ReentrancyGuard
