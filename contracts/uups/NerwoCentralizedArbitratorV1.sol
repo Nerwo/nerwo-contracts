@@ -37,7 +37,7 @@ contract NerwoCentralizedArbitratorV1 is IArbitrator, UUPSUpgradeable, OwnableUp
         require(msg.value >= arbitrationCost(_extraData), "Not enough ETH to cover arbitration costs.");
         _;
     }
-    modifier requireAppealFee(uint _disputeID, bytes calldata _extraData) {
+    modifier requireAppealFee(uint256 _disputeID, bytes calldata _extraData) {
         require(msg.value >= appealCost(_disputeID, _extraData), "Not enough ETH to cover appeal costs.");
         _;
     }
@@ -46,13 +46,13 @@ contract NerwoCentralizedArbitratorV1 is IArbitrator, UUPSUpgradeable, OwnableUp
      *  @param _disputeID ID of the dispute.
      *  @param _arbitrable The contract which created the dispute.
      */
-    event AppealPossible(uint indexed _disputeID, IArbitrable indexed _arbitrable);
+    event AppealPossible(uint256 indexed _disputeID, IArbitrable indexed _arbitrable);
 
     /** @dev To be raised when the current ruling is appealed.
      *  @param _disputeID ID of the dispute.
      *  @param _arbitrable The contract which created the dispute.
      */
-    event AppealDecision(uint indexed _disputeID, IArbitrable indexed _arbitrable);
+    event AppealDecision(uint256 indexed _disputeID, IArbitrable indexed _arbitrable);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -88,7 +88,7 @@ contract NerwoCentralizedArbitratorV1 is IArbitrator, UUPSUpgradeable, OwnableUp
     /** @dev Set the arbitration price. Only callable by the owner.
      *  @param _arbitrationPrice Amount to be paid for arbitration.
      */
-    function setArbitrationPrice(uint _arbitrationPrice) external onlyOwner {
+    function setArbitrationPrice(uint256 _arbitrationPrice) external onlyOwner {
         arbitrationPrice = _arbitrationPrice;
     }
 
@@ -96,7 +96,7 @@ contract NerwoCentralizedArbitratorV1 is IArbitrator, UUPSUpgradeable, OwnableUp
      *  _extraData Not used by this contract.
      *  @return fee Amount to be paid.
      */
-    function arbitrationCost(bytes calldata) public view returns (uint fee) {
+    function arbitrationCost(bytes calldata) public view returns (uint256 fee) {
         return arbitrationPrice;
     }
 
@@ -105,7 +105,7 @@ contract NerwoCentralizedArbitratorV1 is IArbitrator, UUPSUpgradeable, OwnableUp
      *  _extraData Not used by this contract.
      *  @return fee Amount to be paid.
      */
-    function appealCost(uint _disputeID, bytes calldata) public view returns (uint fee) {
+    function appealCost(uint256 _disputeID, bytes calldata) public view returns (uint256 fee) {
         Dispute memory dispute = disputes[_disputeID];
         if (dispute.status == DisputeStatus.Appealable) return dispute.appealCost;
         else return NOT_PAYABLE_VALUE;
@@ -117,7 +117,7 @@ contract NerwoCentralizedArbitratorV1 is IArbitrator, UUPSUpgradeable, OwnableUp
      *  _extraData Can be used to give additional info on the dispute to be created.
      *  @return disputeID ID of the dispute created.
      */
-    function createDispute(uint _choices, bytes calldata) public payable returns (uint disputeID) {
+    function createDispute(uint256 _choices, bytes calldata) public payable returns (uint256 disputeID) {
         // Create the dispute and return its number.
         disputes.push(
             Dispute({
@@ -184,7 +184,7 @@ contract NerwoCentralizedArbitratorV1 is IArbitrator, UUPSUpgradeable, OwnableUp
      *  @param _disputeID The ID of the dispute to update.
      *  @param _appealCost The new cost to appeal this ruling.
      */
-    function changeAppealFee(uint _disputeID, uint _appealCost) external onlyOwner {
+    function changeAppealFee(uint256 _disputeID, uint256 _appealCost) external onlyOwner {
         Dispute storage dispute = disputes[_disputeID];
         require(dispute.status == DisputeStatus.Appealable, "The dispute must be appealable.");
 
@@ -196,7 +196,7 @@ contract NerwoCentralizedArbitratorV1 is IArbitrator, UUPSUpgradeable, OwnableUp
      *  @param _extraData Can be used to give extra info on the appeal.
      */
     function appeal(
-        uint _disputeID,
+        uint256 _disputeID,
         bytes calldata _extraData
     ) public payable requireAppealFee(_disputeID, _extraData) {
         Dispute storage dispute = disputes[_disputeID];
@@ -215,7 +215,7 @@ contract NerwoCentralizedArbitratorV1 is IArbitrator, UUPSUpgradeable, OwnableUp
      *  @param _disputeID ID of the dispute to rule.
      *  @return status The status of the dispute.
      */
-    function disputeStatus(uint _disputeID) public view returns (DisputeStatus status) {
+    function disputeStatus(uint256 _disputeID) public view returns (DisputeStatus status) {
         Dispute storage dispute = disputes[_disputeID];
         if (disputes[_disputeID].status == DisputeStatus.Appealable && block.timestamp >= dispute.appealPeriodEnd)
             // If the appeal period is over, consider it solved even if rule has not been called yet.
@@ -227,7 +227,7 @@ contract NerwoCentralizedArbitratorV1 is IArbitrator, UUPSUpgradeable, OwnableUp
      *  @param _disputeID ID of the dispute.
      *  @return ruling The ruling which have been given or which would be given if no appeals are raised.
      */
-    function currentRuling(uint _disputeID) public view returns (uint ruling) {
+    function currentRuling(uint256 _disputeID) public view returns (uint256 ruling) {
         return disputes[_disputeID].ruling;
     }
 
@@ -235,7 +235,7 @@ contract NerwoCentralizedArbitratorV1 is IArbitrator, UUPSUpgradeable, OwnableUp
      *  @param _disputeID ID of the dispute.
      *  @return start end The start and end of the period.
      */
-    function appealPeriod(uint _disputeID) public view returns (uint start, uint end) {
+    function appealPeriod(uint256 _disputeID) public view returns (uint256 start, uint256 end) {
         Dispute storage dispute = disputes[_disputeID];
         return (dispute.appealPeriodStart, dispute.appealPeriodEnd);
     }
