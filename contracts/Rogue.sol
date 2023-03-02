@@ -18,12 +18,12 @@ enum Status {
 struct Transaction {
     address payable sender;
     address payable receiver;
-    uint amount;
-    uint timeoutPayment; // Time in seconds after which the transaction can be automatically executed if not disputed.
-    uint disputeId; // If dispute exists, the ID of the dispute.
-    uint senderFee; // Total fees paid by the sender.
-    uint receiverFee; // Total fees paid by the receiver.
-    uint lastInteraction; // Last interaction for the dispute procedure.
+    uint256 amount;
+    uint64 timeoutPayment; // Time in seconds after which the transaction can be automatically executed if not disputed.
+    uint256 disputeId; // If dispute exists, the ID of the dispute.
+    uint256 senderFee; // Total fees paid by the sender.
+    uint256 receiverFee; // Total fees paid by the receiver.
+    uint64 lastInteraction; // Last interaction for the dispute procedure.
     Status status;
 }
 
