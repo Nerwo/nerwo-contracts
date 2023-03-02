@@ -82,7 +82,7 @@ contract NerwoCentralizedArbitratorV1 is IArbitrator, UUPSUpgradeable, OwnableUp
     ///@dev required by the OZ UUPS module
     function _authorizeUpgrade(address) internal override onlyOwner {}
 
-    function getContractNameWithVersion() public pure override returns (string memory) {
+    function getContractNameWithVersion() external pure override returns (string memory) {
         return CONTRACT_NAME;
     }
 
