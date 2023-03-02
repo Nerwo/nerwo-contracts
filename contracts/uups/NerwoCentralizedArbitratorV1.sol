@@ -176,7 +176,7 @@ contract NerwoCentralizedArbitratorV1 is IArbitrator, UUPSUpgradeable, OwnableUp
         dispute.status = DisputeStatus.Appealable;
         dispute.appealCost = _appealCost;
         dispute.appealPeriodStart = _now;
-        dispute.appealPeriodEnd = uint64(_now + _timeToAppeal); //  just make it fail on overflow
+        dispute.appealPeriodEnd = uint64(_now + _timeToAppeal); //  just let it fail on overflow
 
         emit AppealPossible(_disputeID, dispute.arbitrated);
     }
