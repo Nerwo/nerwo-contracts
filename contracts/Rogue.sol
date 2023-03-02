@@ -9,14 +9,14 @@ import {console} from "hardhat/console.sol";
 
 interface Escrow {
     function createTransaction(
-        uint _timeoutPayment,
+        uint256 _timeoutPayment,
         address _receiver,
         string calldata _metaEvidence
-    ) external payable returns (uint transactionID);
+    ) external payable returns (uint256 transactionID);
 
-    function pay(uint _transactionID, uint _amount) external;
+    function pay(uint256 _transactionID, uint256 _amount) external;
 
-    function payArbitrationFeeBySender(uint _transactionID) external payable;
+    function payArbitrationFeeBySender(uint256 _transactionID) external payable;
 }
 
 contract Rogue {
@@ -30,10 +30,10 @@ contract Rogue {
     Escrow public immutable escrow;
 
     Action public action = Action.None;
-    uint public transactionID = 0;
-    uint public amount = 0;
+    uint256 public transactionID = 0;
+    uint256 public amount = 0;
 
-    event TransactionCreated(uint _transactionID, address indexed _sender, address indexed _receiver, uint _amount);
+    event TransactionCreated(uint256 _transactionID, address indexed _sender, address indexed _receiver, uint256 _amount);
 
     constructor(address _escrow) {
         escrow = Escrow(_escrow);
@@ -46,7 +46,7 @@ contract Rogue {
     }
 
     receive() external payable {
-        console.log("Rogue: receive() action %s - transactionID %s - amount %s", uint(action), transactionID, amount);
+        console.log("Rogue: receive() action %s - transactionID %s - amount %s", uint256(action), transactionID, amount);
 
         Escrow caller = Escrow(msg.sender);
 
@@ -68,35 +68,35 @@ contract Rogue {
         }
     }
 
-    function setAction(uint _action) external {
+    function setAction(uint256 _action) external {
         Action newAction = Action(_action);
         require(newAction <= Action.Revert, "Invalid action");
         action = newAction;
     }
 
-    function setTransaction(uint _transactionID) external {
+    function setTransaction(uint256 _transactionID) external {
         transactionID = _transactionID;
     }
 
-    function setAmount(uint _amount) external {
+    function setAmount(uint256 _amount) external {
         amount = _amount;
     }
 
-    function transferTo(address _to, uint _amount) external payable {
+    function transferTo(address _to, uint256 _amount) external payable {
         require(address(this).balance >= amount, "Not enough funds");
         payable(_to).transfer(_amount);
     }
 
     function createTransaction(
-        uint _timeoutPayment,
+        uint256 _timeoutPayment,
         address _receiver,
         string calldata _metaEvidence
-    ) external payable returns (uint _transactionID) {
+    ) external payable returns (uint256 _transactionID) {
         _transactionID = escrow.createTransaction{value: amount}(_timeoutPayment, _receiver, _metaEvidence);
         emit TransactionCreated(_transactionID, msg.sender, _receiver, amount);
     }
 
-    function payArbitrationFeeBySender(uint _transactionID) external payable {
+    function payArbitrationFeeBySender(uint256 _transactionID) external payable {
         console.log("Rogue: payArbitrationFeeBySender %s", amount);
         escrow.payArbitrationFeeBySender{value: amount}(_transactionID);
     }
