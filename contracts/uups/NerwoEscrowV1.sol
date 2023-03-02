@@ -49,11 +49,11 @@ contract NerwoEscrowV1 is IArbitrable, UUPSUpgradeable, OwnableUpgradeable, Vers
         address payable sender;
         address payable receiver;
         uint amount;
-        uint timeoutPayment; // Time in seconds after which the transaction can be automatically executed if not disputed.
+        uint64 timeoutPayment; // Time in seconds after which the transaction can be automatically executed if not disputed.
         uint disputeId; // If dispute exists, the ID of the dispute.
         uint senderFee; // Total fees paid by the sender.
         uint receiverFee; // Total fees paid by the receiver.
-        uint lastInteraction; // Last interaction for the dispute procedure.
+        uint64 lastInteraction; // Last interaction for the dispute procedure.
         Status status;
     }
 
@@ -283,11 +283,11 @@ contract NerwoEscrowV1 is IArbitrable, UUPSUpgradeable, OwnableUpgradeable, Vers
                 sender: payable(_msgSender()),
                 receiver: payable(_receiver),
                 amount: msg.value,
-                timeoutPayment: _timeoutPayment,
+                timeoutPayment: uint64(_timeoutPayment),
                 disputeId: 0,
                 senderFee: 0,
                 receiverFee: 0,
-                lastInteraction: block.timestamp,
+                lastInteraction: uint64(block.timestamp),
                 status: Status.NoDispute
             })
         );
@@ -427,7 +427,7 @@ contract NerwoEscrowV1 is IArbitrable, UUPSUpgradeable, OwnableUpgradeable, Vers
         // Require that the total pay at least the arbitration cost.
         require(transaction.senderFee == arbitrationCost, "The sender fee must cover arbitration costs.");
 
-        transaction.lastInteraction = block.timestamp;
+        transaction.lastInteraction = uint64(block.timestamp);
 
         // The receiver still has to pay. This can also happen if he has paid, but arbitrationCost has increased.
         if (transaction.receiverFee == 0) {
@@ -458,7 +458,7 @@ contract NerwoEscrowV1 is IArbitrable, UUPSUpgradeable, OwnableUpgradeable, Vers
         // Require that the total paid to be at least the arbitration cost.
         require(transaction.receiverFee == arbitrationCost, "The receiver fee must cover arbitration costs.");
 
-        transaction.lastInteraction = block.timestamp;
+        transaction.lastInteraction = uint64(block.timestamp);
         // The sender still has to pay. This can also happen if he has paid, but arbitrationCost has increased.
         if (transaction.senderFee == 0) {
             transaction.status = Status.WaitingSender;

@@ -17,19 +17,22 @@ contract NerwoCentralizedArbitratorV1 is IArbitrator, UUPSUpgradeable, OwnableUp
         Solved
     }
 
-    uint private arbitrationPrice; // Not public because arbitrationCost already acts as an accessor.
-    uint private constant NOT_PAYABLE_VALUE = (2 ** 256 - 2) / 2; // High value to be sure that the appeal is too expensive.
-    uint private constant UINT_MAX = 2 ** 256 - 1;
+    uint256 private arbitrationPrice; // Not public because arbitrationCost already acts as an accessor.
+    uint256 private constant NOT_PAYABLE_VALUE = (2 ** 256 - 2) / 2; // High value to be sure that the appeal is too expensive.
 
     struct Dispute {
         IArbitrable arbitrated; // The contract requiring arbitration.
-        uint choices; // The amount of possible choices, 0 excluded.
-        uint fees; // The total amount of fees collected by the arbitrator.
-        uint ruling; // The current ruling.
+
         DisputeStatus status; // The status of the dispute.
-        uint appealCost; // The cost to appeal. 0 before it is appealable.
-        uint appealPeriodStart; // The start of the appeal period. 0 before it is appealable.
-        uint appealPeriodEnd; // The end of the appeal Period. 0 before it is appealable.
+
+        uint8 choices; // The amount of possible choices, 0 excluded.
+        uint8 ruling; // The current ruling.
+
+        uint64 appealPeriodStart; // The start of the appeal period. 0 before it is appealable.
+        uint64 appealPeriodEnd; // The end of the appeal Period. 0 before it is appealable.
+
+        uint256 fees; // The total amount of fees collected by the arbitrator.
+        uint256 appealCost; // The cost to appeal. 0 before it is appealable.
     }
 
     Dispute[] public disputes;
@@ -107,7 +110,7 @@ contract NerwoCentralizedArbitratorV1 is IArbitrator, UUPSUpgradeable, OwnableUp
      *  @return fee Amount to be paid.
      */
     function appealCost(uint _disputeID, bytes calldata) public view returns (uint fee) {
-        Dispute storage dispute = disputes[_disputeID];
+        Dispute memory dispute = disputes[_disputeID];
         if (dispute.status == DisputeStatus.Appealable) return dispute.appealCost;
         else return NOT_PAYABLE_VALUE;
     }
@@ -123,7 +126,7 @@ contract NerwoCentralizedArbitratorV1 is IArbitrator, UUPSUpgradeable, OwnableUp
         disputes.push(
             Dispute({
                 arbitrated: IArbitrable(_msgSender()),
-                choices: _choices,
+                choices: uint8(_choices),
                 fees: msg.value,
                 ruling: 0,
                 status: DisputeStatus.Waiting,
@@ -134,7 +137,6 @@ contract NerwoCentralizedArbitratorV1 is IArbitrator, UUPSUpgradeable, OwnableUp
         );
         disputeID = disputes.length - 1;
         emit DisputeCreation(disputeID, IArbitrable(_msgSender()));
-        return disputeID;
     }
 
     /** @dev Give a ruling. UNTRUSTED.
@@ -142,16 +144,17 @@ contract NerwoCentralizedArbitratorV1 is IArbitrator, UUPSUpgradeable, OwnableUp
      *  @param _ruling Ruling given by the arbitrator. Note that 0 means "Not able/wanting to make a decision".
      */
     // FIXME add non reentrant?
-    function giveRuling(uint _disputeID, uint _ruling) external onlyOwner {
+    function giveRuling(uint256 _disputeID, uint256 _ruling) external onlyOwner {
         Dispute storage dispute = disputes[_disputeID];
         require(_ruling <= dispute.choices, "Invalid ruling.");
         require(dispute.status == DisputeStatus.Waiting, "The dispute must be waiting for arbitration.");
 
-        dispute.ruling = _ruling;
+        dispute.ruling = uint8(_ruling);
         dispute.status = DisputeStatus.Solved;
 
-        (bool success,) = payable(_msgSender()).call{value: dispute.fees}("");
+        (bool success, ) = payable(_msgSender()).call{value: dispute.fees}("");
         require(success, "Failed to send dispute fee.");
+
         dispute.arbitrated.rule(_disputeID, _ruling);
     }
 
@@ -162,24 +165,22 @@ contract NerwoCentralizedArbitratorV1 is IArbitrator, UUPSUpgradeable, OwnableUp
      *  @param _timeToAppeal The time to appeal the ruling.
      */
     function giveAppealableRuling(
-        uint _disputeID,
-        uint _ruling,
-        uint _appealCost,
-        uint _timeToAppeal
+        uint256 _disputeID,
+        uint256 _ruling,
+        uint256 _appealCost,
+        uint256 _timeToAppeal
     ) external onlyOwner {
         Dispute storage dispute = disputes[_disputeID];
         require(_ruling <= dispute.choices, "Invalid ruling.");
         require(dispute.status == DisputeStatus.Waiting, "The dispute must be waiting for arbitration.");
 
-        dispute.ruling = _ruling;
+        uint64 _now = uint64(block.timestamp);
+
+        dispute.ruling = uint8(_ruling);
         dispute.status = DisputeStatus.Appealable;
         dispute.appealCost = _appealCost;
-        dispute.appealPeriodStart = block.timestamp;
-
-        unchecked {
-            uint sum = block.timestamp + _timeToAppeal;
-            dispute.appealPeriodEnd = sum >= block.timestamp ? sum : UINT_MAX;
-        }
+        dispute.appealPeriodStart = _now;
+        dispute.appealPeriodEnd = uint64(_now + _timeToAppeal); //  just make it fail on overflow
 
         emit AppealPossible(_disputeID, dispute.arbitrated);
     }
