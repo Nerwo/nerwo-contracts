@@ -334,7 +334,7 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
         require(transaction.status == Status.NoDispute, "The transaction shouldn't be disputed.");
         require(_amount <= transaction.amount, "The amount paid has to be less than or equal to the transaction.");
 
-        transaction.amount -= _amount; // reentrancy safe
+        transaction.amount -= _amount;
 
         uint256 feeAmount = calculateFeeRecipientAmount(_amount);
         _transferTo(feeRecipient, feeAmount);
@@ -358,7 +358,7 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
             "The amount reimbursed has to be less or equal than the transaction."
         );
 
-        transaction.amount -= _amountReimbursed; // reentrancy safe
+        transaction.amount -= _amountReimbursed;
         _sendTo(transaction.sender, _amountReimbursed);
 
         emit Payment(_transactionID, _amountReimbursed, _msgSender());
@@ -375,10 +375,10 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
             "The timeout has not passed yet."
         );
 
-        transaction.status = Status.Resolved; // reentrancy safe
+        transaction.status = Status.Resolved;
 
         uint256 amount = transaction.amount;
-        transaction.amount = 0; // reentrancy safe
+        transaction.amount = 0;
 
         uint256 feeAmount = calculateFeeRecipientAmount(amount);
         _transferTo(feeRecipient, feeAmount);
@@ -398,11 +398,10 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
 
         if (transaction.receiverFee != 0) {
             uint256 receiverFee = transaction.receiverFee;
-            transaction.receiverFee = 0; // reentrancy safe
+            transaction.receiverFee = 0;
             _sendTo(transaction.receiver, receiverFee);
         }
 
-        // reentrancy safe -> Status.Resolved
         _executeRuling(_transactionID, SENDER_WINS);
     }
 
@@ -416,11 +415,10 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
 
         if (transaction.senderFee != 0) {
             uint256 senderFee = transaction.senderFee;
-            transaction.senderFee = 0; // reentrancy safe
+            transaction.senderFee = 0;
             _sendTo(transaction.sender, senderFee);
         }
 
-        // reentrancy safe -> Status.Resolved
         _executeRuling(_transactionID, RECEIVER_WINS);
     }
 
@@ -451,7 +449,6 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
             emit HasToPayFee(_transactionID, Party.Receiver);
         } else {
             // The receiver has also paid the fee. We create the dispute.
-            // reentrancy safe -> Status.DisputeCreated
             _raiseDispute(_transactionID, arbitrationCost);
         }
     }
@@ -481,7 +478,6 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
             emit HasToPayFee(_transactionID, Party.Sender);
         } else {
             // The sender has also paid the fee. We create the dispute.
-            // reentrancy safe -> Status.DisputeCreated
             _raiseDispute(_transactionID, arbitrationCost);
         }
     }
@@ -491,9 +487,8 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
      *  @param _arbitrationCost Amount to pay the arbitrator.
      */
     function _raiseDispute(uint256 _transactionID, uint256 _arbitrationCost) internal {
-        // reentrancy check in callers
         Transaction storage transaction = transactions[_transactionID];
-        transaction.status = Status.DisputeCreated; // reentrancy safe
+        transaction.status = Status.DisputeCreated;
 
         transaction.disputeId = arbitrator.createDispute{value: _arbitrationCost}(
             AMOUNT_OF_CHOICES,
@@ -531,7 +526,6 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
 
         emit Ruling(IArbitrator(_msgSender()), _disputeID, _ruling);
 
-        // reentrancy safe -> Status.Resolved
         _executeRuling(transactionID, _ruling);
     }
 
@@ -540,7 +534,6 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
      *  @param _ruling Ruling given by the arbitrator. 1 : Reimburse the receiver. 2 : Pay the sender.
      */
     function _executeRuling(uint256 _transactionID, uint256 _ruling) internal {
-        // reentrancy check in callers
         require(_ruling <= AMOUNT_OF_CHOICES, "Invalid ruling.");
 
         Transaction storage transaction = transactions[_transactionID];
@@ -552,7 +545,7 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
         transaction.amount = 0;
         transaction.senderFee = 0;
         transaction.receiverFee = 0;
-        transaction.status = Status.Resolved; // reentrancy safe
+        transaction.status = Status.Resolved;
 
         uint256 feeAmount;
 
