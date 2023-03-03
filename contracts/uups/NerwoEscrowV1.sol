@@ -70,7 +70,7 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
     address payable public feeRecipient; // Address which receives a share of receiver payment.
     uint256 public feeRecipientBasisPoint; // The share of fee to be received by the feeRecipient, down to 2 decimal places as 550 = 5.5%.
 
-    mapping(uint256 => uint256) public disputeIDtoTransactionID; // One-to-one relationship between the dispute and the transaction.
+    mapping(uint256 => uint256) private disputeIDtoTransactionID; // One-to-one relationship between the dispute and the transaction.
 
     // **************************** //
     // *          Events          * //
@@ -315,6 +315,15 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
         }
     }
 
+    /** @dev Send to recipent, reverts on failure
+     *  @param target To address to send to
+     *  @param amount Transaction amount
+     */
+    function _transferTo(address payable target, uint256 amount) internal {
+        (bool success, ) = target.call{value: amount}("");
+        require(success, "Transfer failed");
+    }
+
     /** @dev Pay receiver. To be called if the good or service is provided.
      *  @param _transactionID The index of the transaction.
      *  @param _amount Amount to pay in wei.
@@ -328,7 +337,7 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
         transaction.amount -= _amount; // reentrancy safe
 
         uint256 feeAmount = calculateFeeRecipientAmount(_amount);
-        feeRecipient.transfer(feeAmount);
+        _transferTo(feeRecipient, feeAmount);
 
         _sendTo(transaction.receiver, _amount - feeAmount);
 
@@ -372,7 +381,8 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
         transaction.amount = 0; // reentrancy safe
 
         uint256 feeAmount = calculateFeeRecipientAmount(amount);
-        feeRecipient.transfer(feeAmount);
+        _transferTo(feeRecipient, feeAmount);
+
         _sendTo(transaction.receiver, amount - feeAmount);
 
         emit FeeRecipientPayment(_transactionID, feeAmount);
@@ -517,8 +527,7 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
         require(_msgSender() == address(arbitrator), "The caller must be the arbitrator.");
 
         uint256 transactionID = disputeIDtoTransactionID[_disputeID];
-        Transaction storage transaction = transactions[transactionID];
-        require(transaction.status == Status.DisputeCreated, "The dispute has already been resolved.");
+        require(transactions[transactionID].status == Status.DisputeCreated, "The dispute has already been resolved.");
 
         emit Ruling(IArbitrator(_msgSender()), _disputeID, _ruling);
 
@@ -553,7 +562,7 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
             _sendTo(transaction.sender, senderArbitrationFee + amount);
         } else if (_ruling == RECEIVER_WINS) {
             feeAmount = calculateFeeRecipientAmount(amount);
-            feeRecipient.transfer(feeAmount);
+            _transferTo(feeRecipient, feeAmount);
 
             _sendTo(transaction.receiver, receiverArbitrationFee + amount - feeAmount);
 
@@ -563,7 +572,7 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
             uint256 splitAmount = amount / 2;
 
             feeAmount = calculateFeeRecipientAmount(splitAmount);
-            feeRecipient.transfer(feeAmount);
+            _transferTo(feeRecipient, feeAmount);
 
             _sendTo(transaction.sender, splitArbitration + splitAmount);
             _sendTo(transaction.receiver, splitArbitration + splitAmount - feeAmount);
