@@ -503,7 +503,7 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
      *  @param _evidence A link to an evidence using its URI.
      */
     function submitEvidence(uint256 _transactionID, string calldata _evidence) external {
-        Transaction storage transaction = transactions[_transactionID];
+        Transaction memory transaction = transactions[_transactionID];
         require(
             _msgSender() == transaction.sender || _msgSender() == transaction.receiver,
             "The caller must be the sender or the receiver."
