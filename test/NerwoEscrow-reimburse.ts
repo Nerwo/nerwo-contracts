@@ -2,27 +2,22 @@ import { expect } from 'chai';
 import { deployments, ethers } from 'hardhat';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 
-import { NerwoCentralizedArbitratorV1, NerwoEscrowV1, Rogue } from '../typechain-types';
+import { NerwoEscrowV1, Rogue } from '../typechain-types';
 
 import * as constants from '../constants';
 
 describe('NerwoEscrow: reimburse', function () {
   let escrow: NerwoEscrowV1;
-  let arbitrator: NerwoCentralizedArbitratorV1;
-  let deployer: SignerWithAddress, platform: SignerWithAddress, court: SignerWithAddress;
+  let platform: SignerWithAddress;
   let sender: SignerWithAddress, receiver: SignerWithAddress;
   let rogue: Rogue;
 
   this.beforeEach(async () => {
-    [deployer, platform, court, sender, receiver] = await ethers.getSigners();
+    [, platform, , sender, receiver] = await ethers.getSigners();
 
-    process.env.NERWO_COURT_ADDRESS = deployer.address;
     await deployments.fixture(['NerwoCentralizedArbitratorV1', 'NerwoEscrowV1']);
 
-    let deployment = await deployments.get('NerwoCentralizedArbitratorV1');
-    arbitrator = await ethers.getContractAt('NerwoCentralizedArbitratorV1', deployment.address);
-
-    deployment = await deployments.get('NerwoEscrowV1');
+    let deployment = await deployments.get('NerwoEscrowV1');
     escrow = await ethers.getContractAt('NerwoEscrowV1', deployment.address);
 
     const Rogue = await ethers.getContractFactory("Rogue");
