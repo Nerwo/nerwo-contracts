@@ -518,7 +518,7 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
      *  @param _disputeID ID of the dispute in the Arbitrator contract.
      *  @param _ruling Ruling given by the arbitrator. Note that 0 is reserved for "Not able/wanting to make a decision".
      */
-    function rule(uint256 _disputeID, uint256 _ruling) external nonReentrant {
+    function rule(uint256 _disputeID, uint256 _ruling) external override nonReentrant {
         require(_msgSender() == address(arbitrator), "The caller must be the arbitrator.");
 
         uint256 transactionID = disputeIDtoTransactionID[_disputeID];
