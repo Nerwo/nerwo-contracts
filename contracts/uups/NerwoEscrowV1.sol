@@ -90,7 +90,7 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
      *  @param _amount The amount paid.
      *  @param _party The party that paid.
      */
-    event Payment(uint256 indexed _transactionID, uint256 _amount, address _party);
+    event Payment(uint256 indexed _transactionID, uint256 _amount, address indexed _party);
 
     /** @dev Indicate that a party has to pay a fee or would otherwise be considered as losing.
      *  @param _transactionID The index of the transaction.
@@ -160,7 +160,7 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
      *  @param amount The amount
      *  @param data Failed call data
      */
-    event SendFailed(address recipient, uint256 amount, bytes data);
+    event SendFailed(address indexed recipient, uint256 amount, bytes data);
 
     /* ReentrancyGuard */
 
