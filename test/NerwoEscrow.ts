@@ -120,8 +120,8 @@ describe('NerwoEscrow', function () {
 
     let _disputeID = await createDispute(_transactionID, sender, receiver, arbitrationPrice, arbitrationPrice);
 
-    await expect(escrow.connect(sender).pay(_transactionID, amount)).to.revertedWith(
-      "The transaction shouldn't be disputed.");
+    await expect(escrow.connect(sender).pay(_transactionID, amount))
+      .to.revertedWithCustomError(escrow, 'InvalidStatus');
 
     await expect(arbitrator.connect(court).giveRuling(_disputeID, constants.SENDER_WINS)).to.be.rejectedWith(
       'Ownable: caller is not the owner');
@@ -175,7 +175,7 @@ describe('NerwoEscrow', function () {
 
     await expect(escrow.connect(receiver).payArbitrationFeeByReceiver(_transactionID, {
       value: arbitrationPrice.mul(2)
-    })).to.be.rejectedWith('The receiver fee must cover arbitration costs.');
+    })).to.be.revertedWithCustomError(escrow, 'InvalidAmount');
 
     await expect(escrow.connect(receiver).payArbitrationFeeByReceiver(
       _transactionID, { value: arbitrationPrice }))
@@ -189,7 +189,7 @@ describe('NerwoEscrow', function () {
     await rogue.setAmount(arbitrationPrice.mul(2));
 
     await expect(rogue.payArbitrationFeeBySender(_transactionID))
-      .to.be.rejectedWith('The sender fee must cover arbitration costs.');
+      .to.be.revertedWithCustomError(escrow, 'InvalidAmount');
 
     await rogue.setAmount(arbitrationPrice);
 

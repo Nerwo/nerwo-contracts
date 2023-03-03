@@ -20,6 +20,13 @@ import {IArbitrator} from "../kleros/IArbitrator.sol";
 import {IArbitrable} from "../kleros/IArbitrable.sol";
 
 error NullAddress();
+error ReentrantCall();
+error TransferFailed(address recipient, uint256 amount, bytes data);
+error NoTimeout();
+error InvalidRuling();
+error InvalidCaller(address expected);
+error InvalidStatus(uint256 expected);
+error InvalidAmount(uint256 amount);
 
 contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUpgradeable, VersionAware {
     // **************************** //
@@ -172,7 +179,9 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
 
     function _nonReentrantBefore() private {
         // On the first call to nonReentrant, _status will be _NOT_ENTERED
-        require(_status != _ENTERED, "ReentrancyGuard: reentrant call");
+        if (_status == _ENTERED) {
+            revert ReentrantCall();
+        }
 
         // Any calls to nonReentrant after this point will fail
         _status = _ENTERED;
@@ -289,9 +298,15 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
      *  @param _newFeeRecipient Address of the new Fee Recipient.
      */
     function changeFeeRecipient(address _newFeeRecipient) external {
-        require(_msgSender() == feeRecipient, "The caller must be the current Fee Recipient");
-        feeRecipient = payable(_newFeeRecipient);
+        if (_msgSender() != feeRecipient) {
+            revert InvalidCaller(feeRecipient);
+        }
 
+        if (_newFeeRecipient == address(0)) {
+            revert NullAddress();
+        }
+
+        feeRecipient = payable(_newFeeRecipient);
         emit FeeRecipientChanged(_msgSender(), _newFeeRecipient);
     }
 
@@ -346,8 +361,10 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
      *  @param amount Transaction amount
      */
     function _transferTo(address payable target, uint256 amount) internal {
-        (bool success, ) = target.call{value: amount}("");
-        require(success, "Transfer failed");
+        (bool success, bytes memory data) = target.call{value: amount}("");
+        if (!success) {
+            revert TransferFailed(target, amount, data);
+        }
     }
 
     /** @dev Pay receiver. To be called if the good or service is provided.
@@ -356,9 +373,18 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
      */
     function pay(uint256 _transactionID, uint256 _amount) external nonReentrant {
         Transaction storage transaction = transactions[_transactionID];
-        require(transaction.sender == _msgSender(), "The caller must be the sender.");
-        require(transaction.status == Status.NoDispute, "The transaction shouldn't be disputed.");
-        require(_amount <= transaction.amount, "The amount paid has to be less than or equal to the transaction.");
+
+        if (_msgSender() != transaction.sender) {
+            revert InvalidCaller(transaction.sender);
+        }
+
+        if (transaction.status != Status.NoDispute) {
+            revert InvalidStatus(uint256(Status.NoDispute));
+        }
+
+        if (_amount > transaction.amount) {
+            revert InvalidAmount(transaction.amount);
+        }
 
         transaction.amount -= _amount;
 
@@ -377,12 +403,18 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
      */
     function reimburse(uint256 _transactionID, uint256 _amountReimbursed) external nonReentrant {
         Transaction storage transaction = transactions[_transactionID];
-        require(transaction.receiver == _msgSender(), "The caller must be the receiver.");
-        require(transaction.status == Status.NoDispute, "The transaction shouldn't be disputed.");
-        require(
-            _amountReimbursed <= transaction.amount,
-            "The amount reimbursed has to be less or equal than the transaction."
-        );
+
+        if (_msgSender() != transaction.receiver) {
+            revert InvalidCaller(transaction.receiver);
+        }
+
+        if (transaction.status != Status.NoDispute) {
+            revert InvalidStatus(uint256(Status.NoDispute));
+        }
+
+        if (_amountReimbursed > transaction.amount) {
+            revert InvalidAmount(transaction.amount);
+        }
 
         transaction.amount -= _amountReimbursed;
         _sendTo(transaction.sender, _amountReimbursed);
@@ -395,11 +427,14 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
      */
     function executeTransaction(uint256 _transactionID) external nonReentrant {
         Transaction storage transaction = transactions[_transactionID];
-        require(transaction.status == Status.NoDispute, "The transaction shouldn't be disputed.");
-        require(
-            block.timestamp - transaction.lastInteraction >= transaction.timeoutPayment,
-            "The timeout has not passed yet."
-        );
+
+        if (transaction.status != Status.NoDispute) {
+            revert InvalidStatus(uint256(Status.NoDispute));
+        }
+
+        if (block.timestamp - transaction.lastInteraction < transaction.timeoutPayment) {
+            revert NoTimeout();
+        }
 
         transaction.status = Status.Resolved;
 
@@ -419,8 +454,14 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
      */
     function timeOutBySender(uint256 _transactionID) external nonReentrant {
         Transaction storage transaction = transactions[_transactionID];
-        require(transaction.status == Status.WaitingReceiver, "The transaction is not waiting on the receiver.");
-        require(block.timestamp - transaction.lastInteraction >= feeTimeout, "Timeout time has not passed yet.");
+
+        if (transaction.status != Status.WaitingReceiver) {
+            revert InvalidStatus(uint256(Status.WaitingReceiver));
+        }
+
+        if (block.timestamp - transaction.lastInteraction < feeTimeout) {
+            revert NoTimeout();
+        }
 
         if (transaction.receiverFee != 0) {
             uint256 receiverFee = transaction.receiverFee;
@@ -436,8 +477,14 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
      */
     function timeOutByReceiver(uint256 _transactionID) external nonReentrant {
         Transaction storage transaction = transactions[_transactionID];
-        require(transaction.status == Status.WaitingSender, "The transaction is not waiting on the sender.");
-        require(block.timestamp - transaction.lastInteraction >= feeTimeout, "Timeout time has not passed yet.");
+
+        if (transaction.status != Status.WaitingSender) {
+            revert InvalidStatus(uint256(Status.WaitingSender));
+        }
+
+        if (block.timestamp - transaction.lastInteraction < feeTimeout) {
+            revert NoTimeout();
+        }
 
         if (transaction.senderFee != 0) {
             uint256 senderFee = transaction.senderFee;
@@ -455,18 +502,22 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
      */
     function payArbitrationFeeBySender(uint256 _transactionID) external payable nonReentrant {
         Transaction storage transaction = transactions[_transactionID];
-        require(
-            transaction.status < Status.DisputeCreated,
-            "Dispute has already been created or because the transaction has been executed."
-        );
-        require(_msgSender() == transaction.sender, "The caller must be the sender.");
+
+        if (_msgSender() != transaction.sender) {
+            revert InvalidCaller(transaction.sender);
+        }
+
+        if (transaction.status >= Status.DisputeCreated) {
+            revert InvalidStatus(uint256(Status.DisputeCreated));
+        }
 
         uint256 arbitrationCost = arbitrator.arbitrationCost(arbitratorExtraData);
+
+        if (msg.value != arbitrationCost) {
+            revert InvalidAmount(arbitrationCost);
+        }
+
         transaction.senderFee = msg.value;
-
-        // Require that the total pay at least the arbitration cost.
-        require(transaction.senderFee == arbitrationCost, "The sender fee must cover arbitration costs.");
-
         transaction.lastInteraction = uint64(block.timestamp);
 
         // The receiver still has to pay. This can also happen if he has paid, but arbitrationCost has increased.
@@ -485,19 +536,24 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
      */
     function payArbitrationFeeByReceiver(uint256 _transactionID) external payable nonReentrant {
         Transaction storage transaction = transactions[_transactionID];
-        require(
-            transaction.status < Status.DisputeCreated,
-            "Dispute has already been created or because the transaction has been executed."
-        );
-        require(_msgSender() == transaction.receiver, "The caller must be the receiver.");
+
+        if (_msgSender() != transaction.receiver) {
+            revert InvalidCaller(transaction.receiver);
+        }
+
+        if (transaction.status >= Status.DisputeCreated) {
+            revert InvalidStatus(uint256(Status.DisputeCreated));
+        }
 
         uint256 arbitrationCost = arbitrator.arbitrationCost(arbitratorExtraData);
+
+        if (msg.value != arbitrationCost) {
+            revert InvalidAmount(arbitrationCost);
+        }
+
         transaction.receiverFee = msg.value;
-
-        // Require that the total paid to be at least the arbitration cost.
-        require(transaction.receiverFee == arbitrationCost, "The receiver fee must cover arbitration costs.");
-
         transaction.lastInteraction = uint64(block.timestamp);
+
         // The sender still has to pay. This can also happen if he has paid, but arbitrationCost has increased.
         if (transaction.senderFee == 0) {
             transaction.status = Status.WaitingSender;
@@ -530,11 +586,14 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
      */
     function submitEvidence(uint256 _transactionID, string calldata _evidence) external {
         Transaction memory transaction = transactions[_transactionID];
-        require(
-            _msgSender() == transaction.sender || _msgSender() == transaction.receiver,
-            "The caller must be the sender or the receiver."
-        );
-        require(transaction.status < Status.Resolved, "Must not send evidence if the dispute is resolved.");
+
+        if (_msgSender() != transaction.sender && _msgSender() != transaction.receiver) {
+            revert InvalidCaller(address(0));
+        }
+
+        if (transaction.status >= Status.Resolved) {
+            revert InvalidStatus(uint64(Status.Resolved));
+        }
 
         emit Evidence(arbitrator, _transactionID, _msgSender(), _evidence);
     }
@@ -545,10 +604,14 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
      *  @param _ruling Ruling given by the arbitrator. Note that 0 is reserved for "Not able/wanting to make a decision".
      */
     function rule(uint256 _disputeID, uint256 _ruling) external override nonReentrant {
-        require(_msgSender() == address(arbitrator), "The caller must be the arbitrator.");
+        if (_msgSender() != address(arbitrator)) {
+            revert InvalidCaller(address(arbitrator));
+        }
 
         uint256 transactionID = disputeIDtoTransactionID[_disputeID];
-        require(transactions[transactionID].status == Status.DisputeCreated, "The dispute has already been resolved.");
+        if (transactions[transactionID].status != Status.DisputeCreated) {
+            revert InvalidStatus(uint256(Status.DisputeCreated));
+        }
 
         emit Ruling(IArbitrator(_msgSender()), _disputeID, _ruling);
 
@@ -560,7 +623,9 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
      *  @param _ruling Ruling given by the arbitrator. 1 : Reimburse the receiver. 2 : Pay the sender.
      */
     function _executeRuling(uint256 _transactionID, uint256 _ruling) internal {
-        require(_ruling <= AMOUNT_OF_CHOICES, "Invalid ruling.");
+        if (_ruling > AMOUNT_OF_CHOICES) {
+            revert InvalidRuling();
+        }
 
         Transaction storage transaction = transactions[_transactionID];
 

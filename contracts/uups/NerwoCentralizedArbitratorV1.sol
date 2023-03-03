@@ -8,6 +8,14 @@ import {VersionAware} from "../VersionAware.sol";
 import {IArbitrator} from "../kleros/IArbitrator.sol";
 import {IArbitrable} from "../kleros/IArbitrable.sol";
 
+error InvalidRuling();
+error InvalidCaller(address expected);
+error InvalidStatus(uint256 expected);
+error AppealPeriodExpired();
+
+error TransferFailed(address recipient, uint256 amount, bytes data);
+error InsufficientFunding(uint256 required);
+
 contract NerwoCentralizedArbitratorV1 is IArbitrator, UUPSUpgradeable, OwnableUpgradeable, VersionAware {
     string private constant CONTRACT_NAME = "NerwoCentralizedArbitrator: V1";
 
@@ -34,12 +42,18 @@ contract NerwoCentralizedArbitratorV1 is IArbitrator, UUPSUpgradeable, OwnableUp
     Dispute[] private disputes;
 
     modifier requireArbitrationFee(bytes calldata _extraData) {
-        require(msg.value >= arbitrationCost(_extraData), "Not enough ETH to cover arbitration costs.");
+        uint256 required = arbitrationCost(_extraData);
+        if (msg.value != required) {
+            revert InsufficientFunding(required);
+        }
         _;
     }
 
     modifier requireAppealFee(uint256 _disputeID, bytes calldata _extraData) {
-        require(msg.value >= appealCost(_disputeID, _extraData), "Not enough ETH to cover appeal costs.");
+        uint256 required = appealCost(_disputeID, _extraData);
+        if (msg.value != required) {
+            revert InsufficientFunding(required);
+        }
         _;
     }
 
@@ -84,6 +98,17 @@ contract NerwoCentralizedArbitratorV1 is IArbitrator, UUPSUpgradeable, OwnableUp
 
     function getContractNameWithVersion() external pure override returns (string memory) {
         return CONTRACT_NAME;
+    }
+
+    /** @dev Send to recipent, reverts on failure
+     *  @param target To address to send to
+     *  @param amount Transaction amount
+     */
+    function _transferTo(address payable target, uint256 amount) internal {
+        (bool success, bytes memory data) = target.call{value: amount}("");
+        if (!success) {
+            revert TransferFailed(target, amount, data);
+        }
     }
 
     /** @dev Set the arbitration price. Only callable by the owner.
@@ -142,14 +167,20 @@ contract NerwoCentralizedArbitratorV1 is IArbitrator, UUPSUpgradeable, OwnableUp
      */
     function giveRuling(uint256 _disputeID, uint256 _ruling) external onlyOwner {
         Dispute storage dispute = disputes[_disputeID];
-        require(_ruling <= dispute.choices, "Invalid ruling.");
-        require(dispute.status == DisputeStatus.Waiting, "The dispute must be waiting for arbitration.");
+
+        if (dispute.status != DisputeStatus.Waiting) {
+            revert InvalidStatus(uint256(DisputeStatus.Waiting));
+        }
+
+        if (_ruling > dispute.choices) {
+            revert InvalidRuling();
+        }
 
         dispute.ruling = uint8(_ruling);
         dispute.status = DisputeStatus.Solved;
 
-        (bool success, ) = payable(_msgSender()).call{value: dispute.fees}("");
-        require(success, "Failed to send dispute fee.");
+        // FIXME: emit only log instead of failing?
+        _transferTo(payable(_msgSender()), dispute.fees);
 
         dispute.arbitrated.rule(_disputeID, _ruling);
     }
@@ -167,8 +198,14 @@ contract NerwoCentralizedArbitratorV1 is IArbitrator, UUPSUpgradeable, OwnableUp
         uint256 _timeToAppeal
     ) external onlyOwner {
         Dispute storage dispute = disputes[_disputeID];
-        require(_ruling <= dispute.choices, "Invalid ruling.");
-        require(dispute.status == DisputeStatus.Waiting, "The dispute must be waiting for arbitration.");
+
+        if (_ruling > dispute.choices) {
+            revert InvalidRuling();
+        }
+
+        if (dispute.status != DisputeStatus.Waiting) {
+            revert InvalidStatus(uint256(DisputeStatus.Waiting));
+        }
 
         uint64 _now = uint64(block.timestamp);
 
@@ -187,7 +224,10 @@ contract NerwoCentralizedArbitratorV1 is IArbitrator, UUPSUpgradeable, OwnableUp
      */
     function changeAppealFee(uint256 _disputeID, uint256 _appealCost) external onlyOwner {
         Dispute storage dispute = disputes[_disputeID];
-        require(dispute.status == DisputeStatus.Appealable, "The dispute must be appealable.");
+
+        if (dispute.status != DisputeStatus.Appealable) {
+            revert InvalidStatus(uint256(DisputeStatus.Appealable));
+        }
 
         dispute.appealCost = _appealCost;
     }
@@ -201,11 +241,14 @@ contract NerwoCentralizedArbitratorV1 is IArbitrator, UUPSUpgradeable, OwnableUp
         bytes calldata _extraData
     ) external payable requireAppealFee(_disputeID, _extraData) {
         Dispute storage dispute = disputes[_disputeID];
-        require(dispute.status == DisputeStatus.Appealable, "The dispute must be appealable.");
-        require(
-            block.timestamp < dispute.appealPeriodEnd,
-            "The appeal must occur before the end of the appeal period."
-        );
+
+        if (dispute.status != DisputeStatus.Appealable) {
+            revert InvalidStatus(uint256(DisputeStatus.Appealable));
+        }
+
+        if (block.timestamp >= dispute.appealPeriodEnd) {
+            revert AppealPeriodExpired();
+        }
 
         dispute.fees += msg.value;
         dispute.status = DisputeStatus.Waiting;
