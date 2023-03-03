@@ -155,10 +155,7 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
      */
     event SendFailed(address recipient, uint256 amount, bytes data);
 
-    // **************************** //
-    // *    Arbitrable functions  * //
-    // *    Modifying the state   * //
-    // **************************** //
+    /* ReentrancyGuard */
 
     /**
      * @dev Prevents a contract from calling itself, directly or indirectly.
@@ -168,14 +165,37 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
      * `private` function that does the actual work.
      */
     modifier nonReentrant() {
+        _nonReentrantBefore();
+        _;
+        _nonReentrantAfter();
+    }
+
+    function _nonReentrantBefore() private {
         // On the first call to nonReentrant, _status will be _NOT_ENTERED
         require(_status != _ENTERED, "ReentrancyGuard: reentrant call");
 
         // Any calls to nonReentrant after this point will fail
         _status = _ENTERED;
-        _;
+    }
+
+    function _nonReentrantAfter() private {
+        // By storing the original value once again, a refund is triggered (see
+        // https://eips.ethereum.org/EIPS/eip-2200)
         _status = _NOT_ENTERED;
     }
+
+    /**
+     * @dev Returns true if the reentrancy guard is currently set to "entered", which indicates there is a
+     * `nonReentrant` function in the call stack.
+     */
+    function _reentrancyGuardEntered() internal view returns (bool) {
+        return _status == _ENTERED;
+    }
+
+    // **************************** //
+    // *    Arbitrable functions  * //
+    // *    Modifying the state   * //
+    // **************************** //
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
