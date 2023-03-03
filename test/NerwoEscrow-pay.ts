@@ -39,6 +39,10 @@ describe('NerwoEscrow: pay', function () {
     await expect(sender.sendTransaction({ to: rogue.address, value: rogueFunds }))
       .to.changeEtherBalance(rogue, rogueFunds);
 
+    await expect(escrow.connect(sender).createTransaction(
+      constants.TIMEOUT_PAYMENT, rogue.address, '', { value: 0 }))
+      .to.be.revertedWithCustomError(escrow, 'InvalidAmount').withArgs(0);
+
     const blockNumber = await ethers.provider.getBlockNumber();
 
     await expect(escrow.connect(sender).createTransaction(
@@ -55,8 +59,8 @@ describe('NerwoEscrow: pay', function () {
 
     const { _transactionID } = events[0].args!;
 
-    // FIXME: revert
-    //await escrow.connect(sender).pay(_transactionID, 0);
+    await expect(escrow.connect(sender).pay(_transactionID, 0))
+      .to.be.revertedWithCustomError(escrow, 'InvalidAmount').withArgs(amount);
 
     await expect(escrow.connect(sender).pay(_transactionID, amount.mul(2)))
       .to.be.revertedWithCustomError(escrow, 'InvalidAmount').withArgs(amount);

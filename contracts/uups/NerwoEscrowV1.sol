@@ -325,6 +325,11 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
             revert NullAddress();
         }
 
+        // FIXME: check vs min amount
+        if (msg.value == 0) {
+            revert InvalidAmount(0);
+        }
+
         transactions.push(
             Transaction({
                 sender: payable(_msgSender()),
@@ -382,7 +387,7 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
             revert InvalidStatus(uint256(Status.NoDispute));
         }
 
-        if (_amount > transaction.amount) {
+        if ((_amount == 0) || (transaction.amount == 0) || (_amount > transaction.amount)) {
             revert InvalidAmount(transaction.amount);
         }
 
@@ -412,7 +417,7 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
             revert InvalidStatus(uint256(Status.NoDispute));
         }
 
-        if (_amountReimbursed > transaction.amount) {
+        if ((_amountReimbursed == 0) || (transaction.amount == 0) || (_amountReimbursed > transaction.amount)) {
             revert InvalidAmount(transaction.amount);
         }
 
