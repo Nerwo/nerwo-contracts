@@ -19,6 +19,8 @@ import {VersionAware} from "../VersionAware.sol";
 import {IArbitrator} from "../kleros/IArbitrator.sol";
 import {IArbitrable} from "../kleros/IArbitrable.sol";
 
+error NullAddress();
+
 contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUpgradeable, VersionAware {
     // **************************** //
     // *    Contract variables    * //
@@ -284,6 +286,10 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
         address _receiver,
         string calldata _metaEvidence
     ) external payable returns (uint256 transactionID) {
+        if (_receiver == address(0)) {
+            revert NullAddress();
+        }
+
         transactions.push(
             Transaction({
                 sender: payable(_msgSender()),
