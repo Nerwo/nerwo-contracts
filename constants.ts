@@ -15,6 +15,7 @@ export const ARBITRATOR_PRICE = ethers.utils.parseEther(process.env.NERWO_ARBITR
 export const enum RogueAction {
     None,
     Pay,
+    Reimburse,
     PayArbitrationFeeBySender,
     Revert
 }

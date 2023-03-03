@@ -16,6 +16,8 @@ interface Escrow {
 
     function pay(uint256 _transactionID, uint256 _amount) external;
 
+    function reimburse(uint256 _transactionID, uint256 _amountReimbursed) external;
+
     function payArbitrationFeeBySender(uint256 _transactionID) external payable;
 }
 
@@ -23,8 +25,24 @@ contract Rogue {
     enum Action {
         None,
         Pay,
+        Reimburse,
         PayArbitrationFeeBySender,
         Revert
+    }
+
+    function strAction(Action _action) internal pure returns (string memory) {
+        if (_action == Action.None) {
+            return "None";
+        } else if (_action == Action.Pay) {
+            return "Pay";
+        } else if (_action == Action.Reimburse) {
+            return "Reimburse";
+        } else if (_action == Action.PayArbitrationFeeBySender) {
+            return "PayArbitrationFeeBySender";
+        } else if (_action == Action.Revert) {
+            return "Revert";
+        }
+        return "unknown";
     }
 
     Escrow public immutable escrow;
@@ -33,7 +51,12 @@ contract Rogue {
     uint256 public transactionID = 0;
     uint256 public amount = 0;
 
-    event TransactionCreated(uint256 _transactionID, address indexed _sender, address indexed _receiver, uint256 _amount);
+    event TransactionCreated(
+        uint256 _transactionID,
+        address indexed _sender,
+        address indexed _receiver,
+        uint256 _amount
+    );
 
     constructor(address _escrow) {
         escrow = Escrow(_escrow);
@@ -46,7 +69,12 @@ contract Rogue {
     }
 
     receive() external payable {
-        console.log("Rogue: receive() action %s - transactionID %s - amount %s", uint256(action), transactionID, amount);
+        console.log(
+            "Rogue: receive() action %s - transactionID %s - amount %s",
+            strAction(action),
+            transactionID,
+            amount
+        );
 
         Escrow caller = Escrow(msg.sender);
 
@@ -96,7 +124,15 @@ contract Rogue {
         emit TransactionCreated(_transactionID, msg.sender, _receiver, amount);
     }
 
-    function payArbitrationFeeBySender(uint256 _transactionID) external payable {
+    function pay(uint256 _transactionID, uint256 _amount) external {
+        escrow.pay(_transactionID, _amount);
+    }
+
+    function reimburse(uint256 _transactionID, uint256 _amountReimbursed) external {
+        escrow.reimburse(_transactionID, _amountReimbursed);
+    }
+
+    function payArbitrationFeeBySender(uint256 _transactionID) external {
         console.log("Rogue: payArbitrationFeeBySender %s", amount);
         escrow.payArbitrationFeeBySender{value: amount}(_transactionID);
     }
