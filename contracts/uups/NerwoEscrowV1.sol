@@ -13,6 +13,7 @@ pragma solidity ^0.8.0;
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {SafeCastUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/math/SafeCastUpgradeable.sol";
 
 import {VersionAware} from "../VersionAware.sol";
 
@@ -30,6 +31,8 @@ error InvalidAmount(uint256 amount);
 error InvalidPriceThresolds();
 
 contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUpgradeable, VersionAware {
+    using SafeCastUpgradeable for uint256;
+
     // **************************** //
     // *    Contract variables    * //
     // **************************** //
@@ -410,12 +413,12 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
                 sender: payable(_msgSender()),
                 receiver: payable(_receiver),
                 amount: msg.value,
-                feeBasisPoint: uint32(_findFeeBasisPoint(msg.value)),
-                timeoutPayment: uint32(_timeoutPayment),
+                feeBasisPoint: _findFeeBasisPoint(msg.value).toUint32(),
+                timeoutPayment: _timeoutPayment.toUint32(),
                 disputeId: 0,
                 senderFee: 0,
                 receiverFee: 0,
-                lastInteraction: uint32(block.timestamp),
+                lastInteraction: block.timestamp.toUint32(),
                 status: Status.NoDispute
             })
         );
@@ -599,7 +602,7 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
         }
 
         transaction.senderFee = msg.value;
-        transaction.lastInteraction = uint32(block.timestamp);
+        transaction.lastInteraction = block.timestamp.toUint32();
 
         // The receiver still has to pay. This can also happen if he has paid, but arbitrationCost has increased.
         if (transaction.receiverFee == 0) {
@@ -633,7 +636,7 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
         }
 
         transaction.receiverFee = msg.value;
-        transaction.lastInteraction = uint32(block.timestamp);
+        transaction.lastInteraction = block.timestamp.toUint32();
 
         // The sender still has to pay. This can also happen if he has paid, but arbitrationCost has increased.
         if (transaction.senderFee == 0) {
