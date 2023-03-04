@@ -33,7 +33,7 @@ describe('NerwoEscrow: misc', function () {
 
   it('Creating transaction, then pay', async () => {
     const amount = ethers.utils.parseEther('0.01');
-    const platformFee = amount.mul(constants.FEE_RECIPIENT_BASISPOINT).div(10000);
+    const platformFee = await escrow.calculateFeeRecipientAmount(amount);
 
     const blockNumber = await ethers.provider.getBlockNumber();
     await expect(escrow.connect(sender).createTransaction(
@@ -61,7 +61,7 @@ describe('NerwoEscrow: misc', function () {
   it('Creating transaction with rogue, then pay', async () => {
     const amount = ethers.utils.parseEther('0.02');
     const payAmount = amount.div(2);
-    const platformFee = payAmount.mul(constants.FEE_RECIPIENT_BASISPOINT).div(10000);
+    const platformFee = await escrow.calculateFeeRecipientAmount(payAmount);
 
     const blockNumber = await ethers.provider.getBlockNumber();
     await expect(escrow.connect(sender).createTransaction(
@@ -185,7 +185,7 @@ describe('NerwoEscrow: misc', function () {
     expect(dEvents[0].args!).is.not.undefined;
     ({ _disputeID } = dEvents[0].args!);
 
-    const feeAmount = amount.mul(constants.FEE_RECIPIENT_BASISPOINT).div(10000);
+    const feeAmount = await escrow.calculateFeeRecipientAmount(amount);
     // RECEIVER_WINS -> platform gains
     await expect(arbitrator.connect(court).giveRuling(_disputeID, constants.RECEIVER_WINS))
       .to.changeEtherBalances(

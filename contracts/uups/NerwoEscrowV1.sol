@@ -27,6 +27,7 @@ error InvalidRuling();
 error InvalidCaller(address expected);
 error InvalidStatus(uint256 expected);
 error InvalidAmount(uint256 amount);
+error InvalidPriceThresolds();
 
 contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUpgradeable, VersionAware {
     // **************************** //
@@ -49,7 +50,7 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
 
     struct PriceThreshold {
         uint256 maxPrice;
-        uint256 feeBasisPoint;
+        uint32 feeBasisPoint;
     }
 
     enum Status {
@@ -66,6 +67,7 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
         address payable receiver;
         uint64 timeoutPayment; // Time in seconds after which the transaction can be automatically executed if not disputed.
         uint64 lastInteraction; // Last interaction for the dispute procedure.
+        uint32 feeBasisPoint;
         uint256 amount;
         uint256 disputeId; // If dispute exists, the ID of the dispute.
         uint256 senderFee; // Total fees paid by the sender.
@@ -85,7 +87,6 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
     uint256 public minimalAmount;
 
     address payable public feeRecipient; // Address which receives a share of receiver payment.
-    uint256 public feeRecipientBasisPoint; // The share of fee to be received by the feeRecipient, down to 2 decimal places as 550 = 5.5%.
 
     mapping(uint256 => uint256) private disputeIDtoTransactionID; // One-to-one relationship between the dispute and the transaction.
 
@@ -224,7 +225,6 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
      *  @param _arbitratorExtraData Extra data for the arbitrator.
      *  @param _feeTimeout Arbitration fee timeout for the parties.
      *  @param _feeRecipient Address which receives a share of receiver payment.
-     *  @param _feeRecipientBasisPoint The share of fee to be received by the feeRecipient, down to 2 decimal places as 550 = 5.5%.
      *  @param _priceThresholds List of tuple to calculate fee amount based on price
      */
     function initialize(
@@ -233,7 +233,6 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
         uint256 _feeTimeout,
         uint256 _minimalAmount,
         address _feeRecipient,
-        uint256 _feeRecipientBasisPoint,
         PriceThreshold[] memory _priceThresholds
     ) external initializer {
         _status = _NOT_ENTERED;
@@ -241,7 +240,7 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
 
         _setArbitrator(_arbitrator, _arbitratorExtraData, _feeTimeout);
         _setMinimalAmount(_minimalAmount);
-        _setFeeRecipientAndBasisPoint(_feeRecipient, _feeRecipientBasisPoint);
+        _setFeeRecipient(_feeRecipient);
         _setPriceThresholds(_priceThresholds);
 
         ///@dev as there is no constructor, we need to initialise the OwnableUpgradeable explicitly
@@ -296,20 +295,17 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
     /**
      *  @dev modifies fee recipient and basis point - Internal function without access restriction
      *  @param _feeRecipient Address which receives a share of receiver payment.
-     *  @param _feeRecipientBasisPoint The share of fee to be received by the feeRecipient, down to 2 decimal places as 550 = 5.5%.
      */
-    function _setFeeRecipientAndBasisPoint(address _feeRecipient, uint256 _feeRecipientBasisPoint) internal {
+    function _setFeeRecipient(address _feeRecipient) internal {
         feeRecipient = payable(_feeRecipient);
-        feeRecipientBasisPoint = _feeRecipientBasisPoint;
     }
 
     /**
      *  @dev modifies fee recipient and basis point - External function onlyOwner
      *  @param _feeRecipient Address which receives a share of receiver payment.
-     *  @param _feeRecipientBasisPoint The share of fee to be received by the feeRecipient, down to 2 decimal places as 550 = 5.5%.
      */
-    function setFeeRecipientAndBasisPoint(address _feeRecipient, uint256 _feeRecipientBasisPoint) external onlyOwner {
-        _setFeeRecipientAndBasisPoint(_feeRecipient, _feeRecipientBasisPoint);
+    function setFeeRecipient(address _feeRecipient) external onlyOwner {
+        _setFeeRecipient(_feeRecipient);
     }
 
     /**
@@ -317,6 +313,10 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
      * @param _priceThresholds An array of PriceThreshold structs to set as the new price thresholds.
      */
     function _setPriceThresholds(PriceThreshold[] memory _priceThresholds) internal {
+        if (_priceThresholds.length == 0) {
+            revert InvalidPriceThresolds();
+        }
+
         for (uint i = 0; i < _priceThresholds.length; i++) {
             priceThresholds.push(_priceThresholds[i]);
         }
@@ -345,11 +345,24 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
         return CONTRACT_NAME;
     }
 
+    function _findFeeBasisPoint(uint256 _amount) internal view returns (uint32) {
+        for (uint i = 0; i < priceThresholds.length; i++) {
+            if (_amount <= priceThresholds[i].maxPrice) {
+                return priceThresholds[i].feeBasisPoint;
+            }
+        }
+        revert InvalidPriceThresolds();
+    }
+
     /** @dev Calculate the amount to be paid in wei according to feeRecipientBasisPoint for a particular amount.
      *  @param _amount Amount to pay in wei.
      */
-    function calculateFeeRecipientAmount(uint256 _amount) internal view returns (uint256) {
-        return (_amount * feeRecipientBasisPoint) / 10000;
+    function calculateFeeRecipientAmount(uint256 _amount) external view returns (uint256) {
+        return (_amount * _findFeeBasisPoint(_amount)) / 10000;
+    }
+
+    function _calculateFeeAmount(uint256 _amount, uint32 _feeBasisPoint) internal pure returns (uint256) {
+        return (_amount * _feeBasisPoint) / 10000;
     }
 
     /** @dev Change Fee Recipient.
@@ -392,6 +405,7 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
                 sender: payable(_msgSender()),
                 receiver: payable(_receiver),
                 amount: msg.value,
+                feeBasisPoint: _findFeeBasisPoint(msg.value),
                 timeoutPayment: uint64(_timeoutPayment),
                 disputeId: 0,
                 senderFee: 0,
@@ -450,7 +464,7 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
 
         transaction.amount -= _amount;
 
-        uint256 feeAmount = calculateFeeRecipientAmount(_amount);
+        uint256 feeAmount = (_amount * transaction.feeBasisPoint) / 10000;
         _transferTo(feeRecipient, feeAmount);
 
         _sendTo(transaction.receiver, _amount - feeAmount);
@@ -503,7 +517,7 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
         uint256 amount = transaction.amount;
         transaction.amount = 0;
 
-        uint256 feeAmount = calculateFeeRecipientAmount(amount);
+        uint256 feeAmount = _calculateFeeAmount(amount, transaction.feeBasisPoint);
         _transferTo(feeRecipient, feeAmount);
 
         _sendTo(transaction.receiver, amount - feeAmount);
@@ -707,7 +721,7 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
         if (_ruling == SENDER_WINS) {
             _sendTo(transaction.sender, senderArbitrationFee + amount);
         } else if (_ruling == RECEIVER_WINS) {
-            feeAmount = calculateFeeRecipientAmount(amount);
+            feeAmount = _calculateFeeAmount(amount, transaction.feeBasisPoint);
             _transferTo(feeRecipient, feeAmount);
 
             _sendTo(transaction.receiver, receiverArbitrationFee + amount - feeAmount);
@@ -717,7 +731,7 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
             uint256 splitArbitration = senderArbitrationFee / 2;
             uint256 splitAmount = amount / 2;
 
-            feeAmount = calculateFeeRecipientAmount(splitAmount);
+            feeAmount = _calculateFeeAmount(splitAmount, transaction.feeBasisPoint);
             _transferTo(feeRecipient, feeAmount);
 
             _sendTo(transaction.sender, splitArbitration + splitAmount);

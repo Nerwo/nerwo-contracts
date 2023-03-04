@@ -1,12 +1,17 @@
 import { ethers } from 'hardhat';
+const { parseEther } = ethers.utils;
 
 export const SENDER_WINS = 1;
 export const RECEIVER_WINS = 2;
 
-export const MINIMAL_AMOUNT = ethers.utils.parseEther(process.env.NERWO_MINIMAL_AMOUNT);
+export const MINIMAL_AMOUNT = parseEther(process.env.NERWO_MINIMAL_AMOUNT);
 
 export const FEE_TIMEOUT = process.env.NERWO_FEE_TIMEOUT;
-export const FEE_RECIPIENT_BASISPOINT = process.env.NERWO_FEE_RECIPIENT_BASISPOINT;
+
+export const FEE_PRICE_THRESHOLDS = process.env.NERWO_FEE_PRICE_THRESHOLDS.split(';').map((tuple: string) => {
+    const [amount, basisPoint] = tuple.split('=');
+    return [parseEther(amount), basisPoint];
+});
 
 export const TIMEOUT_PAYMENT = 1500;
 

@@ -58,7 +58,7 @@ describe('NerwoEscrow: reimburse', function () {
       .to.be.revertedWithCustomError(escrow, 'InvalidAmount').withArgs(amount);
 
     amount = amount.div(2);
-    const feeAmount = amount.mul(constants.FEE_RECIPIENT_BASISPOINT).div(10000);
+    const feeAmount = await escrow.calculateFeeRecipientAmount(amount);
 
     await expect(rogue.reimburse(_transactionID, amount))
       .to.changeEtherBalances(
@@ -119,7 +119,7 @@ describe('NerwoEscrow: reimburse', function () {
       .to.be.revertedWithCustomError(escrow, 'InvalidAmount').withArgs(amount);
 
     amount = amount.div(2);
-    const feeAmount = amount.mul(constants.FEE_RECIPIENT_BASISPOINT).div(10000);
+    const feeAmount = await escrow.calculateFeeRecipientAmount(amount);
 
     await expect(escrow.connect(receiver).reimburse(_transactionID, amount))
       .to.changeEtherBalances(
