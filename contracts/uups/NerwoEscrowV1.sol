@@ -233,7 +233,7 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
         uint256 _feeTimeout,
         uint256 _minimalAmount,
         address _feeRecipient,
-        PriceThreshold[] memory _priceThresholds
+        PriceThreshold[] calldata _priceThresholds
     ) external initializer {
         _status = _NOT_ENTERED;
         versionAwareContractName = CONTRACT_NAME;
@@ -312,7 +312,7 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
      * @dev Sets the price thresholds array - Internal function without access restriction
      * @param _priceThresholds An array of PriceThreshold structs to set as the new price thresholds.
      */
-    function _setPriceThresholds(PriceThreshold[] memory _priceThresholds) internal {
+    function _setPriceThresholds(PriceThreshold[] calldata _priceThresholds) internal {
         if (_priceThresholds.length == 0) {
             revert InvalidPriceThresolds();
         }
@@ -326,7 +326,7 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
      * @dev Sets the price thresholds array - External function onlyOwner
      * @param _priceThresholds An array of PriceThreshold structs to set as the new price thresholds.
      */
-    function setPriceThresholds(PriceThreshold[] memory _priceThresholds) external onlyOwner {
+    function setPriceThresholds(PriceThreshold[] calldata _priceThresholds) external onlyOwner {
         _setPriceThresholds(_priceThresholds);
     }
 
