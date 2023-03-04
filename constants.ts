@@ -10,7 +10,7 @@ export const FEE_TIMEOUT = process.env.NERWO_FEE_TIMEOUT;
 
 export const FEE_PRICE_THRESHOLDS = process.env.NERWO_FEE_PRICE_THRESHOLDS.split(';').map((tuple: string) => {
     const [amount, basisPoint] = tuple.split('=');
-    return [parseEther(amount), basisPoint];
+    return { maxPrice: parseEther(amount), feeBasisPoint: basisPoint };
 });
 
 export const TIMEOUT_PAYMENT = 1500;

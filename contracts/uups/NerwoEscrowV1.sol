@@ -317,6 +317,7 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
             revert InvalidPriceThresolds();
         }
 
+        delete priceThresholds;
         for (uint i = 0; i < _priceThresholds.length; i++) {
             priceThresholds.push(_priceThresholds[i]);
         }
