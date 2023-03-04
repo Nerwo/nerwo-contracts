@@ -5,6 +5,7 @@ pragma solidity ^0.8.0;
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {SafeCastUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/math/SafeCastUpgradeable.sol";
 
 import {VersionAware} from "../VersionAware.sol";
 
@@ -20,6 +21,8 @@ error TransferFailed(address recipient, uint256 amount, bytes data);
 error InsufficientFunding(uint256 required);
 
 contract NerwoCentralizedArbitratorV1 is IArbitrator, Initializable, UUPSUpgradeable, OwnableUpgradeable, VersionAware {
+    using SafeCastUpgradeable for uint256;
+
     string private constant CONTRACT_NAME = "NerwoCentralizedArbitrator: V1";
 
     enum DisputeStatus {
@@ -151,7 +154,7 @@ contract NerwoCentralizedArbitratorV1 is IArbitrator, Initializable, UUPSUpgrade
         disputes.push(
             Dispute({
                 arbitrated: IArbitrable(_msgSender()),
-                choices: uint8(_choices),
+                choices: _choices.toUint8(),
                 fees: msg.value,
                 ruling: 0,
                 status: DisputeStatus.Waiting,
@@ -179,7 +182,7 @@ contract NerwoCentralizedArbitratorV1 is IArbitrator, Initializable, UUPSUpgrade
             revert InvalidRuling();
         }
 
-        dispute.ruling = uint8(_ruling);
+        dispute.ruling = _ruling.toUint8();
         dispute.status = DisputeStatus.Solved;
 
         // FIXME: emit only log instead of failing?
@@ -212,7 +215,7 @@ contract NerwoCentralizedArbitratorV1 is IArbitrator, Initializable, UUPSUpgrade
 
         uint32 _now = uint32(block.timestamp);
 
-        dispute.ruling = uint8(_ruling);
+        dispute.ruling = _ruling.toUint8();
         dispute.status = DisputeStatus.Appealable;
         dispute.appealCost = _appealCost;
         dispute.appealPeriodStart = _now;
