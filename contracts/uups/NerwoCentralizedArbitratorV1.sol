@@ -2,9 +2,12 @@
 
 pragma solidity ^0.8.0;
 
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+
 import {VersionAware} from "../VersionAware.sol";
+
 import {IArbitrator} from "../kleros/IArbitrator.sol";
 import {IArbitrable} from "../kleros/IArbitrable.sol";
 
@@ -16,7 +19,7 @@ error AppealPeriodExpired();
 error TransferFailed(address recipient, uint256 amount, bytes data);
 error InsufficientFunding(uint256 required);
 
-contract NerwoCentralizedArbitratorV1 is IArbitrator, UUPSUpgradeable, OwnableUpgradeable, VersionAware {
+contract NerwoCentralizedArbitratorV1 is IArbitrator, Initializable, UUPSUpgradeable, OwnableUpgradeable, VersionAware {
     string private constant CONTRACT_NAME = "NerwoCentralizedArbitrator: V1";
 
     enum DisputeStatus {
