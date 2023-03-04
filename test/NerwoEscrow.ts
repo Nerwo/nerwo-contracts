@@ -31,12 +31,14 @@ describe('NerwoEscrow: misc', function () {
     await rogue.deployed();
   });
 
-  it('Updating priceThresholds', async () => {
+  it('Testing priceThresholds', async () => {
     const answer = ethers.BigNumber.from(42);
     const priceThreshold = {
       maxPrice: answer,
-      feeBasisPoint: 0
+      feeBasisPoint: '0'
     };
+
+    expect(constants.FEE_PRICE_THRESHOLDS).to.be.an('array').that.lengthOf.at.least(2);
 
     expect((await escrow.priceThresholds(1)).maxPrice)
       .to.be.equal(constants.FEE_PRICE_THRESHOLDS[1].maxPrice);
@@ -49,6 +51,12 @@ describe('NerwoEscrow: misc', function () {
 
     // for avg gas calc
     await escrow.connect(deployer).setPriceThresholds(constants.FEE_PRICE_THRESHOLDS);
+
+    for (const priceThreshold of constants.FEE_PRICE_THRESHOLDS) {
+      const amount = priceThreshold.maxPrice;
+      const feeAmount = amount.mul(priceThreshold.feeBasisPoint).div(10000);
+      expect(await escrow.calculateFeeRecipientAmount(amount)).to.be.equal(feeAmount);
+    }
   });
 
   it('Creating transaction, then pay', async () => {

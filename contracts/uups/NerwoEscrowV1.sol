@@ -346,13 +346,17 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
         return CONTRACT_NAME;
     }
 
-    function _findFeeBasisPoint(uint256 _amount) internal view returns (uint256) {
+    function _findFeeBasisPoint(uint256 _amount) internal view returns (uint256 feeBasisPoint) {
         for (uint i = 0; i < priceThresholds.length; i++) {
+            feeBasisPoint = priceThresholds[i].feeBasisPoint;
             if (_amount <= priceThresholds[i].maxPrice) {
-                return priceThresholds[i].feeBasisPoint;
+                return feeBasisPoint;
             }
         }
-        revert InvalidPriceThresolds();
+
+        if (feeBasisPoint == 0) {
+            revert InvalidPriceThresolds();
+        }
     }
 
     /** @dev Calculate the amount to be paid in wei according to feeRecipientBasisPoint for a particular amount.
