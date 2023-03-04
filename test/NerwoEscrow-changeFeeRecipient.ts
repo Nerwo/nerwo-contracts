@@ -12,8 +12,9 @@ describe('NerwoEscrow: changeFeeRecipient', function () {
   this.beforeEach(async () => {
     [deployer, platform, , sender, receiver] = await ethers.getSigners();
 
-    process.env.NERWO_COURT_ADDRESS = deployer.address;
-    await deployments.fixture(['NerwoCentralizedArbitratorV1', 'NerwoEscrowV1']);
+    await deployments.fixture(['NerwoCentralizedArbitratorV1', 'NerwoEscrowV1'], {
+      keepExistingDeployments: true
+    });
 
     let deployment = await deployments.get('NerwoEscrowV1');
     escrow = await ethers.getContractAt('NerwoEscrowV1', deployment.address);
@@ -23,6 +24,10 @@ describe('NerwoEscrow: changeFeeRecipient', function () {
     await expect(escrow.connect(platform).changeFeeRecipient(sender.address))
       .to.emit(escrow, 'FeeRecipientChanged')
       .withArgs(platform.address, sender.address);
+
+    await expect(escrow.connect(sender).changeFeeRecipient(platform.address))
+      .to.emit(escrow, 'FeeRecipientChanged')
+      .withArgs(sender.address, platform.address);
   });
 
   it('Changing fee recipient: invalid caller', async () => {

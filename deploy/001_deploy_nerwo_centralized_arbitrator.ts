@@ -2,8 +2,9 @@ import { DeployFunction } from 'hardhat-deploy/types';
 
 import * as constants from '../constants';
 
-const func: DeployFunction = async function ({ deployments: { deploy, execute }, getNamedAccounts }) {
-  const { deployer } = await getNamedAccounts();
+const func: DeployFunction = async function ({ deployments: { deploy }, getNamedAccounts }) {
+  let { deployer, court } = await getNamedAccounts();
+  court = court || process.env.NERWO_COURT_ADDRESS;
 
   await deploy('NerwoCentralizedArbitratorV1', {
     from: deployer,
@@ -12,21 +13,13 @@ const func: DeployFunction = async function ({ deployments: { deploy, execute },
       execute: {
         init: {
           methodName: 'initialize',
-          args: [constants.ARBITRATOR_PRICE]
+          args: [court, constants.ARBITRATOR_PRICE]
         }
       }
     },
-    log: true
+    log: true,
+    deterministicDeployment: true
   });
-
-  if (deployer != process.env.NERWO_COURT_ADDRESS) {
-    await execute('NerwoCentralizedArbitratorV1', {
-      from: deployer,
-      log: true
-    },
-      'transferOwnership',
-      process.env.NERWO_COURT_ADDRESS);
-  }
 };
 
 export default func;

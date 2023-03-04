@@ -15,7 +15,9 @@ describe('NerwoEscrow: reimburse', function () {
   this.beforeEach(async () => {
     [, platform, , sender, receiver] = await ethers.getSigners();
 
-    await deployments.fixture(['NerwoCentralizedArbitratorV1', 'NerwoEscrowV1']);
+    await deployments.fixture(['NerwoCentralizedArbitratorV1', 'NerwoEscrowV1'], {
+      keepExistingDeployments: true
+    });
 
     let deployment = await deployments.get('NerwoEscrowV1');
     escrow = await ethers.getContractAt('NerwoEscrowV1', deployment.address);

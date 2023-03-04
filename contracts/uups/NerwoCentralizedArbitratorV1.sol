@@ -81,23 +81,14 @@ contract NerwoCentralizedArbitratorV1 is IArbitrator, Initializable, UUPSUpgrade
     }
 
     /** @dev initializer
+     *  @param _owner The initial owner
      *  @param _arbitrationPrice Amount to be paid for arbitration.
      */
-    function initialize(uint256 _arbitrationPrice) external initializer {
+    function initialize(address _owner, uint256 _arbitrationPrice) external initializer {
         arbitrationPrice = _arbitrationPrice;
         versionAwareContractName = CONTRACT_NAME;
-        ///@dev as there is no constructor, we need to initialise the OwnableUpgradeable explicitly
-        __Ownable_init();
+        _transferOwnership(_owner);
     }
-
-    // Here only to test upgrade
-    /*
-    function initialize2(uint256 _arbitrationPrice) external reinitializer(2) {
-        arbitrationPrice = _arbitrationPrice;
-        versionAwareContractName = "NerwoCentralizedArbitrator: V2";
-        ///@dev as there is no constructor, we need to initialise the OwnableUpgradeable explicitly
-        __Ownable_init();
-    }*/
 
     ///@dev required by the OZ UUPS module
     function _authorizeUpgrade(address) internal override onlyOwner {}

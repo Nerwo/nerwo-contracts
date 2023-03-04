@@ -3,9 +3,9 @@ import * as constants from '../constants';
 
 const func: DeployFunction = async function ({ deployments: { get, deploy }, getNamedAccounts }) {
   let { deployer, platform } = await getNamedAccounts();
-  const arbitrator = await get('NerwoCentralizedArbitratorV1');
-
   platform = platform || deployer;
+
+  const arbitrator = await get('NerwoCentralizedArbitratorV1');
 
   await deploy('NerwoEscrowV1', {
     from: deployer,
@@ -15,6 +15,7 @@ const func: DeployFunction = async function ({ deployments: { get, deploy }, get
         init: {
           methodName: 'initialize',
           args: [
+            deployer,                           /* _owner */
             arbitrator.address,                 /* _arbitrator */
             [],                                 /* _arbitratorExtraData */
             constants.FEE_TIMEOUT,              /* _feeTimeout */
@@ -25,9 +26,11 @@ const func: DeployFunction = async function ({ deployments: { get, deploy }, get
         }
       }
     },
-    log: true
+    log: true,
+    deterministicDeployment: true
   });
 };
 
 export default func;
 func.tags = ['NerwoEscrowV1'];
+func.dependencies = ['NerwoCentralizedArbitratorV1'];

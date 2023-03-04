@@ -224,6 +224,7 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
     }
 
     /** @dev initializer
+     *  @param _owner The initial owner
      *  @param _arbitrator The arbitrator of the contract.
      *  @param _arbitratorExtraData Extra data for the arbitrator.
      *  @param _feeTimeout Arbitration fee timeout for the parties.
@@ -231,6 +232,7 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
      *  @param _priceThresholds List of tuple to calculate fee amount based on price
      */
     function initialize(
+        address _owner,
         address _arbitrator,
         bytes calldata _arbitratorExtraData,
         uint256 _feeTimeout,
@@ -246,8 +248,7 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
         _setFeeRecipient(_feeRecipient);
         _setPriceThresholds(_priceThresholds);
 
-        ///@dev as there is no constructor, we need to initialise the OwnableUpgradeable explicitly
-        __Ownable_init();
+        _transferOwnership(_owner);
     }
 
     /**

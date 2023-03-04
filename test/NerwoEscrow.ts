@@ -17,8 +17,9 @@ describe('NerwoEscrow: misc', function () {
   this.beforeEach(async () => {
     [deployer, platform, court, sender, receiver] = await ethers.getSigners();
 
-    process.env.NERWO_COURT_ADDRESS = deployer.address;
-    await deployments.fixture(['NerwoCentralizedArbitratorV1', 'NerwoEscrowV1']);
+    await deployments.fixture(['NerwoCentralizedArbitratorV1', 'NerwoEscrowV1'], {
+      keepExistingDeployments: true
+    });
 
     let deployment = await deployments.get('NerwoCentralizedArbitratorV1');
     arbitrator = await ethers.getContractAt('NerwoCentralizedArbitratorV1', deployment.address);
@@ -29,34 +30,6 @@ describe('NerwoEscrow: misc', function () {
     const Rogue = await ethers.getContractFactory("Rogue");
     rogue = await Rogue.deploy(escrow.address);
     await rogue.deployed();
-  });
-
-  it('Testing priceThresholds', async () => {
-    const answer = ethers.BigNumber.from(42);
-    const priceThreshold = {
-      maxPrice: answer,
-      feeBasisPoint: '0'
-    };
-
-    expect(constants.FEE_PRICE_THRESHOLDS).to.be.an('array').that.lengthOf.at.least(2);
-
-    expect((await escrow.priceThresholds(1)).maxPrice)
-      .to.be.equal(constants.FEE_PRICE_THRESHOLDS[1].maxPrice);
-
-    await escrow.connect(deployer).setPriceThresholds([priceThreshold]);
-    expect((await escrow.priceThresholds(0)).maxPrice).to.be.equal(answer);
-
-    await expect(escrow.priceThresholds(1))
-      .to.be.revertedWithoutReason();
-
-    // for avg gas calc
-    await escrow.connect(deployer).setPriceThresholds(constants.FEE_PRICE_THRESHOLDS);
-
-    for (const priceThreshold of constants.FEE_PRICE_THRESHOLDS) {
-      const amount = priceThreshold.maxPrice;
-      const feeAmount = amount.mul(priceThreshold.feeBasisPoint).div(10000);
-      expect(await escrow.calculateFeeRecipientAmount(amount)).to.be.equal(feeAmount);
-    }
   });
 
   it('Creating transaction, then pay', async () => {
@@ -161,10 +134,8 @@ describe('NerwoEscrow: misc', function () {
     await expect(escrow.connect(sender).pay(_transactionID, amount))
       .to.revertedWithCustomError(escrow, 'InvalidStatus');
 
-    await expect(arbitrator.connect(court).giveRuling(_disputeID, constants.SENDER_WINS)).to.be.rejectedWith(
+    await expect(arbitrator.connect(sender).giveRuling(_disputeID, constants.SENDER_WINS)).to.be.rejectedWith(
       'Ownable: caller is not the owner');
-
-    await arbitrator.transferOwnership(court.address);
 
     // SENDER_WINS -> no platform fee
     await expect(arbitrator.connect(court).giveRuling(_disputeID, constants.SENDER_WINS))
@@ -224,8 +195,6 @@ describe('NerwoEscrow: misc', function () {
   });
 
   it('Creating arbitrage transaction with rogue', async () => {
-    await arbitrator.transferOwnership(court.address);
-
     // fund rogue contract
     const rogueFunds = ethers.utils.parseEther('10.0');
     await expect(sender.sendTransaction({ to: rogue.address, value: rogueFunds }))

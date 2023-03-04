@@ -21,7 +21,8 @@ const config: HardhatUserConfig = {
   },
   namedAccounts: {
     deployer: 0,
-    platform: 1
+    platform: 1,
+    court: 2
   },
   gasReporter: {
     enabled: (process.env.REPORT_GAS) ? true : false,
