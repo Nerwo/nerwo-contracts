@@ -10,5 +10,12 @@ abi
 cache
 artifacts
 
+# deployments
+deployments
+
 # OpenZeppelin
 .openzeppelin/unknown-*.json
+
+# misc
+*.log
+*.diff

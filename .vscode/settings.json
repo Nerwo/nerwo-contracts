@@ -1,0 +1,10 @@
+{
+    "files.exclude": {
+        "**/node_modules": true,
+        "**/deployments": true
+    },
+    "search.exclude": {
+        "**/node_modules": true,
+        "**/deployments": true
+    }
+}
