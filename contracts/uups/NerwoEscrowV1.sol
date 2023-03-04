@@ -770,19 +770,23 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
      *  @param _address The specified address.
      *  @return transactionIDs The transaction IDs.
      */
-    // FIXME: return calldata?
     function getTransactionIDsByAddress(address _address) external view returns (uint256[] memory transactionIDs) {
         uint256 count = 0;
-        for (uint256 i = 0; i < transactions.length; i++) {
-            if (transactions[i].sender == _address || transactions[i].receiver == _address) count++;
+
+        uint256 i;
+        for (i = 0; i < transactions.length; i++) {
+            if (transactions[i].sender == _address || transactions[i].receiver == _address) {
+                count++;
+            }
         }
 
         transactionIDs = new uint256[](count);
-
         count = 0;
 
-        for (uint256 j = 0; j < transactions.length; j++) {
-            if (transactions[j].sender == _address || transactions[j].receiver == _address) transactionIDs[count++] = j;
+        for (i = 0; i < transactions.length; i++) {
+            if (transactions[i].sender == _address || transactions[i].receiver == _address) {
+                transactionIDs[count++] = i;
+            }
         }
     }
 }
