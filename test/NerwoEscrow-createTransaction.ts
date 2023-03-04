@@ -8,10 +8,10 @@ import * as constants from '../constants';
 
 describe('NerwoEscrow: createTransaction', function () {
   let escrow: NerwoEscrowV1;
-  let deployer: SignerWithAddress, sender: SignerWithAddress;
+  let deployer: SignerWithAddress, sender: SignerWithAddress, receiver: SignerWithAddress;
 
   this.beforeEach(async () => {
-    [deployer, , , sender] = await ethers.getSigners();
+    [deployer, , , sender, receiver] = await ethers.getSigners();
 
     process.env.NERWO_COURT_ADDRESS = deployer.address;
     await deployments.fixture(['NerwoCentralizedArbitratorV1', 'NerwoEscrowV1']);
@@ -20,7 +20,30 @@ describe('NerwoEscrow: createTransaction', function () {
     escrow = await ethers.getContractAt('NerwoEscrowV1', deployment.address);
   });
 
-  it('Creating transaction with null receiver', async () => {
+  it('Creating a transaction', async () => {
+    const amount = await escrow.minimalAmount();
+    await expect(escrow.connect(sender).createTransaction(
+      constants.TIMEOUT_PAYMENT,
+      receiver.address,
+      '',
+      { value: amount }))
+      .to.changeEtherBalances(
+        [escrow, sender],
+        [amount, amount.mul(-1)]
+      )
+      .to.emit(escrow, 'TransactionCreated');
+  });
+
+  it('Creating a transaction with myself', async () => {
+    const amount = await escrow.minimalAmount();
+    await expect(escrow.connect(sender).createTransaction(
+      constants.TIMEOUT_PAYMENT,
+      sender.address,
+      '',
+      { value: amount })).to.be.revertedWithCustomError(escrow, 'InvalidCaller');
+  });
+
+  it('Creating a transaction with null receiver', async () => {
     const amount = await escrow.minimalAmount();
     await expect(escrow.connect(sender).createTransaction(
       constants.TIMEOUT_PAYMENT,
@@ -29,25 +52,43 @@ describe('NerwoEscrow: createTransaction', function () {
       { value: amount })).to.be.revertedWithCustomError(escrow, 'NullAddress');
   });
 
-  it('Creating transaction < minimalAmount', async () => {
+  it('Creating a transaction < minimalAmount', async () => {
     const minimalAmount = await escrow.minimalAmount();
     await expect(escrow.connect(sender).createTransaction(
       constants.TIMEOUT_PAYMENT,
-      sender.address,
+      receiver.address,
       '',
       { value: minimalAmount.sub(1) }))
       .to.be.revertedWithCustomError(escrow, 'InvalidAmount').withArgs(minimalAmount);
   });
 
-  it('Creating transaction with overflowing _timeoutPayment', async () => {
+  it('Creating a transaction with overflowing _timeoutPayment', async () => {
     const amount = await escrow.minimalAmount();
     const timeoutPayment = ethers.BigNumber.from(2).pow(32);
 
     await expect(escrow.connect(sender).createTransaction(
       timeoutPayment,
-      sender.address,
+      receiver.address,
       '',
       { value: amount }))
       .to.be.revertedWith(`SafeCast: value doesn't fit in 32 bits`);
+  });
+
+  it('Creating a transaction having b0rk3d priceThresholds', async () => {
+    const amount = await escrow.minimalAmount();
+
+    await escrow.setPriceThresholds([
+      {
+        maxPrice: 0,
+        feeBasisPoint: 0
+      }
+    ]);
+
+    await expect(escrow.connect(sender).createTransaction(
+      constants.TIMEOUT_PAYMENT,
+      receiver.address,
+      '',
+      { value: amount }))
+      .to.be.revertedWithCustomError(escrow, 'InvalidPriceThresolds');
   });
 });

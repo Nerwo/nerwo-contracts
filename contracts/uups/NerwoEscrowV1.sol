@@ -408,6 +408,10 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
             revert InvalidAmount(minimalAmount);
         }
 
+        if (_msgSender() == _receiver) {
+            revert InvalidCaller(_receiver);
+        }
+
         transactions.push(
             Transaction({
                 sender: payable(_msgSender()),
