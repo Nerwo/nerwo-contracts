@@ -36,7 +36,7 @@ describe('NerwoEscrow: pay', function () {
       .to.changeEtherBalance(rogue, rogueFunds);
 
     await expect(escrow.connect(sender).createTransaction(
-      constants.TIMEOUT_PAYMENT, rogue.address, '', { value: ethers.utils.parseEther('0.001') }))
+      constants.TIMEOUT_PAYMENT, rogue.address, '', { value: minimalAmount.sub(1) }))
       .to.be.revertedWithCustomError(escrow, 'InvalidAmount').withArgs(minimalAmount);
 
     const blockNumber = await ethers.provider.getBlockNumber();
@@ -68,11 +68,11 @@ describe('NerwoEscrow: pay', function () {
     await rogue.setAction(constants.RogueAction.Pay);
 
     // FIXME: emit order in sol
-    // FIXME: make SendFailed and Payment mutually exclusive
+    // FIXME: make SendFailed and Payment mutually exclusive?
     await expect(escrow.connect(sender).pay(_transactionID, amount))
       .to.changeEtherBalances(
         [escrow, platform, rogue],
-        [-feeAmount, feeAmount, 0]
+        [feeAmount.mul(-1), feeAmount, 0]
       )
       .to.emit(escrow, 'SendFailed').withArgs(rogue.address, amount.sub(feeAmount), anyValue)
       .to.emit(escrow, 'Payment').withArgs(_transactionID, amount, sender.address)
@@ -81,11 +81,10 @@ describe('NerwoEscrow: pay', function () {
     await expect(escrow.connect(sender).pay(_transactionID, amount.mul(2)))
       .to.be.revertedWithCustomError(escrow, 'InvalidAmount').withArgs(amount);
 
-    // FIXME: revert when amount is 0
     await expect(escrow.connect(sender).pay(_transactionID, amount))
       .to.changeEtherBalances(
         [escrow, platform, rogue],
-        [-feeAmount, feeAmount, 0]
+        [feeAmount.mul(-1), feeAmount, 0]
       )
       .to.emit(escrow, 'Payment').withArgs(_transactionID, amount, sender.address)
       .to.emit(escrow, 'FeeRecipientPayment');
