@@ -33,8 +33,8 @@ contract NerwoCentralizedArbitratorV1 is IArbitrator, UUPSUpgradeable, OwnableUp
         DisputeStatus status; // The status of the dispute.
         uint8 choices; // The amount of possible choices, 0 excluded.
         uint8 ruling; // The current ruling.
-        uint64 appealPeriodStart; // The start of the appeal period. 0 before it is appealable.
-        uint64 appealPeriodEnd; // The end of the appeal Period. 0 before it is appealable.
+        uint32 appealPeriodStart; // The start of the appeal period. 0 before it is appealable.
+        uint32 appealPeriodEnd; // The end of the appeal Period. 0 before it is appealable.
         uint256 fees; // The total amount of fees collected by the arbitrator.
         uint256 appealCost; // The cost to appeal. 0 before it is appealable.
     }
@@ -207,13 +207,13 @@ contract NerwoCentralizedArbitratorV1 is IArbitrator, UUPSUpgradeable, OwnableUp
             revert InvalidStatus(uint256(DisputeStatus.Waiting));
         }
 
-        uint64 _now = uint64(block.timestamp);
+        uint32 _now = uint32(block.timestamp);
 
         dispute.ruling = uint8(_ruling);
         dispute.status = DisputeStatus.Appealable;
         dispute.appealCost = _appealCost;
         dispute.appealPeriodStart = _now;
-        dispute.appealPeriodEnd = uint64(_now + _timeToAppeal); //  just let it fail on overflow
+        dispute.appealPeriodEnd = uint32(_now + _timeToAppeal); //  just let it fail on overflow
 
         emit AppealPossible(_disputeID, dispute.arbitrated);
     }

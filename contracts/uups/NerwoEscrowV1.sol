@@ -65,8 +65,8 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
         Status status;
         address payable sender;
         address payable receiver;
-        uint64 timeoutPayment; // Time in seconds after which the transaction can be automatically executed if not disputed.
-        uint64 lastInteraction; // Last interaction for the dispute procedure.
+        uint32 timeoutPayment; // Time in seconds after which the transaction can be automatically executed if not disputed.
+        uint32 lastInteraction; // Last interaction for the dispute procedure.
         uint32 feeBasisPoint;
         uint256 amount;
         uint256 disputeId; // If dispute exists, the ID of the dispute.
@@ -83,7 +83,7 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
     bytes public arbitratorExtraData; // Extra data to set up the arbitration.
     IArbitrator public arbitrator; // Address of the arbitrator contract.
 
-    uint256 public feeTimeout; // Time in seconds a party can take to pay arbitration fees before being considered unresponding and lose the dispute.
+    uint32 public feeTimeout; // Time in seconds a party can take to pay arbitration fees before being considered unresponding and lose the dispute.
     uint256 public minimalAmount;
 
     address payable public feeRecipient; // Address which receives a share of receiver payment.
@@ -256,7 +256,7 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
     function _setArbitrator(address _arbitrator, bytes calldata _arbitratorExtraData, uint256 _feeTimeout) internal {
         arbitrator = IArbitrator(_arbitrator);
         arbitratorExtraData = _arbitratorExtraData;
-        feeTimeout = _feeTimeout;
+        feeTimeout = uint32(_feeTimeout);
     }
 
     /**
@@ -406,11 +406,11 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
                 receiver: payable(_receiver),
                 amount: msg.value,
                 feeBasisPoint: _findFeeBasisPoint(msg.value),
-                timeoutPayment: uint64(_timeoutPayment),
+                timeoutPayment: uint32(_timeoutPayment),
                 disputeId: 0,
                 senderFee: 0,
                 receiverFee: 0,
-                lastInteraction: uint64(block.timestamp),
+                lastInteraction: uint32(block.timestamp),
                 status: Status.NoDispute
             })
         );
@@ -594,7 +594,7 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
         }
 
         transaction.senderFee = msg.value;
-        transaction.lastInteraction = uint64(block.timestamp);
+        transaction.lastInteraction = uint32(block.timestamp);
 
         // The receiver still has to pay. This can also happen if he has paid, but arbitrationCost has increased.
         if (transaction.receiverFee == 0) {
@@ -628,7 +628,7 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
         }
 
         transaction.receiverFee = msg.value;
-        transaction.lastInteraction = uint64(block.timestamp);
+        transaction.lastInteraction = uint32(block.timestamp);
 
         // The sender still has to pay. This can also happen if he has paid, but arbitrationCost has increased.
         if (transaction.senderFee == 0) {
