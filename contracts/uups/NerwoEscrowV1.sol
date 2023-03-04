@@ -50,7 +50,7 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
 
     struct PriceThreshold {
         uint256 maxPrice;
-        uint32 feeBasisPoint;
+        uint256 feeBasisPoint;
     }
 
     enum Status {
@@ -83,7 +83,7 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
     bytes public arbitratorExtraData; // Extra data to set up the arbitration.
     IArbitrator public arbitrator; // Address of the arbitrator contract.
 
-    uint32 public feeTimeout; // Time in seconds a party can take to pay arbitration fees before being considered unresponding and lose the dispute.
+    uint256 public feeTimeout; // Time in seconds a party can take to pay arbitration fees before being considered unresponding and lose the dispute.
     uint256 public minimalAmount;
 
     address payable public feeRecipient; // Address which receives a share of receiver payment.
@@ -256,7 +256,7 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
     function _setArbitrator(address _arbitrator, bytes calldata _arbitratorExtraData, uint256 _feeTimeout) internal {
         arbitrator = IArbitrator(_arbitrator);
         arbitratorExtraData = _arbitratorExtraData;
-        feeTimeout = uint32(_feeTimeout);
+        feeTimeout = _feeTimeout;
     }
 
     /**
@@ -345,7 +345,7 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
         return CONTRACT_NAME;
     }
 
-    function _findFeeBasisPoint(uint256 _amount) internal view returns (uint32) {
+    function _findFeeBasisPoint(uint256 _amount) internal view returns (uint256) {
         for (uint i = 0; i < priceThresholds.length; i++) {
             if (_amount <= priceThresholds[i].maxPrice) {
                 return priceThresholds[i].feeBasisPoint;
@@ -405,7 +405,7 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
                 sender: payable(_msgSender()),
                 receiver: payable(_receiver),
                 amount: msg.value,
-                feeBasisPoint: _findFeeBasisPoint(msg.value),
+                feeBasisPoint: uint32(_findFeeBasisPoint(msg.value)),
                 timeoutPayment: uint32(_timeoutPayment),
                 disputeId: 0,
                 senderFee: 0,
