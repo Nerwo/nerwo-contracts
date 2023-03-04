@@ -4,7 +4,6 @@ import '@nomicfoundation/hardhat-toolbox';
 import '@nomiclabs/hardhat-etherscan';
 import '@openzeppelin/hardhat-upgrades';
 import 'hardhat-gas-reporter';
-import 'hardhat-abi-exporter';
 import 'hardhat-deploy';
 
 import * as dotenv from 'dotenv';
