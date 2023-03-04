@@ -476,7 +476,7 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
 
         transaction.amount -= _amount;
 
-        uint256 feeAmount = (_amount * transaction.feeBasisPoint) / 10000;
+        uint256 feeAmount = _calculateFeeAmount(_amount, transaction.feeBasisPoint);
         _transferTo(feeRecipient, feeAmount);
 
         _sendTo(transaction.receiver, _amount - feeAmount);
