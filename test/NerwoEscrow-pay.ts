@@ -27,7 +27,8 @@ describe('NerwoEscrow: pay', function () {
   });
 
   it('rogue as recipient', async () => {
-    let amount = ethers.utils.parseEther('0.002');
+    const minimalAmount = await escrow.minimalAmount();
+    let amount = ethers.utils.parseEther('0.02')
 
     // fund rogue contract
     const rogueFunds = ethers.utils.parseEther('10.0');
@@ -35,8 +36,8 @@ describe('NerwoEscrow: pay', function () {
       .to.changeEtherBalance(rogue, rogueFunds);
 
     await expect(escrow.connect(sender).createTransaction(
-      constants.TIMEOUT_PAYMENT, rogue.address, '', { value: 0 }))
-      .to.be.revertedWithCustomError(escrow, 'InvalidAmount').withArgs(0);
+      constants.TIMEOUT_PAYMENT, rogue.address, '', { value: ethers.utils.parseEther('0.001') }))
+      .to.be.revertedWithCustomError(escrow, 'InvalidAmount').withArgs(minimalAmount);
 
     const blockNumber = await ethers.provider.getBlockNumber();
 
@@ -44,7 +45,7 @@ describe('NerwoEscrow: pay', function () {
       constants.TIMEOUT_PAYMENT, rogue.address, '', { value: amount }))
       .to.changeEtherBalances(
         [platform, sender],
-        [0, -amount]
+        [0, amount.mul(-1)]
       )
       .to.emit(escrow, 'TransactionCreated');
 

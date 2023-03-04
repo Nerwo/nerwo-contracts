@@ -47,6 +47,11 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
         Receiver
     }
 
+    struct PriceThreshold {
+        uint256 maxPrice;
+        uint256 feeBasisPoint;
+    }
+
     enum Status {
         NoDispute,
         WaitingSender,
@@ -70,11 +75,14 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
     // ReentrancyGuard
     uint256 private _status;
 
+    PriceThreshold[] public priceThresholds;
+
     Transaction[] private transactions;
     bytes public arbitratorExtraData; // Extra data to set up the arbitration.
     IArbitrator public arbitrator; // Address of the arbitrator contract.
 
     uint256 public feeTimeout; // Time in seconds a party can take to pay arbitration fees before being considered unresponding and lose the dispute.
+    uint256 public minimalAmount;
 
     address payable public feeRecipient; // Address which receives a share of receiver payment.
     uint256 public feeRecipientBasisPoint; // The share of fee to be received by the feeRecipient, down to 2 decimal places as 550 = 5.5%.
@@ -214,70 +222,120 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
     /** @dev initializer
      *  @param _arbitrator The arbitrator of the contract.
      *  @param _arbitratorExtraData Extra data for the arbitrator.
+     *  @param _feeTimeout Arbitration fee timeout for the parties.
      *  @param _feeRecipient Address which receives a share of receiver payment.
      *  @param _feeRecipientBasisPoint The share of fee to be received by the feeRecipient, down to 2 decimal places as 550 = 5.5%.
-     *  @param _feeTimeout Arbitration fee timeout for the parties.
+     *  @param _priceThresholds List of tuple to calculate fee amount based on price
      */
     function initialize(
         address _arbitrator,
         bytes calldata _arbitratorExtraData,
+        uint256 _feeTimeout,
+        uint256 _minimalAmount,
         address _feeRecipient,
         uint256 _feeRecipientBasisPoint,
-        uint256 _feeTimeout
+        PriceThreshold[] memory _priceThresholds
     ) external initializer {
         _status = _NOT_ENTERED;
         versionAwareContractName = CONTRACT_NAME;
-        _setArbitrator(_arbitrator, _arbitratorExtraData, _feeRecipient, _feeRecipientBasisPoint, _feeTimeout);
+
+        _setArbitrator(_arbitrator, _arbitratorExtraData, _feeTimeout);
+        _setMinimalAmount(_minimalAmount);
+        _setFeeRecipientAndBasisPoint(_feeRecipient, _feeRecipientBasisPoint);
+        _setPriceThresholds(_priceThresholds);
+
         ///@dev as there is no constructor, we need to initialise the OwnableUpgradeable explicitly
         __Ownable_init();
-    }
-
-    // Here only to test upgrade
-    /*
-    function initialize2(
-        address _arbitrator,
-        bytes calldata _arbitratorExtraData,
-        address _feeRecipient,
-        uint256 _feeRecipientBasisPoint,
-        uint256 _feeTimeout
-    ) external reinitializer(2) {
-        _status = _NOT_ENTERED;
-        _setArbitrator(_arbitrator, _arbitratorExtraData, _feeRecipient, _feeRecipientBasisPoint, _feeTimeout);
-        versionAwareContractName = "NerwoEscrow: V2";
-        ///@dev as there is no constructor, we need to initialise the OwnableUpgradeable explicitly
-        __Ownable_init();
-    }*/
-
-    function getBalance() external view returns (uint256) {
-        return address(this).balance;
-    }
-
-    function setArbitrator(
-        address _arbitrator,
-        bytes calldata _arbitratorExtraData,
-        address _feeRecipient,
-        uint256 _feeRecipientBasisPoint,
-        uint256 _feeTimeout
-    ) external onlyOwner {
-        _setArbitrator(_arbitrator, _arbitratorExtraData, _feeRecipient, _feeRecipientBasisPoint, _feeTimeout);
     }
 
     /**
-     * @dev modifies Arbitrator and paramameters
-     * Internal function without access restriction.
+     *  @dev modifies Arbitrator - Internal function without access restriction
+     *  @param _arbitrator The arbitrator of the contract.
+     *  @param _arbitratorExtraData Extra data for the arbitrator.
+     *  @param _feeTimeout Arbitration fee timeout for the parties.
      */
-    function _setArbitrator(
-        address _arbitrator,
-        bytes calldata _arbitratorExtraData,
-        address _feeRecipient,
-        uint256 _feeRecipientBasisPoint,
-        uint256 _feeTimeout
-    ) internal {
+    function _setArbitrator(address _arbitrator, bytes calldata _arbitratorExtraData, uint256 _feeTimeout) internal {
         arbitrator = IArbitrator(_arbitrator);
         arbitratorExtraData = _arbitratorExtraData;
         feeTimeout = _feeTimeout;
+    }
+
+    /**
+     *  @dev modifies Arbitrator - External function onlyOwner
+     *  @param _arbitrator The arbitrator of the contract.
+     *  @param _arbitratorExtraData Extra data for the arbitrator.
+     *  @param _feeTimeout Arbitration fee timeout for the parties.
+     */
+    function setArbitrator(
+        address _arbitrator,
+        bytes calldata _arbitratorExtraData,
+        uint256 _feeTimeout
+    ) external onlyOwner {
+        _setArbitrator(_arbitrator, _arbitratorExtraData, _feeTimeout);
+    }
+
+    /**
+     * @dev Modifies the minimum amount that can be sent in a transaction.
+     * @param _minimalAmount The new minimum amount.
+     */
+    function _setMinimalAmount(uint256 _minimalAmount) internal {
+        if (_minimalAmount == 0) {
+            revert InvalidAmount(0);
+        }
+        minimalAmount = _minimalAmount;
+    }
+
+    /**
+     * @dev Modifies the minimum amount that can be sent in a transaction. Only the contract owner can call this function.
+     * @param _minimalAmount The new minimum amount.
+     */
+    function setMinimalAmount(uint256 _minimalAmount) external onlyOwner {
+        _setMinimalAmount(_minimalAmount);
+    }
+
+    /**
+     *  @dev modifies fee recipient and basis point - Internal function without access restriction
+     *  @param _feeRecipient Address which receives a share of receiver payment.
+     *  @param _feeRecipientBasisPoint The share of fee to be received by the feeRecipient, down to 2 decimal places as 550 = 5.5%.
+     */
+    function _setFeeRecipientAndBasisPoint(address _feeRecipient, uint256 _feeRecipientBasisPoint) internal {
         feeRecipient = payable(_feeRecipient);
         feeRecipientBasisPoint = _feeRecipientBasisPoint;
+    }
+
+    /**
+     *  @dev modifies fee recipient and basis point - External function onlyOwner
+     *  @param _feeRecipient Address which receives a share of receiver payment.
+     *  @param _feeRecipientBasisPoint The share of fee to be received by the feeRecipient, down to 2 decimal places as 550 = 5.5%.
+     */
+    function setFeeRecipientAndBasisPoint(address _feeRecipient, uint256 _feeRecipientBasisPoint) external onlyOwner {
+        _setFeeRecipientAndBasisPoint(_feeRecipient, _feeRecipientBasisPoint);
+    }
+
+    /**
+     * @dev Sets the price thresholds array - Internal function without access restriction
+     * @param _priceThresholds An array of PriceThreshold structs to set as the new price thresholds.
+     */
+    function _setPriceThresholds(PriceThreshold[] memory _priceThresholds) internal {
+        for (uint i = 0; i < _priceThresholds.length; i++) {
+            priceThresholds.push(_priceThresholds[i]);
+        }
+    }
+
+    /**
+     * @dev Sets the price thresholds array - External function onlyOwner
+     * @param _priceThresholds An array of PriceThreshold structs to set as the new price thresholds.
+     */
+    function setPriceThresholds(PriceThreshold[] memory _priceThresholds) external onlyOwner {
+        _setPriceThresholds(_priceThresholds);
+    }
+
+    /**
+     * @dev Returns the current ETH balance of the contract.
+     * @return The current balance of the contract.
+     */
+    function getBalance() external view returns (uint256) {
+        return address(this).balance;
     }
 
     ///@dev required by the OZ UUPS module
@@ -325,9 +383,8 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
             revert NullAddress();
         }
 
-        // FIXME: check vs min amount
-        if (msg.value == 0) {
-            revert InvalidAmount(0);
+        if (msg.value < minimalAmount) {
+            revert InvalidAmount(minimalAmount);
         }
 
         transactions.push(

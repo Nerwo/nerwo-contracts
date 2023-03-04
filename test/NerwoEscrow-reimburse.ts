@@ -26,7 +26,8 @@ describe('NerwoEscrow: reimburse', function () {
   });
 
   it('rogue as recipient', async () => {
-    let amount = ethers.utils.parseEther('0.002');
+    const minimalAmount = await escrow.minimalAmount();
+    let amount = ethers.utils.parseEther('0.03')
 
     const blockNumber = await ethers.provider.getBlockNumber();
 
@@ -34,7 +35,7 @@ describe('NerwoEscrow: reimburse', function () {
       constants.TIMEOUT_PAYMENT, rogue.address, '', { value: amount }))
       .to.changeEtherBalances(
         [platform, sender],
-        [0, -amount]
+        [0, amount.mul(-1)]
       )
       .to.emit(escrow, 'TransactionCreated');
 
@@ -62,7 +63,7 @@ describe('NerwoEscrow: reimburse', function () {
     await expect(rogue.reimburse(_transactionID, amount))
       .to.changeEtherBalances(
         [escrow, sender, rogue],
-        [-amount, amount, 0]
+        [amount.mul(-1), amount, 0]
       )
       .to.emit(escrow, 'Payment').withArgs(_transactionID, amount, rogue.address);
 
@@ -71,7 +72,7 @@ describe('NerwoEscrow: reimburse', function () {
     await expect(escrow.connect(sender).pay(_transactionID, amount))
       .to.changeEtherBalances(
         [escrow, platform, rogue],
-        [-feeAmount, feeAmount, 0]
+        [feeAmount.mul(-1), feeAmount, 0]
       )
       .to.emit(escrow, 'Payment').withArgs(_transactionID, amount, sender.address)
       .to.emit(escrow, 'FeeRecipientPayment').withArgs(_transactionID, feeAmount);
@@ -81,7 +82,7 @@ describe('NerwoEscrow: reimburse', function () {
   });
 
   it('rogue as sender', async () => {
-    let amount = ethers.utils.parseEther('0.002');
+    let amount = ethers.utils.parseEther('0.02');
 
     // fund rogue contract
     const rogueFunds = ethers.utils.parseEther('10.0');
@@ -95,7 +96,7 @@ describe('NerwoEscrow: reimburse', function () {
       constants.TIMEOUT_PAYMENT, receiver.address, ''))
       .to.changeEtherBalances(
         [platform, rogue],
-        [0, -amount]
+        [0, amount.mul(-1)]
       )
       .to.emit(escrow, 'TransactionCreated');
 
@@ -123,14 +124,14 @@ describe('NerwoEscrow: reimburse', function () {
     await expect(escrow.connect(receiver).reimburse(_transactionID, amount))
       .to.changeEtherBalances(
         [escrow, rogue],
-        [-amount, amount]
+        [amount.mul(-1), amount]
       )
       .to.emit(escrow, 'Payment').withArgs(_transactionID, amount, receiver.address);
 
     await expect(rogue.pay(_transactionID, amount))
       .to.changeEtherBalances(
         [escrow, platform, rogue, receiver],
-        [-amount, feeAmount, 0, amount.sub(feeAmount)]
+        [amount.mul(-1), feeAmount, 0, amount.sub(feeAmount)]
       )
       .to.emit(escrow, 'Payment').withArgs(_transactionID, amount, rogue.address)
       .to.emit(escrow, 'FeeRecipientPayment').withArgs(_transactionID, feeAmount);

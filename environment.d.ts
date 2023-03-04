@@ -6,6 +6,7 @@ declare global {
             NERWO_PLATFORM_ADDRESS: string;
             NERWO_ARBITRATION_PRICE: string;
             NERWO_FEE_TIMEOUT: number;
+            NERWO_MINIMAL_AMOUNT: string;
             NERWO_FEE_RECIPIENT_BASISPOINT: number;
         }
     }

@@ -15,11 +15,13 @@ const func: DeployFunction = async function ({ deployments: { get, deploy }, get
         init: {
           methodName: 'initialize',
           args: [
-            arbitrator.address,
-            [],
-            platform,
-            constants.FEE_RECIPIENT_BASISPOINT,
-            constants.FEE_TIMEOUT
+            arbitrator.address,                 /* _arbitrator */
+            [],                                 /* _arbitratorExtraData */
+            constants.FEE_TIMEOUT,              /* _feeTimeout */
+            constants.MINIMAL_AMOUNT,           /* _minimalAmount */
+            platform,                           /* _feeRecipient */
+            constants.FEE_RECIPIENT_BASISPOINT, /* _feeRecipientBasisPoint */
+            []                                  /* _priceThresholds */
           ]
         }
       }
