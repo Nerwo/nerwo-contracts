@@ -422,7 +422,7 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
                 disputeId: 0,
                 senderFee: 0,
                 receiverFee: 0,
-                lastInteraction: block.timestamp.toUint32(),
+                lastInteraction: uint32(block.timestamp),
                 status: Status.NoDispute
             })
         );
@@ -606,7 +606,7 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
         }
 
         transaction.senderFee = msg.value;
-        transaction.lastInteraction = block.timestamp.toUint32();
+        transaction.lastInteraction = uint32(block.timestamp);
 
         // The receiver still has to pay. This can also happen if he has paid, but arbitrationCost has increased.
         if (transaction.receiverFee == 0) {
@@ -640,7 +640,7 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
         }
 
         transaction.receiverFee = msg.value;
-        transaction.lastInteraction = block.timestamp.toUint32();
+        transaction.lastInteraction = uint32(block.timestamp);
 
         // The sender still has to pay. This can also happen if he has paid, but arbitrationCost has increased.
         if (transaction.senderFee == 0) {
