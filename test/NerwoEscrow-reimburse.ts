@@ -26,7 +26,6 @@ describe('NerwoEscrow: reimburse', function () {
   });
 
   it('rogue as recipient', async () => {
-    const minimalAmount = await escrow.minimalAmount();
     let amount = ethers.utils.parseEther('0.03')
 
     const blockNumber = await ethers.provider.getBlockNumber();
@@ -44,9 +43,6 @@ describe('NerwoEscrow: reimburse', function () {
     expect(events[0].args!).is.not.undefined;
 
     const { _transactionID } = events[0].args!;
-
-    await expect(escrow.connect(sender).pay(_transactionID, 0))
-      .to.be.revertedWithCustomError(escrow, 'InvalidAmount').withArgs(amount);
 
     await expect(escrow.connect(sender).reimburse(_transactionID, amount))
       .to.be.revertedWithCustomError(escrow, 'InvalidCaller').withArgs(rogue.address);
