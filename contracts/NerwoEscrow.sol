@@ -323,6 +323,28 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable {
         emit FeeRecipientChanged(_msgSender(), _newFeeRecipient);
     }
 
+    /** @dev Send to recipent, emit a log when fails
+     *  @param target To address to send to
+     *  @param amount Transaction amount
+     */
+    function _sendTo(address payable target, uint256 amount) internal {
+        (bool success, bytes memory data) = target.call{value: amount}("");
+        if (!success) {
+            emit SendFailed(target, amount, data);
+        }
+    }
+
+    /** @dev Send to recipent, reverts on failure
+     *  @param target To address to send to
+     *  @param amount Transaction amount
+     */
+    function _transferTo(address payable target, uint256 amount) internal {
+        (bool success, bytes memory data) = target.call{value: amount}("");
+        if (!success) {
+            revert TransferFailed(target, amount, data);
+        }
+    }
+
     /** @dev Create a transaction.
      *  @param _timeoutPayment Time after which a party can automatically execute the arbitrable transaction.
      *  @param _receiver The recipient of the transaction.
@@ -365,28 +387,6 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable {
 
         emit MetaEvidence(transactionID, _metaEvidence);
         emit TransactionCreated(transactionID, _msgSender(), _receiver, msg.value);
-    }
-
-    /** @dev Send to recipent, emit a log when fails
-     *  @param target To address to send to
-     *  @param amount Transaction amount
-     */
-    function _sendTo(address payable target, uint256 amount) internal {
-        (bool success, bytes memory data) = target.call{value: amount}("");
-        if (!success) {
-            emit SendFailed(target, amount, data);
-        }
-    }
-
-    /** @dev Send to recipent, reverts on failure
-     *  @param target To address to send to
-     *  @param amount Transaction amount
-     */
-    function _transferTo(address payable target, uint256 amount) internal {
-        (bool success, bytes memory data) = target.call{value: amount}("");
-        if (!success) {
-            revert TransferFailed(target, amount, data);
-        }
     }
 
     /** @dev Pay receiver. To be called if the good or service is provided.
