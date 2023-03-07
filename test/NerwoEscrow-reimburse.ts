@@ -1,37 +1,17 @@
 import { expect } from 'chai';
-import { deployments, ethers } from 'hardhat';
-import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
-
-import { NerwoEscrow, Rogue } from '../typechain-types';
+import { ethers } from 'hardhat';
+import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 
 import * as constants from '../constants';
+import { deployAndFundRogueFixture, deployFixture } from './fixtures';
 
 describe('NerwoEscrow: reimburse', function () {
-  let escrow: NerwoEscrow;
-  let platform: SignerWithAddress;
-  let sender: SignerWithAddress, receiver: SignerWithAddress;
-  let rogue: Rogue;
-
-  this.beforeEach(async () => {
-    [, platform, , sender, receiver] = await ethers.getSigners();
-
-    await deployments.fixture(['NerwoCentralizedArbitrator', 'NerwoEscrow'], {
-      keepExistingDeployments: true
-    });
-
-    let deployment = await deployments.get('NerwoEscrow');
-    escrow = await ethers.getContractAt('NerwoEscrow', deployment.address);
-
-    const Rogue = await ethers.getContractFactory("Rogue");
-    rogue = await Rogue.deploy(escrow.address);
-    await rogue.deployed();
-  });
-
   it('rogue as recipient', async () => {
+    const { escrow, rogue, platform, sender } = await loadFixture(deployFixture);
+
     let amount = ethers.utils.parseEther('0.03');
 
     const blockNumber = await ethers.provider.getBlockNumber();
-
     await expect(escrow.connect(sender).createTransaction(
       constants.TIMEOUT_PAYMENT, rogue.address, '', { value: amount }))
       .to.changeEtherBalances(
@@ -80,13 +60,9 @@ describe('NerwoEscrow: reimburse', function () {
   });
 
   it('rogue as sender', async () => {
+    const { escrow, rogue, platform, receiver } = await loadFixture(deployAndFundRogueFixture);
+
     let amount = ethers.utils.parseEther('0.02');
-
-    // fund rogue contract
-    const rogueFunds = ethers.utils.parseEther('10.0');
-    await expect(sender.sendTransaction({ to: rogue.address, value: rogueFunds }))
-      .to.changeEtherBalance(rogue, rogueFunds);
-
     await rogue.setAmount(amount);
 
     const blockNumber = await ethers.provider.getBlockNumber();
@@ -137,5 +113,4 @@ describe('NerwoEscrow: reimburse', function () {
     await expect(escrow.connect(receiver).reimburse(_transactionID, amount))
       .to.be.revertedWithCustomError(escrow, 'InvalidAmount').withArgs(0);
   });
-
 });

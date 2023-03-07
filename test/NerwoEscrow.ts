@@ -1,38 +1,14 @@
 import { expect } from 'chai';
-import { deployments, ethers } from 'hardhat';
-import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
-
-import { NerwoCentralizedArbitrator, NerwoEscrow, Rogue } from '../typechain-types';
+import { ethers } from 'hardhat';
+import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 
 import * as constants from '../constants';
+import { deployFixture, deployAndFundRogueFixture } from './fixtures';
 
 describe('NerwoEscrow: misc', function () {
-  const arbitrationPrice = ethers.utils.parseEther('0.0001');
-  let escrow: NerwoEscrow;
-  let arbitrator: NerwoCentralizedArbitrator;
-  let deployer: SignerWithAddress, platform: SignerWithAddress, court: SignerWithAddress;
-  let sender: SignerWithAddress, receiver: SignerWithAddress;
-  let rogue: Rogue;
-
-  this.beforeEach(async () => {
-    [deployer, platform, court, sender, receiver] = await ethers.getSigners();
-
-    await deployments.fixture(['NerwoCentralizedArbitrator', 'NerwoEscrow'], {
-      keepExistingDeployments: true
-    });
-
-    let deployment = await deployments.get('NerwoCentralizedArbitrator');
-    arbitrator = await ethers.getContractAt('NerwoCentralizedArbitrator', deployment.address);
-
-    deployment = await deployments.get('NerwoEscrow');
-    escrow = await ethers.getContractAt('NerwoEscrow', deployment.address);
-
-    const Rogue = await ethers.getContractFactory("Rogue");
-    rogue = await Rogue.deploy(escrow.address);
-    await rogue.deployed();
-  });
-
   it('Creating transaction, then pay', async () => {
+    const { escrow, platform, sender, receiver } = await loadFixture(deployFixture);
+
     const amount = ethers.utils.parseEther('0.01');
     const platformFee = await escrow.calculateFeeRecipientAmount(amount);
 
@@ -60,6 +36,8 @@ describe('NerwoEscrow: misc', function () {
   });
 
   it('Creating transaction with rogue, then pay', async () => {
+    const { escrow, rogue, platform, sender } = await loadFixture(deployFixture);
+
     const amount = ethers.utils.parseEther('0.02');
     const payAmount = amount.div(2);
     const platformFee = await escrow.calculateFeeRecipientAmount(payAmount);
@@ -100,7 +78,10 @@ describe('NerwoEscrow: misc', function () {
   });
 
   it('Creating transaction with arbitrage', async () => {
+    const { arbitrator, escrow, platform, court, sender, receiver } = await loadFixture(deployFixture);
+
     let amount = ethers.utils.parseEther('0.04');
+    const arbitrationPrice = await arbitrator.arbitrationCost([]);
 
     let blockNumber = await ethers.provider.getBlockNumber();
     await expect(escrow.connect(sender).createTransaction(
@@ -195,10 +176,8 @@ describe('NerwoEscrow: misc', function () {
   });
 
   it('Creating arbitrage transaction with rogue', async () => {
-    // fund rogue contract
-    const rogueFunds = ethers.utils.parseEther('10.0');
-    await expect(sender.sendTransaction({ to: rogue.address, value: rogueFunds }))
-      .to.changeEtherBalance(rogue, rogueFunds);
+    const { arbitrator, escrow, rogue, platform, court, receiver } = await loadFixture(deployAndFundRogueFixture);
+    const arbitrationPrice = await arbitrator.arbitrationCost([]);
 
     let amount = ethers.utils.parseEther('0.07');
     await rogue.setAmount(amount);

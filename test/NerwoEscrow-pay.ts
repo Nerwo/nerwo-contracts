@@ -1,34 +1,15 @@
 import { expect } from 'chai';
+import { ethers } from 'hardhat';
 import { anyValue } from '@nomicfoundation/hardhat-chai-matchers/withArgs';
-import { deployments, ethers } from 'hardhat';
-import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
-
-import { NerwoEscrow, Rogue } from '../typechain-types';
+import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 
 import * as constants from '../constants';
+import { deployFixture } from './fixtures';
 
 describe('NerwoEscrow: pay', function () {
-  let escrow: NerwoEscrow;
-  let platform: SignerWithAddress;
-  let sender: SignerWithAddress;
-  let rogue: Rogue;
-
-  this.beforeEach(async () => {
-    [, platform, , sender,] = await ethers.getSigners();
-
-    await deployments.fixture(['NerwoCentralizedArbitrator', 'NerwoEscrow'], {
-      keepExistingDeployments: true
-    });
-
-    let deployment = await deployments.get('NerwoEscrow');
-    escrow = await ethers.getContractAt('NerwoEscrow', deployment.address);
-
-    const Rogue = await ethers.getContractFactory("Rogue");
-    rogue = await Rogue.deploy(escrow.address);
-    await rogue.deployed();
-  });
-
   it('rogue as recipient', async () => {
+    const { escrow, rogue, platform, sender } = await loadFixture(deployFixture);
+
     const minimalAmount = await escrow.minimalAmount();
     let amount = ethers.utils.parseEther('0.02');
 

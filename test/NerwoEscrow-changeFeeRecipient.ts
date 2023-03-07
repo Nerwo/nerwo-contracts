@@ -1,26 +1,12 @@
 import { expect } from 'chai';
-import { deployments, ethers } from 'hardhat';
-import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
+import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 
-import { NerwoEscrow } from '../typechain-types';
+import { deployFixture } from './fixtures';
 
 describe('NerwoEscrow: changeFeeRecipient', function () {
-  let escrow: NerwoEscrow;
-  let deployer: SignerWithAddress, platform: SignerWithAddress;
-  let sender: SignerWithAddress, receiver: SignerWithAddress;
-
-  this.beforeEach(async () => {
-    [deployer, platform, , sender, receiver] = await ethers.getSigners();
-
-    await deployments.fixture(['NerwoCentralizedArbitrator', 'NerwoEscrow'], {
-      keepExistingDeployments: true
-    });
-
-    let deployment = await deployments.get('NerwoEscrow');
-    escrow = await ethers.getContractAt('NerwoEscrow', deployment.address);
-  });
-
   it('Changing fee recipient', async () => {
+    const { escrow, platform, sender } = await loadFixture(deployFixture);
+
     await expect(escrow.connect(platform).changeFeeRecipient(sender.address))
       .to.emit(escrow, 'FeeRecipientChanged')
       .withArgs(platform.address, sender.address);
@@ -31,6 +17,8 @@ describe('NerwoEscrow: changeFeeRecipient', function () {
   });
 
   it('Changing fee recipient: invalid caller', async () => {
+    const { escrow, platform, sender } = await loadFixture(deployFixture);
+
     await expect(escrow.connect(sender).changeFeeRecipient(sender.address))
       .to.be.revertedWithCustomError(escrow, 'InvalidCaller').withArgs(platform.address);
   });

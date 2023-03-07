@@ -1,27 +1,14 @@
 import { expect } from 'chai';
-import { deployments, ethers } from 'hardhat';
-import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
-
-import { NerwoEscrow } from '../typechain-types';
+import { ethers } from 'hardhat';
+import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 
 import * as constants from '../constants';
+import { deployFixture } from './fixtures';
 
 describe('NerwoEscrow: createTransaction', function () {
-  let escrow: NerwoEscrow;
-  let deployer: SignerWithAddress, sender: SignerWithAddress, receiver: SignerWithAddress;
-
-  this.beforeEach(async () => {
-    [deployer, , , sender, receiver] = await ethers.getSigners();
-
-    await deployments.fixture(['NerwoCentralizedArbitrator', 'NerwoEscrow'], {
-      keepExistingDeployments: true
-    });
-
-    let deployment = await deployments.get('NerwoEscrow');
-    escrow = await ethers.getContractAt('NerwoEscrow', deployment.address);
-  });
-
   it('Creating a transaction', async () => {
+    const { escrow, sender, receiver } = await loadFixture(deployFixture);
+
     const amount = await escrow.minimalAmount();
     await expect(escrow.connect(sender).createTransaction(
       constants.TIMEOUT_PAYMENT,
@@ -36,6 +23,8 @@ describe('NerwoEscrow: createTransaction', function () {
   });
 
   it('Creating a transaction with myself', async () => {
+    const { escrow, sender, receiver } = await loadFixture(deployFixture);
+
     const amount = await escrow.minimalAmount();
     await expect(escrow.connect(sender).createTransaction(
       constants.TIMEOUT_PAYMENT,
@@ -45,6 +34,8 @@ describe('NerwoEscrow: createTransaction', function () {
   });
 
   it('Creating a transaction with null receiver', async () => {
+    const { escrow, sender, receiver } = await loadFixture(deployFixture);
+
     const amount = await escrow.minimalAmount();
     await expect(escrow.connect(sender).createTransaction(
       constants.TIMEOUT_PAYMENT,
@@ -54,6 +45,8 @@ describe('NerwoEscrow: createTransaction', function () {
   });
 
   it('Creating a transaction < minimalAmount', async () => {
+    const { escrow, sender, receiver } = await loadFixture(deployFixture);
+
     const minimalAmount = await escrow.minimalAmount();
     await expect(escrow.connect(sender).createTransaction(
       constants.TIMEOUT_PAYMENT,
@@ -64,6 +57,8 @@ describe('NerwoEscrow: createTransaction', function () {
   });
 
   it('Creating a transaction with overflowing _timeoutPayment', async () => {
+    const { escrow, sender, receiver } = await loadFixture(deployFixture);
+
     const amount = await escrow.minimalAmount();
     const timeoutPayment = ethers.BigNumber.from(2).pow(32);
 
@@ -76,6 +71,8 @@ describe('NerwoEscrow: createTransaction', function () {
   });
 
   it('Creating a transaction having b0rk3d priceThresholds', async () => {
+    const { escrow, sender, receiver } = await loadFixture(deployFixture);
+
     const amount = await escrow.minimalAmount();
 
     await escrow.setPriceThresholds([

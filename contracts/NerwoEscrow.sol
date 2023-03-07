@@ -458,6 +458,10 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable {
             revert NoTimeout();
         }
 
+        if (transaction.amount == 0) {
+            revert InvalidAmount(0);
+        }
+
         transaction.status = Status.Resolved;
 
         uint256 amount = transaction.amount;
