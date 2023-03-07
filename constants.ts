@@ -6,7 +6,7 @@ export const RECEIVER_WINS = 2;
 
 export const MINIMAL_AMOUNT = parseEther(process.env.NERWO_MINIMAL_AMOUNT);
 
-export const FEE_TIMEOUT = process.env.NERWO_FEE_TIMEOUT;
+export const FEE_TIMEOUT = parseInt(process.env.NERWO_FEE_TIMEOUT, 10);
 
 export const FEE_PRICE_THRESHOLDS = process.env.NERWO_FEE_PRICE_THRESHOLDS.split(';').map((tuple: string) => {
     const [amount, basisPoint] = tuple.split('=');

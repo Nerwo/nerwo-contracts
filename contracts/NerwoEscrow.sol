@@ -489,12 +489,6 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable {
             revert NoTimeout();
         }
 
-        if (transaction.receiverFee != 0) {
-            uint256 receiverFee = transaction.receiverFee;
-            transaction.receiverFee = 0;
-            _sendTo(transaction.receiver, receiverFee);
-        }
-
         _executeRuling(_transactionID, SENDER_WINS);
     }
 
@@ -510,12 +504,6 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable {
 
         if (block.timestamp - transaction.lastInteraction < feeTimeout) {
             revert NoTimeout();
-        }
-
-        if (transaction.senderFee != 0) {
-            uint256 senderFee = transaction.senderFee;
-            transaction.senderFee = 0;
-            _sendTo(transaction.sender, senderFee);
         }
 
         _executeRuling(_transactionID, RECEIVER_WINS);
