@@ -72,4 +72,10 @@ describe('NerwoEscrow: pay', function () {
       .to.emit(escrow, 'Payment').withArgs(_transactionID, amount, sender.address)
       .to.emit(escrow, 'FeeRecipientPayment');
   });
+
+  it('empty -> panic', async () => {
+    const { escrow, sender } = await loadFixture(deployFixture);
+    await expect(escrow.connect(sender).pay(0, 10))
+      .to.be.revertedWithPanic();
+  });
 });
