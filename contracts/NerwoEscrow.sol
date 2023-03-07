@@ -391,6 +391,8 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable {
             revert InvalidCaller(_receiver);
         }
 
+        transactionID = transactions.length;
+
         transactions.push(
             Transaction({
                 sender: payable(_msgSender()),
@@ -405,8 +407,6 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable {
                 status: Status.NoDispute
             })
         );
-
-        transactionID = transactions.length - 1;
 
         emit MetaEvidence(transactionID, _metaEvidence);
         emit TransactionCreated(transactionID, _msgSender(), _receiver, msg.value);
