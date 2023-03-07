@@ -18,6 +18,8 @@ interface Escrow {
 
     function reimburse(uint256 _transactionID, uint256 _amountReimbursed) external;
 
+    function executeTransaction(uint256 _transactionID) external;
+
     function payArbitrationFeeBySender(uint256 _transactionID) external payable;
 }
 
@@ -26,9 +28,12 @@ contract Rogue {
         None,
         Pay,
         Reimburse,
+        ExecuteTransaction,
         PayArbitrationFeeBySender,
         Revert
     }
+
+    event ErrorNotHandled(string reason);
 
     function strAction(Action _action) internal pure returns (string memory) {
         if (_action == Action.None) {
@@ -37,6 +42,8 @@ contract Rogue {
             return "Pay";
         } else if (_action == Action.Reimburse) {
             return "Reimburse";
+        } else if (_action == Action.ExecuteTransaction) {
+            return "ExecuteTransaction";
         } else if (_action == Action.PayArbitrationFeeBySender) {
             return "PayArbitrationFeeBySender";
         } else if (_action == Action.Revert) {
@@ -48,8 +55,9 @@ contract Rogue {
     Escrow public immutable escrow;
 
     Action public action = Action.None;
-    uint256 public transactionID = 0;
-    uint256 public amount = 0;
+    bool public failOnError = true;
+    uint256 public transactionID;
+    uint256 public amount;
 
     event TransactionCreated(
         uint256 _transactionID,
@@ -77,23 +85,44 @@ contract Rogue {
         );
 
         Escrow caller = Escrow(msg.sender);
+        string memory reason;
 
         if (action == Action.None) {
             console.log("Rogue: receive() Received %s", msg.value);
         } else if (action == Action.Pay) {
             console.log("Rogue: receive() Calling pay(%s, %s)", transactionID, amount);
-            caller.pay(transactionID, amount);
-            console.log("Rogue: receive() Called pay()");
+            try caller.pay(transactionID, amount) {} catch Error(string memory _reason) {
+                reason = _reason;
+            }
+        } else if (action == Action.ExecuteTransaction) {
+            console.log("Rogue: receive() calling executeTransaction(%s)", transactionID);
+            try caller.executeTransaction(transactionID) {} catch Error(string memory _reason) {
+                reason = _reason;
+            }
         } else if (action == Action.PayArbitrationFeeBySender) {
             console.log("Rogue: receive() calling payArbitrationFeeBySender pay(%s, %s)", transactionID, amount);
-            caller.payArbitrationFeeBySender{value: amount}(transactionID);
-            console.log("Rogue: receive() called payArbitrationFeeBySender()");
+            try caller.payArbitrationFeeBySender{value: amount}(transactionID) {} catch Error(string memory _reason) {
+                reason = _reason;
+            }
         } else if (action == Action.Revert) {
             console.log("Rogue: reverting");
             revert("Rogue: reverted");
         } else {
             revert("Rogue: invalid action");
         }
+
+        if (bytes(reason).length != 0) {
+            console.log("Rogue: call failed with `%s`", reason);
+            if (failOnError) {
+                revert(reason);
+            } else {
+                emit ErrorNotHandled(reason);
+            }
+        }
+    }
+
+    function setFailOnError(bool _failOnError) external {
+        failOnError = _failOnError;
     }
 
     function setAction(uint256 _action) external {

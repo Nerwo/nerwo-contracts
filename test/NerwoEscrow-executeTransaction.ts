@@ -83,6 +83,39 @@ describe('NerwoEscrow: executeTransaction', function () {
       .to.be.revertedWithCustomError(escrow, 'InvalidStatus');
   });
 
+  it('ReentrancyGuard', async () => {
+    const { escrow, rogue, platform, sender } = await loadFixture(deployFixture);
+    const amount = ethers.utils.parseEther('0.02');
+    const feeAmount = await escrow.calculateFeeRecipientAmount(amount);
+
+    const blockNumber = await ethers.provider.getBlockNumber();
+
+    await expect(escrow.connect(sender).createTransaction(
+      constants.TIMEOUT_PAYMENT, rogue.address, '', { value: amount }))
+      .to.changeEtherBalances(
+        [platform, sender],
+        [0, amount.mul(-1)]
+      )
+      .to.emit(escrow, 'TransactionCreated');
+
+    const events = await escrow.queryFilter(escrow.filters.TransactionCreated(), blockNumber);
+    expect(events).to.be.an('array').that.lengthOf(1);
+    expect(events[0].args!).is.not.undefined;
+
+    const { _transactionID } = events[0].args!;
+    await time.increase(constants.TIMEOUT_PAYMENT);
+
+    await rogue.setAction(constants.RogueAction.ExecuteTransaction);
+    await rogue.setTransaction(_transactionID);
+
+    await rogue.setFailOnError(false);
+    await expect(escrow.connect(sender).executeTransaction(_transactionID))
+      .to.changeEtherBalances(
+        [escrow, rogue, platform],
+        [amount.mul(-1), amount.sub(feeAmount), feeAmount]
+      )
+      .to.emit(rogue, 'ErrorNotHandled').withArgs('ReentrancyGuard: reentrant call');
+  });
 
   it('FeeRecipientPayment', async () => {
     const { escrow, platform, receiver, amount, feeAmount, _transactionID } = await loadFixture(createTransaction);

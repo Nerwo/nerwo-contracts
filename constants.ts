@@ -23,6 +23,7 @@ export const enum RogueAction {
     None,
     Pay,
     Reimburse,
+    ExecuteTransaction,
     PayArbitrationFeeBySender,
     Revert
 }
