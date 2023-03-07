@@ -19,9 +19,9 @@
     "@types/node": "^18.14.6",
     "dotenv": "^16.0.3",
     "hardhat": "^2.13.0",
-    "hardhat-deploy": "^0.11.24",
+    "hardhat-deploy": "^0.11.25",
     "hardhat-gas-reporter": "^1.0.9",
     "mocha": "^10.2.0",
-    "solhint": "^3.4.0"
+    "solhint": "^3.4.1"
   }
 }
