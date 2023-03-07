@@ -70,7 +70,7 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable {
 
     PriceThreshold[] public priceThresholds;
 
-    Transaction[] private transactions;
+    Transaction[] public transactions;
     bytes public arbitratorExtraData; // Extra data to set up the arbitration.
     IArbitrator public arbitrator; // Address of the arbitrator contract.
 
