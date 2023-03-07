@@ -28,7 +28,7 @@ describe('NerwoEscrow: reimburse', function () {
   });
 
   it('rogue as recipient', async () => {
-    let amount = ethers.utils.parseEther('0.03')
+    let amount = ethers.utils.parseEther('0.03');
 
     const blockNumber = await ethers.provider.getBlockNumber();
 
@@ -65,7 +65,7 @@ describe('NerwoEscrow: reimburse', function () {
       )
       .to.emit(escrow, 'Payment').withArgs(_transactionID, amount, rogue.address);
 
-    await rogue.setAction(constants.RogueAction.Reimburse)
+    await rogue.setAction(constants.RogueAction.Reimburse);
     await rogue.setAmount(amount);
     await expect(escrow.connect(sender).pay(_transactionID, amount))
       .to.changeEtherBalances(

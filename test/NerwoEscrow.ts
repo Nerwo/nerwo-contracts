@@ -129,7 +129,7 @@ describe('NerwoEscrow: misc', function () {
     let dEvents = await escrow.queryFilter(escrow.filters.Dispute(), blockNumber);
     expect(dEvents).to.be.an('array').that.lengthOf(1);
     expect(dEvents[0].args!).is.not.undefined;
-    let { _disputeID } = dEvents[0].args!
+    let { _disputeID } = dEvents[0].args!;
 
     await expect(escrow.connect(sender).pay(_transactionID, amount))
       .to.revertedWithCustomError(escrow, 'InvalidStatus');

@@ -30,7 +30,7 @@ describe('NerwoEscrow: pay', function () {
 
   it('rogue as recipient', async () => {
     const minimalAmount = await escrow.minimalAmount();
-    let amount = ethers.utils.parseEther('0.02')
+    let amount = ethers.utils.parseEther('0.02');
 
     // fund rogue contract
     const rogueFunds = ethers.utils.parseEther('10.0');
