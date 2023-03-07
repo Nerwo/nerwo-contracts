@@ -18,7 +18,6 @@ import {IArbitrator} from "./kleros/IArbitrator.sol";
 import {IArbitrable} from "./kleros/IArbitrable.sol";
 
 error NullAddress();
-error ReentrantCall();
 error TransferFailed(address recipient, uint256 amount, bytes data);
 error NoTimeout();
 error InvalidRuling();
