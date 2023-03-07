@@ -3,12 +3,12 @@ import { anyValue } from '@nomicfoundation/hardhat-chai-matchers/withArgs';
 import { deployments, ethers } from 'hardhat';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 
-import { NerwoEscrowV1, Rogue } from '../typechain-types';
+import { NerwoEscrow, Rogue } from '../typechain-types';
 
 import * as constants from '../constants';
 
 describe('NerwoEscrow: pay', function () {
-  let escrow: NerwoEscrowV1;
+  let escrow: NerwoEscrow;
   let platform: SignerWithAddress;
   let sender: SignerWithAddress;
   let rogue: Rogue;
@@ -16,12 +16,12 @@ describe('NerwoEscrow: pay', function () {
   this.beforeEach(async () => {
     [, platform, , sender,] = await ethers.getSigners();
 
-    await deployments.fixture(['NerwoCentralizedArbitratorV1', 'NerwoEscrowV1'], {
+    await deployments.fixture(['NerwoCentralizedArbitrator', 'NerwoEscrow'], {
       keepExistingDeployments: true
     });
 
-    let deployment = await deployments.get('NerwoEscrowV1');
-    escrow = await ethers.getContractAt('NerwoEscrowV1', deployment.address);
+    let deployment = await deployments.get('NerwoEscrow');
+    escrow = await ethers.getContractAt('NerwoEscrow', deployment.address);
 
     const Rogue = await ethers.getContractFactory("Rogue");
     rogue = await Rogue.deploy(escrow.address);

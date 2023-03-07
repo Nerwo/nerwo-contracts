@@ -10,15 +10,12 @@
 
 pragma solidity ^0.8.0;
 
-import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import {SafeCastUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/math/SafeCastUpgradeable.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
-import {VersionAware} from "../VersionAware.sol";
-
-import {IArbitrator} from "../kleros/IArbitrator.sol";
-import {IArbitrable} from "../kleros/IArbitrable.sol";
+import {IArbitrator} from "./kleros/IArbitrator.sol";
+import {IArbitrable} from "./kleros/IArbitrable.sol";
 
 error NullAddress();
 error ReentrantCall();
@@ -30,21 +27,15 @@ error InvalidStatus(uint256 expected);
 error InvalidAmount(uint256 amount);
 error InvalidPriceThresolds();
 
-contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUpgradeable, VersionAware {
-    using SafeCastUpgradeable for uint256;
+contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable {
+    using SafeCast for uint256;
 
     // **************************** //
     // *    Contract variables    * //
     // **************************** //
-    string private constant CONTRACT_NAME = "NerwoEscrow: V1";
-
     uint8 private constant AMOUNT_OF_CHOICES = 2;
     uint8 private constant SENDER_WINS = 1;
     uint8 private constant RECEIVER_WINS = 2;
-
-    // ReentrancyGuard
-    uint256 private constant _NOT_ENTERED = 1;
-    uint256 private constant _ENTERED = 2;
 
     enum Party {
         Sender,
@@ -76,9 +67,6 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
         uint256 senderFee; // Total fees paid by the sender.
         uint256 receiverFee; // Total fees paid by the receiver.
     }
-
-    // ReentrancyGuard
-    uint256 private _status;
 
     PriceThreshold[] public priceThresholds;
 
@@ -174,56 +162,12 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
      */
     event SendFailed(address indexed recipient, uint256 amount, bytes data);
 
-    /* ReentrancyGuard */
-
-    /**
-     * @dev Prevents a contract from calling itself, directly or indirectly.
-     * Calling a `nonReentrant` function from another `nonReentrant`
-     * function is not supported. It is possible to prevent this from happening
-     * by making the `nonReentrant` function external, and making it call a
-     * `private` function that does the actual work.
-     */
-    modifier nonReentrant() {
-        _nonReentrantBefore();
-        _;
-        _nonReentrantAfter();
-    }
-
-    function _nonReentrantBefore() private {
-        // On the first call to nonReentrant, _status will be _NOT_ENTERED
-        if (_status == _ENTERED) {
-            revert ReentrantCall();
-        }
-
-        // Any calls to nonReentrant after this point will fail
-        _status = _ENTERED;
-    }
-
-    function _nonReentrantAfter() private {
-        // By storing the original value once again, a refund is triggered (see
-        // https://eips.ethereum.org/EIPS/eip-2200)
-        _status = _NOT_ENTERED;
-    }
-
-    /**
-     * @dev Returns true if the reentrancy guard is currently set to "entered", which indicates there is a
-     * `nonReentrant` function in the call stack.
-     */
-    function _reentrancyGuardEntered() internal view returns (bool) {
-        return _status == _ENTERED;
-    }
-
     // **************************** //
     // *    Arbitrable functions  * //
     // *    Modifying the state   * //
     // **************************** //
 
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() {
-        _disableInitializers();
-    }
-
-    /** @dev initializer
+    /** @dev constructor
      *  @param _owner The initial owner
      *  @param _arbitrator The arbitrator of the contract.
      *  @param _arbitratorExtraData Extra data for the arbitrator.
@@ -231,23 +175,19 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
      *  @param _feeRecipient Address which receives a share of receiver payment.
      *  @param _priceThresholds List of tuple to calculate fee amount based on price
      */
-    function initialize(
+    constructor(
         address _owner,
         address _arbitrator,
-        bytes calldata _arbitratorExtraData,
+        bytes memory _arbitratorExtraData,
         uint256 _feeTimeout,
         uint256 _minimalAmount,
         address _feeRecipient,
-        PriceThreshold[] calldata _priceThresholds
-    ) external initializer {
-        _status = _NOT_ENTERED;
-        versionAwareContractName = CONTRACT_NAME;
-
+        PriceThreshold[] memory _priceThresholds
+    ) {
         _setArbitrator(_arbitrator, _arbitratorExtraData, _feeTimeout);
         _setMinimalAmount(_minimalAmount);
         _setFeeRecipient(_feeRecipient);
         _setPriceThresholds(_priceThresholds);
-
         _transferOwnership(_owner);
     }
 
@@ -257,7 +197,7 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
      *  @param _arbitratorExtraData Extra data for the arbitrator.
      *  @param _feeTimeout Arbitration fee timeout for the parties.
      */
-    function _setArbitrator(address _arbitrator, bytes calldata _arbitratorExtraData, uint256 _feeTimeout) internal {
+    function _setArbitrator(address _arbitrator, bytes memory _arbitratorExtraData, uint256 _feeTimeout) internal {
         arbitrator = IArbitrator(_arbitrator);
         arbitratorExtraData = _arbitratorExtraData;
         feeTimeout = _feeTimeout;
@@ -316,7 +256,7 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
      * @dev Sets the price thresholds array - Internal function without access restriction
      * @param _priceThresholds An array of PriceThreshold structs to set as the new price thresholds.
      */
-    function _setPriceThresholds(PriceThreshold[] calldata _priceThresholds) internal {
+    function _setPriceThresholds(PriceThreshold[] memory _priceThresholds) internal {
         if (_priceThresholds.length == 0) {
             revert InvalidPriceThresolds();
         }
@@ -341,13 +281,6 @@ contract NerwoEscrowV1 is IArbitrable, Initializable, UUPSUpgradeable, OwnableUp
      */
     function getBalance() external view returns (uint256) {
         return address(this).balance;
-    }
-
-    ///@dev required by the OZ UUPS module
-    function _authorizeUpgrade(address) internal override onlyOwner {}
-
-    function getContractNameWithVersion() external pure override returns (string memory) {
-        return CONTRACT_NAME;
     }
 
     function _findFeeBasisPoint(uint256 _amount) internal view returns (uint256 feeBasisPoint) {

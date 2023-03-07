@@ -6,21 +6,13 @@ const func: DeployFunction = async function ({ deployments: { deploy }, getNamed
   let { deployer, court } = await getNamedAccounts();
   court = court || process.env.NERWO_COURT_ADDRESS;
 
-  await deploy('NerwoCentralizedArbitratorV1', {
+  await deploy('NerwoCentralizedArbitrator', {
     from: deployer,
-    proxy: {
-      proxyContract: 'UUPS',
-      execute: {
-        init: {
-          methodName: 'initialize',
-          args: [court, constants.ARBITRATOR_PRICE]
-        }
-      }
-    },
+    args: [court, constants.ARBITRATOR_PRICE],
     log: true,
     deterministicDeployment: true
   });
 };
 
 export default func;
-func.tags = ['NerwoCentralizedArbitratorV1'];
+func.tags = ['NerwoCentralizedArbitrator'];

@@ -2,24 +2,24 @@ import { expect } from 'chai';
 import { deployments, ethers } from 'hardhat';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 
-import { NerwoEscrowV1 } from '../typechain-types';
+import { NerwoEscrow } from '../typechain-types';
 
 import * as constants from '../constants';
 
 describe('NerwoEscrow: setPriceThresholds', function () {
-  let escrow: NerwoEscrowV1;
+  let escrow: NerwoEscrow;
   let deployer: SignerWithAddress, platform: SignerWithAddress;
   let sender: SignerWithAddress, receiver: SignerWithAddress;
 
   this.beforeEach(async () => {
     [deployer, platform, , sender, receiver] = await ethers.getSigners();
 
-    await deployments.fixture(['NerwoCentralizedArbitratorV1', 'NerwoEscrowV1'], {
+    await deployments.fixture(['NerwoCentralizedArbitrator', 'NerwoEscrow'], {
       keepExistingDeployments: true
     });
 
-    let deployment = await deployments.get('NerwoEscrowV1');
-    escrow = await ethers.getContractAt('NerwoEscrowV1', deployment.address);
+    let deployment = await deployments.get('NerwoEscrow');
+    escrow = await ethers.getContractAt('NerwoEscrow', deployment.address);
   });
 
   it('Testing priceThresholds', async () => {

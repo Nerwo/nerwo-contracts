@@ -2,15 +2,12 @@
 
 pragma solidity ^0.8.0;
 
-import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import {SafeCastUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/math/SafeCastUpgradeable.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
-import {VersionAware} from "../VersionAware.sol";
-
-import {IArbitrator} from "../kleros/IArbitrator.sol";
-import {IArbitrable} from "../kleros/IArbitrable.sol";
+import {IArbitrator} from "./kleros/IArbitrator.sol";
+import {IArbitrable} from "./kleros/IArbitrable.sol";
 
 error InvalidRuling();
 error InvalidCaller(address expected);
@@ -20,10 +17,8 @@ error AppealPeriodExpired();
 error TransferFailed(address recipient, uint256 amount, bytes data);
 error InsufficientFunding(uint256 required);
 
-contract NerwoCentralizedArbitratorV1 is IArbitrator, Initializable, UUPSUpgradeable, OwnableUpgradeable, VersionAware {
-    using SafeCastUpgradeable for uint256;
-
-    string private constant CONTRACT_NAME = "NerwoCentralizedArbitrator: V1";
+contract NerwoCentralizedArbitrator is Ownable, ReentrancyGuard, IArbitrator {
+    using SafeCast for uint256;
 
     enum DisputeStatus {
         Waiting,
@@ -75,26 +70,13 @@ contract NerwoCentralizedArbitratorV1 is IArbitrator, Initializable, UUPSUpgrade
      */
     event AppealDecision(uint256 indexed _disputeID, IArbitrable indexed _arbitrable);
 
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() {
-        _disableInitializers();
-    }
-
     /** @dev initializer
      *  @param _owner The initial owner
      *  @param _arbitrationPrice Amount to be paid for arbitration.
      */
-    function initialize(address _owner, uint256 _arbitrationPrice) external initializer {
+    constructor(address _owner, uint256 _arbitrationPrice) {
         arbitrationPrice = _arbitrationPrice;
-        versionAwareContractName = CONTRACT_NAME;
         _transferOwnership(_owner);
-    }
-
-    ///@dev required by the OZ UUPS module
-    function _authorizeUpgrade(address) internal override onlyOwner {}
-
-    function getContractNameWithVersion() external pure override returns (string memory) {
-        return CONTRACT_NAME;
     }
 
     /** @dev Send to recipent, reverts on failure
@@ -129,9 +111,12 @@ contract NerwoCentralizedArbitratorV1 is IArbitrator, Initializable, UUPSUpgrade
      *  @return fee Amount to be paid.
      */
     function appealCost(uint256 _disputeID, bytes calldata) public view returns (uint256 fee) {
-        Dispute memory dispute = disputes[_disputeID];
-        if (dispute.status == DisputeStatus.Appealable) return dispute.appealCost;
-        else return NOT_PAYABLE_VALUE;
+        Dispute storage dispute = disputes[_disputeID];
+        if (dispute.status == DisputeStatus.Appealable) {
+            return dispute.appealCost;
+        }
+
+        return NOT_PAYABLE_VALUE;
     }
 
     /** @dev Create a dispute. Must be called by the arbitrable contract.
@@ -258,10 +243,11 @@ contract NerwoCentralizedArbitratorV1 is IArbitrator, Initializable, UUPSUpgrade
      */
     function disputeStatus(uint256 _disputeID) external view returns (DisputeStatus status) {
         Dispute storage dispute = disputes[_disputeID];
-        if (disputes[_disputeID].status == DisputeStatus.Appealable && block.timestamp >= dispute.appealPeriodEnd)
+        if (disputes[_disputeID].status == DisputeStatus.Appealable && block.timestamp >= dispute.appealPeriodEnd) {
             // If the appeal period is over, consider it solved even if rule has not been called yet.
             return DisputeStatus.Solved;
-        else return disputes[_disputeID].status;
+        }
+        return disputes[_disputeID].status;
     }
 
     /** @dev Return the ruling of a dispute.
