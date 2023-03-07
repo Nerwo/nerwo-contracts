@@ -678,41 +678,4 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable {
             emit FeeRecipientPayment(_transactionID, feeAmount);
         }
     }
-
-    // **************************** //
-    // *     Constant getters     * //
-    // **************************** //
-
-    /** @dev Getter to know the count of transactions.
-     *  @return countTransactions The count of transactions.
-     */
-    function getCountTransactions() external view returns (uint256 countTransactions) {
-        return transactions.length;
-    }
-
-    /** @dev Get IDs for transactions where the specified address is the receiver and/or the sender.
-     *  This function must be used by the UI and not by other smart contracts.
-     *  Note that the complexity is O(t), where t is amount of arbitrable transactions.
-     *  @param _address The specified address.
-     *  @return transactionIDs The transaction IDs.
-     */
-    function getTransactionIDsByAddress(address _address) external view returns (uint256[] memory transactionIDs) {
-        uint256 count = 0;
-
-        uint256 i;
-        for (i = 0; i < transactions.length; i++) {
-            if (transactions[i].sender == _address || transactions[i].receiver == _address) {
-                count++;
-            }
-        }
-
-        transactionIDs = new uint256[](count);
-        count = 0;
-
-        for (i = 0; i < transactions.length; i++) {
-            if (transactions[i].sender == _address || transactions[i].receiver == _address) {
-                transactionIDs[count++] = i;
-            }
-        }
-    }
 }
