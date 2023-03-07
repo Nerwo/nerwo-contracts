@@ -26,6 +26,7 @@ error InvalidCaller(address expected);
 error InvalidStatus(uint256 expected);
 error InvalidAmount(uint256 amount);
 error InvalidPriceThresolds();
+error NoLostFunds();
 
 contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable {
     using SafeCast for uint256;
@@ -78,6 +79,8 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable {
     uint256 public minimalAmount;
 
     address payable public feeRecipient; // Address which receives a share of receiver payment.
+
+    uint256 public lostFunds; // failed to receive funds, e.g. error in _sendTo()
 
     mapping(uint256 => uint256) private disputeIDtoTransactionID; // One-to-one relationship between the dispute and the transaction.
 
@@ -161,6 +164,12 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable {
      *  @param data Failed call data
      */
     event SendFailed(address indexed recipient, uint256 amount, bytes data);
+
+    /** @dev To be emitted when the owner withdraw lost funds
+     *  @param recipient The owner at the moment of withdrawal
+     *  @param amount The amount
+     */
+    event FundsRecovered(address indexed recipient, uint256 amount);
 
     // **************************** //
     // *    Arbitrable functions  * //
@@ -331,6 +340,7 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable {
         (bool success, bytes memory data) = target.call{value: amount}("");
         if (!success) {
             emit SendFailed(target, amount, data);
+            lostFunds += amount;
         }
     }
 
@@ -343,6 +353,19 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable {
         if (!success) {
             revert TransferFailed(target, amount, data);
         }
+    }
+
+    /** @dev Withdraw lost founds (when _sendTo() fails) */
+    function withdrawLostFunds() external onlyOwner nonReentrant {
+        if (lostFunds == 0) {
+            revert NoLostFunds();
+        }
+
+        uint256 amount = lostFunds;
+        lostFunds = 0;
+
+        _transferTo(payable(_msgSender()), amount);
+        emit FundsRecovered(_msgSender(), amount);
     }
 
     /** @dev Create a transaction.
