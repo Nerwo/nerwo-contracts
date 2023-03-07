@@ -23,7 +23,7 @@ describe('NerwoEscrow: createTransaction', function () {
   });
 
   it('Creating a transaction with myself', async () => {
-    const { escrow, sender, receiver } = await loadFixture(deployFixture);
+    const { escrow, sender } = await loadFixture(deployFixture);
 
     const amount = await escrow.minimalAmount();
     await expect(escrow.connect(sender).createTransaction(
@@ -34,7 +34,7 @@ describe('NerwoEscrow: createTransaction', function () {
   });
 
   it('Creating a transaction with null receiver', async () => {
-    const { escrow, sender, receiver } = await loadFixture(deployFixture);
+    const { escrow, sender } = await loadFixture(deployFixture);
 
     const amount = await escrow.minimalAmount();
     await expect(escrow.connect(sender).createTransaction(
