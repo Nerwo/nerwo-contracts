@@ -7,7 +7,7 @@ pragma solidity ^0.8.0;
 /* solhint-disable no-console */
 import {console} from "hardhat/console.sol";
 
-interface Escrow {
+interface IEscrow {
     function createTransaction(
         uint256 _timeoutPayment,
         address _receiver,
@@ -52,7 +52,7 @@ contract Rogue {
         return "unknown";
     }
 
-    Escrow public immutable escrow;
+    IEscrow public immutable escrow;
 
     Action public action = Action.None;
     bool public failOnError = true;
@@ -69,7 +69,7 @@ contract Rogue {
     );
 
     constructor(address _escrow) {
-        escrow = Escrow(_escrow);
+        escrow = IEscrow(_escrow);
     }
 
     fallback() external payable {
@@ -86,7 +86,7 @@ contract Rogue {
             amount
         );
 
-        Escrow caller = Escrow(msg.sender);
+        IEscrow caller = IEscrow(msg.sender);
         string memory reason;
 
         if (action == Action.None) {
