@@ -1,4 +1,6 @@
 import { ethers } from 'hardhat';
+import { BigNumber } from 'ethers';
+
 const { parseEther } = ethers.utils;
 
 export const SENDER_WINS = 1;
@@ -13,9 +15,7 @@ export const FEE_PRICE_THRESHOLDS = process.env.NERWO_FEE_PRICE_THRESHOLDS.split
     return { maxPrice: parseEther(amount), feeBasisPoint: basisPoint };
 });
 
-export const TIMEOUT_PAYMENT = 1500;
-
-export const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
+export const TIMEOUT_PAYMENT = BigNumber.from(1500);
 
 export const ARBITRATOR_PRICE = ethers.utils.parseEther(process.env.NERWO_ARBITRATION_PRICE);
 

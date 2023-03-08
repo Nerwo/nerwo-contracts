@@ -1,131 +1,99 @@
 import { expect } from 'chai';
-import { ethers } from 'hardhat';
-import { loadFixture, time } from '@nomicfoundation/hardhat-network-helpers';
+import { deployments, ethers } from 'hardhat';
+import { time } from '@nomicfoundation/hardhat-network-helpers';
 
 import * as constants from '../constants';
-import { deployFixture } from './fixtures';
+import { getContracts, getSigners, createTransaction, createDispute, randomAmount } from './utils';
 
 describe('NerwoEscrow: executeTransaction', function () {
-  async function createTransaction() {
-    const { arbitrator, escrow, rogue } = await loadFixture(deployFixture);
-    const [, platform, , sender, receiver] = await ethers.getSigners();
-    const amount = ethers.utils.parseEther('0.02');
-    const feeAmount = await escrow.calculateFeeRecipientAmount(amount);
-
-    const blockNumber = await ethers.provider.getBlockNumber();
-
-    await expect(escrow.connect(sender).createTransaction(
-      constants.TIMEOUT_PAYMENT, receiver.address, '', { value: amount }))
-      .to.changeEtherBalances(
-        [platform, sender],
-        [0, amount.mul(-1)]
-      )
-      .to.emit(escrow, 'TransactionCreated');
-
-    const events = await escrow.queryFilter(escrow.filters.TransactionCreated(), blockNumber);
-    expect(events).to.be.an('array').that.lengthOf(1);
-    expect(events[0].args!).is.not.undefined;
-
-    const { _transactionID } = events[0].args!;
-    return { arbitrator, escrow, rogue, platform, sender, receiver, amount, feeAmount, _transactionID };
-  }
-
-  async function createDispute() {
-    const { arbitrator, escrow, sender, receiver, _transactionID } = await loadFixture(createTransaction);
-    const arbitrationPrice = await arbitrator.arbitrationCost([]);
-
-    await expect(escrow.connect(sender).payArbitrationFeeBySender(
-      _transactionID, { value: arbitrationPrice }))
-      .to.emit(escrow, 'HasToPayFee');
-
-    const blockNumber = await ethers.provider.getBlockNumber();
-
-    await expect(await escrow.connect(receiver).payArbitrationFeeByReceiver(
-      _transactionID, { value: arbitrationPrice }))
-      .to.emit(escrow, 'Dispute')
-      .to.not.emit(escrow, 'HasToPayFee');
-
-    const dEvents = await escrow.queryFilter(escrow.filters.Dispute(), blockNumber);
-    expect(dEvents).to.be.an('array').that.lengthOf(1);
-    expect(dEvents[0].args!).is.not.undefined;
-    let { _disputeID } = dEvents[0].args!;
-
-    return { escrow, receiver, _transactionID, _disputeID };
-  }
+  before(async () => {
+    await deployments.fixture(['NerwoEscrow', 'Rogue'], {
+      keepExistingDeployments: true
+    });
+  });
 
   it('NoTimeout', async () => {
-    const { escrow, receiver, _transactionID } = await loadFixture(createTransaction);
-    await expect(escrow.connect(receiver).executeTransaction(_transactionID))
+    const { escrow } = await getContracts();
+    const { sender, receiver } = await getSigners();
+
+    const amount = await randomAmount();
+    const transactionID = await createTransaction(sender, receiver.address, amount);
+
+    await expect(escrow.connect(receiver).executeTransaction(transactionID))
       .to.be.revertedWithCustomError(escrow, 'NoTimeout');
   });
 
   it('InvalidAmount (already paid)', async () => {
-    const { escrow, platform, sender, amount, feeAmount, _transactionID } = await loadFixture(createTransaction);
+    const { escrow } = await getContracts();
+    const { platform, sender, receiver } = await getSigners();
 
-    await expect(escrow.connect(sender).pay(_transactionID, amount))
+    const amount = ethers.utils.parseEther('0.02');
+    const feeAmount = await escrow.calculateFeeRecipientAmount(amount);
+    const transactionID = await createTransaction(sender, receiver.address, amount);
+
+    expect(await escrow.connect(sender).pay(transactionID, amount))
       .to.changeEtherBalances(
         [escrow, platform],
         [amount.mul(-1), feeAmount]
       )
-      .to.emit(escrow, 'Payment').withArgs(_transactionID, amount, sender.address)
+      .to.emit(escrow, 'Payment').withArgs(transactionID, amount, sender.address)
       .to.emit(escrow, 'FeeRecipientPayment');
 
     await time.increase(constants.TIMEOUT_PAYMENT);
-    await expect(escrow.connect(sender).executeTransaction(_transactionID))
+    await expect(escrow.connect(sender).executeTransaction(transactionID))
       .to.be.revertedWithCustomError(escrow, 'InvalidAmount').withArgs(0);
   });
 
   it('InvalidStatus', async () => {
-    const { escrow, receiver, _transactionID } = await loadFixture(createDispute);
+    const { escrow } = await getContracts();
+    const { sender, receiver } = await getSigners();
+
+    const amount = ethers.utils.parseEther('0.02');
+    let transactionID = await createTransaction(sender, receiver.address, amount);
+    await createDispute(sender, receiver, transactionID);
 
     await time.increase(constants.TIMEOUT_PAYMENT);
-    await expect(escrow.connect(receiver).executeTransaction(_transactionID))
+    await expect(escrow.connect(receiver).executeTransaction(transactionID))
       .to.be.revertedWithCustomError(escrow, 'InvalidStatus');
   });
 
   it('ReentrancyGuard', async () => {
-    const { escrow, rogue, platform, sender } = await loadFixture(deployFixture);
+    const { escrow, rogue } = await getContracts();
+    const { platform, sender } = await getSigners();
+
     const amount = ethers.utils.parseEther('0.02');
     const feeAmount = await escrow.calculateFeeRecipientAmount(amount);
+    const transactionID = await createTransaction(sender, rogue.address, amount);
 
-    const blockNumber = await ethers.provider.getBlockNumber();
+    await rogue.setTransaction(transactionID);
+    await rogue.setFailOnError(false);
 
-    await expect(escrow.connect(sender).createTransaction(
-      constants.TIMEOUT_PAYMENT, rogue.address, '', { value: amount }))
-      .to.changeEtherBalances(
-        [platform, sender],
-        [0, amount.mul(-1)]
-      )
-      .to.emit(escrow, 'TransactionCreated');
-
-    const events = await escrow.queryFilter(escrow.filters.TransactionCreated(), blockNumber);
-    expect(events).to.be.an('array').that.lengthOf(1);
-    expect(events[0].args!).is.not.undefined;
-
-    const { _transactionID } = events[0].args!;
     await time.increase(constants.TIMEOUT_PAYMENT);
 
     await rogue.setAction(constants.RogueAction.ExecuteTransaction);
-    await rogue.setTransaction(_transactionID);
-
-    await rogue.setFailOnError(false);
-    await expect(escrow.connect(sender).executeTransaction(_transactionID))
+    expect(await escrow.connect(sender).executeTransaction(transactionID))
       .to.changeEtherBalances(
         [escrow, rogue, platform],
         [amount.mul(-1), amount.sub(feeAmount), feeAmount]
       )
       .to.emit(rogue, 'ErrorNotHandled').withArgs('ReentrancyGuard: reentrant call');
+    await rogue.setAction(constants.RogueAction.None);
   });
 
   it('FeeRecipientPayment', async () => {
-    const { escrow, platform, receiver, amount, feeAmount, _transactionID } = await loadFixture(createTransaction);
+    const { escrow } = await getContracts();
+    const { platform, sender, receiver } = await getSigners();
+
+    const amount = ethers.utils.parseEther('0.02');
+    const feeAmount = await escrow.calculateFeeRecipientAmount(amount);
+    const transactionID = await createTransaction(sender, receiver.address, amount);
 
     await time.increase(constants.TIMEOUT_PAYMENT);
-    await expect(escrow.connect(receiver).executeTransaction(_transactionID))
+    expect(await escrow.connect(receiver).executeTransaction(transactionID))
       .to.changeEtherBalances(
         [escrow, platform, receiver],
         [amount.mul(-1), feeAmount, amount.sub(feeAmount)]
       )
-      .to.emit(escrow, 'FeeRecipientPayment').withArgs(_transactionID, feeAmount);
+      .to.emit(escrow, 'FeeRecipientPayment').withArgs(transactionID, feeAmount);
   });
 });

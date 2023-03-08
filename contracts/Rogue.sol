@@ -59,6 +59,8 @@ contract Rogue {
     uint256 public transactionID;
     uint256 public amount;
 
+    uint256 public owner = 0x31337;
+
     event TransactionCreated(
         uint256 _transactionID,
         address indexed _sender,

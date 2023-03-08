@@ -1,13 +1,19 @@
 import { expect } from 'chai';
-import { ethers } from 'hardhat';
-import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
+import { deployments, ethers } from 'hardhat';
 
 import * as constants from '../constants';
-import { deployFixture } from './fixtures';
+import { getContracts, getSigners } from './utils';
 
 describe('NerwoEscrow: setPriceThresholds', function () {
+  before(async () => {
+    await deployments.fixture(['NerwoEscrow', 'Rogue'], {
+      keepExistingDeployments: true
+    });
+  });
+
   it('Testing priceThresholds', async () => {
-    const { escrow, deployer } = await loadFixture(deployFixture);
+    const { escrow } = await getContracts();
+    const { deployer } = await getSigners();
 
     const answer = ethers.BigNumber.from(42);
     const priceThreshold = {

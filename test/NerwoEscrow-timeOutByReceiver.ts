@@ -1,61 +1,55 @@
+import { time } from '@nomicfoundation/hardhat-network-helpers';
 import { expect } from 'chai';
-import { ethers } from 'hardhat';
-import { loadFixture, time } from '@nomicfoundation/hardhat-network-helpers';
+import { deployments } from 'hardhat';
 
 import * as constants from '../constants';
-import { deployFixture } from './fixtures';
+import { getContracts, getSigners, createTransaction, randomAmount } from './utils';
 
 describe('NerwoEscrow: timeOutByReceiver', function () {
-  async function createTransaction() {
-    const { arbitrator, escrow, platform, sender, receiver } = await loadFixture(deployFixture);
-
-    const amount = ethers.utils.parseEther('0.02');
-    const feeAmount = await escrow.calculateFeeRecipientAmount(amount);
-
-    const blockNumber = await ethers.provider.getBlockNumber();
-
-    await expect(escrow.connect(sender).createTransaction(
-      constants.TIMEOUT_PAYMENT, receiver.address, '', { value: amount }))
-      .to.changeEtherBalances(
-        [platform, sender],
-        [0, amount.mul(-1)]
-      )
-      .to.emit(escrow, 'TransactionCreated');
-
-    const events = await escrow.queryFilter(escrow.filters.TransactionCreated(), blockNumber);
-    expect(events).to.be.an('array').that.lengthOf(1);
-    expect(events[0].args!).is.not.undefined;
-
-    const { _transactionID } = events[0].args!;
-    return { arbitrator, escrow, platform, sender, receiver, amount, feeAmount, _transactionID };
-  }
+  before(async () => {
+    await deployments.fixture(['NerwoEscrow', 'Rogue'], {
+      keepExistingDeployments: true
+    });
+  });
 
   it('NoTimeout', async () => {
-    const { arbitrator, escrow, receiver, _transactionID } = await loadFixture(createTransaction);
-    const arbitrationPrice = await arbitrator.arbitrationCost([]);
+    const { arbitrator, escrow } = await getContracts();
+    const { sender, receiver } = await getSigners();
 
-    await expect(escrow.connect(receiver).payArbitrationFeeByReceiver(
-      _transactionID, { value: arbitrationPrice }))
+    const amount = await randomAmount();
+    const arbitrationPrice = await arbitrator.arbitrationCost([]);
+    const transactionID = await createTransaction(sender, receiver.address, amount);
+
+    expect(await escrow.connect(receiver).payArbitrationFeeByReceiver(
+      transactionID, { value: arbitrationPrice }))
       .to.emit(escrow, 'HasToPayFee');
 
-    await expect(escrow.connect(receiver).timeOutByReceiver(_transactionID))
+    await expect(escrow.connect(receiver).timeOutByReceiver(transactionID))
       .to.be.revertedWithCustomError(escrow, 'NoTimeout');
   });
 
   it('InvalidStatus', async () => {
-    const { escrow, receiver, _transactionID } = await loadFixture(createTransaction);
+    const { escrow } = await getContracts();
+    const { sender, receiver } = await getSigners();
 
-    await expect(escrow.connect(receiver).timeOutByReceiver(_transactionID))
+    const amount = await randomAmount();
+    const transactionID = await createTransaction(sender, receiver.address, amount);
+
+    await expect(escrow.connect(receiver).timeOutByReceiver(transactionID))
       .to.be.revertedWithCustomError(escrow, 'InvalidStatus');
   });
 
   it('Timeout', async () => {
-    const { arbitrator, escrow, platform, receiver, amount, feeAmount, _transactionID }
-      = await loadFixture(createTransaction);
-    const arbitrationPrice = await arbitrator.arbitrationCost([]);
+    const { arbitrator, escrow } = await getContracts();
+    const { platform, sender, receiver } = await getSigners();
 
-    await expect(escrow.connect(receiver).payArbitrationFeeByReceiver(
-      _transactionID, { value: arbitrationPrice }))
+    const amount = await randomAmount();
+    const feeAmount = await escrow.calculateFeeRecipientAmount(amount);
+    const arbitrationPrice = await arbitrator.arbitrationCost([]);
+    const transactionID = await createTransaction(sender, receiver.address, amount);
+
+    expect(await escrow.connect(receiver).payArbitrationFeeByReceiver(
+      transactionID, { value: arbitrationPrice }))
       .to.changeEtherBalances(
         [escrow, receiver],
         [arbitrationPrice, arbitrationPrice.mul(-1)]
@@ -64,7 +58,7 @@ describe('NerwoEscrow: timeOutByReceiver', function () {
 
     await time.increase(constants.FEE_TIMEOUT);
 
-    await expect(escrow.connect(receiver).timeOutByReceiver(_transactionID))
+    expect(await escrow.connect(receiver).timeOutByReceiver(transactionID))
       .to.changeEtherBalances(
         [escrow, platform, receiver],
         [amount.add(arbitrationPrice).mul(-1), feeAmount, amount.sub(feeAmount).add(arbitrationPrice)]
