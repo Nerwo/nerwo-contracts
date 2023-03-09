@@ -24,7 +24,7 @@ export async function getSigners() {
 
 export async function fund(recipient: Account, amount: BigNumber) {
     const { deployer } = await getSigners();
-    expect(await deployer.sendTransaction({ to: recipient.address, value: amount }))
+    await expect(deployer.sendTransaction({ to: recipient.address, value: amount }))
         .to.changeEtherBalance(recipient, amount);
 }
 
@@ -40,7 +40,7 @@ export async function createTransaction(
     const { escrow } = await getContracts();
     const { platform } = await getSigners();
 
-    expect(await escrow.connect(sender).createTransaction(
+    await expect(escrow.connect(sender).createTransaction(
         timeoutPayment, receiver_address, metaEvidence, { value: amount }))
         .to.changeEtherBalances(
             [platform, sender],
@@ -59,13 +59,13 @@ export async function createDispute(sender: Signer, receiver: Signer, transactio
     const { arbitrator, escrow } = await getContracts();
     const arbitrationPrice = await arbitrator.arbitrationCost([]);
 
-    expect(await escrow.connect(sender).payArbitrationFeeBySender(
+    await expect(escrow.connect(sender).payArbitrationFeeBySender(
         transactionID, { value: arbitrationPrice }))
         .to.emit(escrow, 'HasToPayFee');
 
     const blockNumber = await ethers.provider.getBlockNumber();
 
-    expect(await escrow.connect(receiver).payArbitrationFeeByReceiver(
+    await expect(escrow.connect(receiver).payArbitrationFeeByReceiver(
         transactionID, { value: arbitrationPrice }))
         .to.emit(escrow, 'Dispute')
         .to.not.emit(escrow, 'HasToPayFee');

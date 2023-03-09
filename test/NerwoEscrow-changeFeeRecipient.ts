@@ -13,11 +13,11 @@ describe('NerwoEscrow: changeFeeRecipient', function () {
     const { escrow } = await getContracts();
     const { platform, sender } = await getSigners();
 
-    expect(await escrow.connect(platform).changeFeeRecipient(sender.address))
+    await expect(escrow.connect(platform).changeFeeRecipient(sender.address))
       .to.emit(escrow, 'FeeRecipientChanged')
       .withArgs(platform.address, sender.address);
 
-    expect(await escrow.connect(sender).changeFeeRecipient(platform.address))
+    await expect(escrow.connect(sender).changeFeeRecipient(platform.address))
       .to.emit(escrow, 'FeeRecipientChanged')
       .withArgs(sender.address, platform.address);
   });

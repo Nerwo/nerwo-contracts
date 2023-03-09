@@ -31,7 +31,7 @@ describe('NerwoEscrow: executeTransaction', function () {
     const feeAmount = await escrow.calculateFeeRecipientAmount(amount);
     const transactionID = await createTransaction(sender, receiver.address, amount);
 
-    expect(await escrow.connect(sender).pay(transactionID, amount))
+    await expect(escrow.connect(sender).pay(transactionID, amount))
       .to.changeEtherBalances(
         [escrow, platform],
         [amount.mul(-1), feeAmount]
@@ -66,17 +66,18 @@ describe('NerwoEscrow: executeTransaction', function () {
     const transactionID = await createTransaction(sender, rogue.address, amount);
 
     await rogue.setTransaction(transactionID);
-    await rogue.setFailOnError(false);
 
     await time.increase(constants.TIMEOUT_PAYMENT);
 
     await rogue.setAction(constants.RogueAction.ExecuteTransaction);
-    expect(await escrow.connect(sender).executeTransaction(transactionID))
+    await rogue.setFailOnError(false);
+    await expect(escrow.connect(sender).executeTransaction(transactionID))
       .to.changeEtherBalances(
         [escrow, rogue, platform],
         [amount.mul(-1), amount.sub(feeAmount), feeAmount]
       )
       .to.emit(rogue, 'ErrorNotHandled').withArgs('ReentrancyGuard: reentrant call');
+    await rogue.setFailOnError(true);
     await rogue.setAction(constants.RogueAction.None);
   });
 
@@ -89,7 +90,7 @@ describe('NerwoEscrow: executeTransaction', function () {
     const transactionID = await createTransaction(sender, receiver.address, amount);
 
     await time.increase(constants.TIMEOUT_PAYMENT);
-    expect(await escrow.connect(receiver).executeTransaction(transactionID))
+    await expect(escrow.connect(receiver).executeTransaction(transactionID))
       .to.changeEtherBalances(
         [escrow, platform, receiver],
         [amount.mul(-1), feeAmount, amount.sub(feeAmount)]

@@ -37,7 +37,7 @@ describe('NerwoEscrow: withdrawLostFunds', function () {
     const transactionID = await createTransaction(sender, rogue.address, amount);
 
     await rogue.setAction(constants.RogueAction.Revert);
-    expect(await escrow.connect(sender).pay(transactionID, amount))
+    await expect(escrow.connect(sender).pay(transactionID, amount))
       .to.changeEtherBalances(
         [escrow, platform, rogue],
         [feeAmount.mul(-1), feeAmount, 0]
@@ -47,7 +47,7 @@ describe('NerwoEscrow: withdrawLostFunds', function () {
 
     const lostFunds = await escrow.lostFunds();
 
-    expect(await escrow.connect(deployer).withdrawLostFunds())
+    await expect(escrow.connect(deployer).withdrawLostFunds())
       .to.changeEtherBalances(
         [escrow, deployer],
         [lostFunds.mul(-1), lostFunds]

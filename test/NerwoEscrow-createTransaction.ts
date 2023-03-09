@@ -16,8 +16,7 @@ describe('NerwoEscrow: createTransaction', function () {
     const { sender, receiver } = await getSigners();
 
     const amount = await randomAmount();
-    expect(await createTransaction(sender, receiver.address, amount))
-      .to.emit(escrow, 'TransactionCreated');
+    await createTransaction(sender, receiver.address, amount);
   });
 
   it('Creating a transaction with myself', async () => {
