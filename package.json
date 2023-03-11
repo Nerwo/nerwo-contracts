@@ -4,7 +4,7 @@
   "description": "Nerwo Platform: Smart contracts",
   "scripts": {
     "test": "hardhat test",
-    "check": "solhint contracts/*.sol contracts/**/*.sol"
+    "solhint": "solhint contracts/*.sol contracts/**/*.sol"
   },
   "author": "Gianluigi Tiesi <sherpya@gmail.com>",
   "license": "MIT",
