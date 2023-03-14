@@ -43,7 +43,7 @@ const config: HardhatUserConfig = {
       accounts: {
         mnemonic: process.env.HARDHAT_MNEMONIC || HARDHAT_NETWORK_MNEMONIC
       },
-      deploy: ['deploy', 'deploy/hardhat']
+      deploy: ['deploy', 'deploy-hardhat']
     }
   },
   etherscan: {
