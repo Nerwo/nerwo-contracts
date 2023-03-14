@@ -1,5 +1,6 @@
 import { expect } from 'chai';
 import { deployments, ethers } from 'hardhat';
+import { anyUint } from '@nomicfoundation/hardhat-chai-matchers/withArgs';
 
 import * as constants from '../constants';
 import { getContracts, getSigners, fund, createTransaction, randomAmount } from './utils';
@@ -86,7 +87,6 @@ describe('NerwoEscrow: reimburse', function () {
       .to.be.revertedWithCustomError(escrow, 'InvalidAmount').withArgs(amount);
 
     amount = amount.div(2);
-    const feeAmount = await escrow.calculateFeeRecipientAmount(amount);
 
     await expect(escrow.connect(receiver).reimburse(transactionID, amount))
       .to.changeEtherBalances(
@@ -94,6 +94,9 @@ describe('NerwoEscrow: reimburse', function () {
         [amount.mul(-1), amount]
       )
       .to.emit(escrow, 'Payment').withArgs(transactionID, amount, receiver.address);
+
+    const { feeBasisPoint } = await escrow.transactions(transactionID);
+    const feeAmount = amount.mul(feeBasisPoint).div(10000);
 
     // check balance b0rk3d when calling a contract that sends ether
     await expect(rogue.pay(transactionID, amount))
