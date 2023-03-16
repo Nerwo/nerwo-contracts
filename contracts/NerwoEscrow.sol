@@ -1,11 +1,28 @@
 // SPDX-License-Identifier: MIT
 /**
- *  @authors: [@eburgos, @n1c01a5, @sherpya]
- *  @reviewers: [@unknownunknown1, @clesaege*, @ferittuncer, @remedcu]
- *  @auditors: []
- *  @bounties: []
- *  @deployments: []
- *  @tools: [MythX]
+ *  @title EscrowWithDispute
+ *  @author: [@eburgos, @n1c01a5, @sherpya]
+ *
+ *  @notice This contract implements an escrow system with dispute resolution, allowing secure transactions
+ * between a sender and a receiver. The contract holds funds on behalf of the sender until the transaction
+ * is completed or a dispute arises. If a dispute occurs, an external arbitrator determines the outcome.
+ *
+ * The main features of the contract are:
+ * 1. Create transactions: The sender initializes a transaction by providing details such as the receiver's
+ *    address, the transaction amount, and any associated fees.
+ * 2. Make payments: The sender can pay the receiver if the goods or services are provided as expected.
+ * 3. Reimbursements: The receiver can reimburse the sender if the goods or services cannot be fully provided.
+ * 4. Execute transactions: If the timeout has passed, the receiver can execute the transaction and receive
+ *    the transaction amount.
+ * 5. Timeouts: Both the sender and receiver can trigger a timeout if the counterparty fails to pay the arbitration fee.
+ * 6. Raise disputes and handle arbitration fees: Both parties can raise disputes and pay arbitration fees. The
+ *    contract ensures that both parties pay the fees before raising a dispute.
+ * 7. Submit evidence: Both parties can submit evidence to support their case during a dispute.
+ * 8. Arbitrator ruling: The external arbitrator can provide a ruling to resolve the dispute. The ruling is
+ *    executed by the contract, which redistributes the funds accordingly.
+ *
+ * The contract follows best practices for security, gas optimization, and error handling. It uses Solidity's
+ * custom errors, nonReentrant modifier, and events for better tracking and debugging.
  */
 
 pragma solidity ^0.8.0;
