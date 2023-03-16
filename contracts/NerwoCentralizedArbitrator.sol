@@ -70,6 +70,13 @@ contract NerwoCentralizedArbitrator is Ownable, ReentrancyGuard, IArbitrator {
      */
     event AppealDecision(uint256 indexed _disputeID, IArbitrable indexed _arbitrable);
 
+    /**
+     * @dev Emitted when the arbitration price is updated by the owner.
+     * @param previousPrice The previous arbitration price.
+     * @param newPrice The updated arbitration price.
+     */
+    event ArbitrationPriceChanged(uint256 previousPrice, uint256 newPrice);
+
     /** @dev initializer
      *  @param _owner The initial owner
      *  @param _arbitrationPrice Amount to be paid for arbitration.
@@ -94,7 +101,9 @@ contract NerwoCentralizedArbitrator is Ownable, ReentrancyGuard, IArbitrator {
      *  @param _arbitrationPrice Amount to be paid for arbitration.
      */
     function setArbitrationPrice(uint256 _arbitrationPrice) external onlyOwner {
+        uint256 previousPrice = arbitrationPrice;
         arbitrationPrice = _arbitrationPrice;
+        emit ArbitrationPriceChanged(previousPrice, _arbitrationPrice);
     }
 
     /** @dev Cost of arbitration. Accessor to arbitrationPrice.
