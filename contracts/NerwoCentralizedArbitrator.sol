@@ -139,6 +139,9 @@ contract NerwoCentralizedArbitrator is Ownable, ReentrancyGuard, IArbitrator {
         bytes calldata _extraData
     ) external payable requireArbitrationFee(_extraData) returns (uint256 disputeID) {
         // Create the dispute and return its number.
+
+        disputeID = disputes.length;
+
         disputes.push(
             Dispute({
                 arbitrated: IArbitrable(_msgSender()),
@@ -151,7 +154,6 @@ contract NerwoCentralizedArbitrator is Ownable, ReentrancyGuard, IArbitrator {
                 appealPeriodEnd: 0
             })
         );
-        disputeID = disputes.length - 1;
         emit DisputeCreation(disputeID, IArbitrable(_msgSender()));
     }
 
