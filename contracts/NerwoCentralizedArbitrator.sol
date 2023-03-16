@@ -122,10 +122,13 @@ contract NerwoCentralizedArbitrator is Ownable, ReentrancyGuard, IArbitrator {
     /** @dev Create a dispute. Must be called by the arbitrable contract.
      *  Must be paid at least arbitrationCost().
      *  @param _choices Amount of choices the arbitrator can make in this dispute. When ruling <= choices.
-     *  _extraData Can be used to give additional info on the dispute to be created.
+     *  @param _extraData Can be used to give additional info on the dispute to be created.
      *  @return disputeID ID of the dispute created.
      */
-    function createDispute(uint256 _choices, bytes calldata) external payable returns (uint256 disputeID) {
+    function createDispute(
+        uint256 _choices,
+        bytes calldata _extraData
+    ) external payable requireArbitrationFee(_extraData) returns (uint256 disputeID) {
         // Create the dispute and return its number.
         disputes.push(
             Dispute({
