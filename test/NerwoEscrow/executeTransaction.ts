@@ -2,8 +2,8 @@ import { expect } from 'chai';
 import { deployments, ethers } from 'hardhat';
 import { time } from '@nomicfoundation/hardhat-network-helpers';
 
-import * as constants from '../constants';
-import { getContracts, getSigners, createTransaction, createDispute, randomAmount } from './utils';
+import * as constants from '../../constants';
+import { getContracts, getSigners, createTransaction, createDispute, randomAmount } from '../utils';
 
 describe('NerwoEscrow: executeTransaction', function () {
   before(async () => {

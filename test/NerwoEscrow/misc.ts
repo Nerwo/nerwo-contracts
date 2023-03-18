@@ -1,9 +1,10 @@
 import { expect } from 'chai';
 import { deployments, ethers } from 'hardhat';
 
-import * as constants from '../constants';
-import { IArbitrable__factory, IERC165__factory } from '../typechain-types';
-import { getContracts, getSigners, fund, createTransaction, randomAmount, getInterfaceID } from './utils';
+import { IArbitrable__factory, IERC165__factory } from '../../typechain-types';
+
+import * as constants from '../../constants';
+import { getContracts, getSigners, fund, createTransaction, randomAmount, getInterfaceID } from '../utils';
 
 describe('NerwoEscrow: misc', function () {
   before(async () => {

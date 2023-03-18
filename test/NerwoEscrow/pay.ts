@@ -2,8 +2,8 @@ import { expect } from 'chai';
 import { deployments, ethers } from 'hardhat';
 import { anyValue } from '@nomicfoundation/hardhat-chai-matchers/withArgs';
 
-import * as constants from '../constants';
-import { getContracts, getSigners, fund, createTransaction } from './utils';
+import * as constants from '../../constants';
+import { getContracts, getSigners, fund, createTransaction } from '../utils';
 
 describe('NerwoEscrow: pay', function () {
   before(async () => {

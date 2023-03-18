@@ -1,6 +1,6 @@
 import { expect } from 'chai';
 import { deployments } from 'hardhat';
-import { getContracts, getSigners } from './utils';
+import { getContracts, getSigners } from '../utils';
 
 describe('NerwoEscrow: changeFeeRecipient', function () {
   before(async () => {
