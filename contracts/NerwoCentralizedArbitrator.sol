@@ -2,10 +2,11 @@
 
 pragma solidity ^0.8.0;
 
+import {ERC165} from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import {ERC165Checker} from "@openzeppelin/contracts/utils/introspection/ERC165Checker.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import {ERC165} from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 
 import {IArbitrator} from "./kleros/IArbitrator.sol";
 import {IArbitrable} from "./kleros/IArbitrable.sol";
@@ -20,6 +21,7 @@ error InsufficientFunding(uint256 required);
 
 contract NerwoCentralizedArbitrator is Ownable, ReentrancyGuard, IArbitrator, ERC165 {
     using SafeCast for uint256;
+    using ERC165Checker for address;
 
     enum DisputeStatus {
         Waiting,
@@ -147,12 +149,17 @@ contract NerwoCentralizedArbitrator is Ownable, ReentrancyGuard, IArbitrator, ER
         bytes calldata _extraData
     ) external payable requireArbitrationFee(_extraData) returns (uint256 disputeID) {
         // Create the dispute and return its number.
+        IArbitrable arbitrable = IArbitrable(_msgSender());
+
+        if (!_msgSender().supportsInterface(type(IArbitrable).interfaceId)) {
+            revert InvalidCaller(address(0));
+        }
 
         disputeID = disputes.length;
 
         disputes.push(
             Dispute({
-                arbitrated: IArbitrable(_msgSender()),
+                arbitrated: arbitrable,
                 choices: _choices.toUint8(),
                 fees: msg.value,
                 ruling: 0,
@@ -162,7 +169,7 @@ contract NerwoCentralizedArbitrator is Ownable, ReentrancyGuard, IArbitrator, ER
                 appealPeriodEnd: 0
             })
         );
-        emit DisputeCreation(disputeID, IArbitrable(_msgSender()));
+        emit DisputeCreation(disputeID, arbitrable);
     }
 
     /** @dev Give a ruling. UNTRUSTED.
