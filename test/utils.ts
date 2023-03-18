@@ -1,6 +1,7 @@
 import { expect } from 'chai';
-import { BigNumber, Contract, Signer, Wallet } from 'ethers';
 import { ethers } from 'hardhat';
+import { BigNumber, Contract, Signer, Wallet } from 'ethers';
+import { Interface } from 'ethers/lib/utils';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 
 import { NerwoCentralizedArbitrator, NerwoEscrow, Rogue } from '../typechain-types';
@@ -80,4 +81,16 @@ export async function randomAmount() {
     const { escrow } = await getContracts();
     const minimalAmount = await escrow.minimalAmount();
     return minimalAmount.mul(Math.floor(10 / Math.random()));
+}
+
+// https://ethereum.stackexchange.com/a/123567/115740
+export function getInterfaceID(contractInterface: Interface) {
+    let interfaceID: BigNumber = ethers.constants.Zero;
+    const functions: string[] = Object.keys(contractInterface.functions);
+
+    for (let i = 0; i < functions.length; i++) {
+        interfaceID = interfaceID.xor(contractInterface.getSighash(functions[i]));
+    }
+
+    return interfaceID.toHexString();
 }

@@ -2,13 +2,22 @@ import { expect } from 'chai';
 import { deployments, ethers } from 'hardhat';
 
 import * as constants from '../constants';
-import { getContracts, getSigners, fund, createTransaction, randomAmount } from './utils';
+import { IArbitrable__factory, IERC165__factory } from '../typechain-types';
+import { getContracts, getSigners, fund, createTransaction, randomAmount, getInterfaceID } from './utils';
 
 describe('NerwoEscrow: misc', function () {
   before(async () => {
     await deployments.fixture(['NerwoEscrow', 'Rogue'], {
       keepExistingDeployments: true
     });
+  });
+
+  it('supportsInterface', async () => {
+    const { escrow } = await getContracts();
+    const IERC165 = IERC165__factory.createInterface();
+    const IArbitrable = IArbitrable__factory.createInterface();
+    expect(await escrow.supportsInterface(getInterfaceID(IERC165))).to.be.true;
+    expect(await escrow.supportsInterface(getInterfaceID(IArbitrable))).to.be.true;
   });
 
   it('Creating transaction, then pay', async () => {

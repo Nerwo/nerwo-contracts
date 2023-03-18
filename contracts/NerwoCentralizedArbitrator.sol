@@ -5,6 +5,7 @@ pragma solidity ^0.8.0;
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import {ERC165} from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 
 import {IArbitrator} from "./kleros/IArbitrator.sol";
 import {IArbitrable} from "./kleros/IArbitrable.sol";
@@ -17,7 +18,7 @@ error AppealPeriodExpired();
 error TransferFailed(address recipient, uint256 amount, bytes data);
 error InsufficientFunding(uint256 required);
 
-contract NerwoCentralizedArbitrator is Ownable, ReentrancyGuard, IArbitrator {
+contract NerwoCentralizedArbitrator is Ownable, ReentrancyGuard, IArbitrator, ERC165 {
     using SafeCast for uint256;
 
     enum DisputeStatus {
@@ -76,6 +77,13 @@ contract NerwoCentralizedArbitrator is Ownable, ReentrancyGuard, IArbitrator {
      * @param newPrice The updated arbitration price.
      */
     event ArbitrationPriceChanged(uint256 previousPrice, uint256 newPrice);
+
+    /**
+     * @dev See {IERC165-supportsInterface}.
+     */
+    function supportsInterface(bytes4 interfaceId) public view virtual override returns (bool) {
+        return interfaceId == type(IArbitrator).interfaceId || super.supportsInterface(interfaceId);
+    }
 
     /** @dev initializer
      *  @param _owner The initial owner

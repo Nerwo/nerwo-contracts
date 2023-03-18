@@ -30,6 +30,7 @@ pragma solidity ^0.8.0;
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import {ERC165} from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 
 import {IArbitrator} from "./kleros/IArbitrator.sol";
 import {IArbitrable} from "./kleros/IArbitrable.sol";
@@ -44,7 +45,7 @@ error InvalidAmount(uint256 amount);
 error InvalidPriceThresolds();
 error NoLostFunds();
 
-contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable {
+contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
     using SafeCast for uint256;
 
     // **************************** //
@@ -186,6 +187,13 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable {
      *  @param amount The amount
      */
     event FundsRecovered(address indexed recipient, uint256 amount);
+
+    /**
+     * @dev See {IERC165-supportsInterface}.
+     */
+    function supportsInterface(bytes4 interfaceId) public view virtual override returns (bool) {
+        return interfaceId == type(IArbitrable).interfaceId || super.supportsInterface(interfaceId);
+    }
 
     // **************************** //
     // *    Arbitrable functions  * //
