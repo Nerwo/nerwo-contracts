@@ -230,3 +230,21 @@ In the case of a dispute, the arbitrator is responsible for providing a ruling,
 which will result in either the sender being reimbursed or the receiver being paid.
 The contract also enforces timeouts for various actions,
 such as paying arbitration fees and executing transactions.
+
+### Escrow flow
+
+```mermaid
+flowchart LR
+    A(createTransaction) -->B{NoDispute}
+    B -->|pay| C[Receiver]
+    B -->|reimburse| D[Sender]
+    B -->|payArbitrationFeeByReceiver| E{WaitingSender}
+    B -->|payArbitrationFeeBySender| F{WaitingReceiver}
+    E -->|payArbitrationFeeBySender| G{DisputeCreated}
+    F -->|payArbitrationFeeByReceiver| G{DisputeCreated}
+    E -->|timeOutByReceiver| C[Receiver]
+    F -->|timeOutBySender| D[Sender]
+    G -->|rule = 1| D[Sender]
+    G -->|rule = 2| C[Receiver]
+    G -->|rule = 0| H[Split Payment]
+```
