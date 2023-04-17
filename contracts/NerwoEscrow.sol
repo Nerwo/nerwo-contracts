@@ -42,7 +42,7 @@ error InvalidRuling();
 error InvalidCaller(address expected);
 error InvalidStatus(uint256 expected);
 error InvalidAmount(uint256 amount);
-error InvalidPriceThresolds();
+error InvalidPriceThresholds();
 error NoLostFunds();
 
 contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
@@ -291,7 +291,7 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
      */
     function _setPriceThresholds(PriceThreshold[] memory _priceThresholds) internal {
         if (_priceThresholds.length == 0) {
-            revert InvalidPriceThresolds();
+            revert InvalidPriceThresholds();
         }
 
         delete priceThresholds;
@@ -325,7 +325,7 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
         }
 
         if (feeBasisPoint == 0) {
-            revert InvalidPriceThresolds();
+            revert InvalidPriceThresholds();
         }
     }
 

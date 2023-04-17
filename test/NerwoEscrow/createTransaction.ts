@@ -69,7 +69,7 @@ describe('NerwoEscrow: createTransaction', function () {
     }]);
 
     await expect(createTransaction(sender, receiver.address, amount))
-      .to.be.revertedWithCustomError(escrow, 'InvalidPriceThresolds');
+      .to.be.revertedWithCustomError(escrow, 'InvalidPriceThresholds');
 
     // reset back to original
     await escrow.connect(deployer).setPriceThresholds(constants.FEE_PRICE_THRESHOLDS);
