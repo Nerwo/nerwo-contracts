@@ -47,7 +47,6 @@ describe('NerwoEscrow: createTransaction', function () {
   });
 
   it('Creating a transaction with overflowing _timeoutPayment', async () => {
-    const { escrow } = await getContracts();
     const { sender, receiver } = await getSigners();
 
     const amount = await randomAmount();
@@ -55,23 +54,5 @@ describe('NerwoEscrow: createTransaction', function () {
 
     await expect(createTransaction(sender, receiver.address, amount, timeoutPayment))
       .to.be.revertedWith(`SafeCast: value doesn't fit in 32 bits`);
-  });
-
-  it('Creating a transaction having b0rk3d priceThresholds', async () => {
-    const { escrow } = await getContracts();
-    const { deployer, sender, receiver } = await getSigners();
-
-    const amount = await randomAmount();
-
-    await escrow.setPriceThresholds([{
-      maxPrice: 0,
-      feeBasisPoint: 0
-    }]);
-
-    await expect(createTransaction(sender, receiver.address, amount))
-      .to.be.revertedWithCustomError(escrow, 'InvalidPriceThresholds');
-
-    // reset back to original
-    await escrow.connect(deployer).setPriceThresholds(constants.FEE_PRICE_THRESHOLDS);
   });
 });

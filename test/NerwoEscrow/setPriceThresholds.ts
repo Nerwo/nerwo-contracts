@@ -21,10 +21,10 @@ describe('NerwoEscrow: setPriceThresholds', function () {
       feeBasisPoint: '0'
     };
 
-    expect(constants.FEE_PRICE_THRESHOLDS).to.be.an('array').that.lengthOf.at.least(2);
+    expect(constants.FEE_PRICE_THRESHOLDS).to.be.an('array').that.lengthOf.at.least(1);
 
-    expect((await escrow.priceThresholds(1)).maxPrice)
-      .to.be.equal(constants.FEE_PRICE_THRESHOLDS[1].maxPrice);
+    expect((await escrow.priceThresholds(0)).maxPrice)
+      .to.be.equal(constants.FEE_PRICE_THRESHOLDS[0].maxPrice);
 
     await escrow.connect(deployer).setPriceThresholds([priceThreshold]);
     expect((await escrow.priceThresholds(0)).maxPrice).to.be.equal(answer);

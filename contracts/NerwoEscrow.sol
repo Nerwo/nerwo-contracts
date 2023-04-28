@@ -323,10 +323,6 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
                 return feeBasisPoint;
             }
         }
-
-        if (feeBasisPoint == 0) {
-            revert InvalidPriceThresholds();
-        }
     }
 
     /** @dev Calculate the amount to be paid in wei according to feeRecipientBasisPoint for a particular amount.
@@ -373,6 +369,10 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
      *  @param amount Transaction amount
      */
     function _transferTo(address payable target, uint256 amount) internal {
+        if (amount == 0) {
+            return;
+        }
+
         (bool success, bytes memory data) = target.call{value: amount}("");
         if (!success) {
             revert TransferFailed(target, amount, data);
