@@ -497,37 +497,6 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
         emit Payment(_transactionID, _amountReimbursed, _msgSender());
     }
 
-    /** @dev Transfer the transaction's amount to the receiver if the timeout has passed.
-     *  @param _transactionID The index of the transaction.
-     */
-    function executeTransaction(uint256 _transactionID) external nonReentrant {
-        Transaction storage transaction = transactions[_transactionID];
-
-        if (transaction.status != Status.NoDispute) {
-            revert InvalidStatus(uint256(Status.NoDispute));
-        }
-
-        if (block.timestamp - transaction.lastInteraction < transaction.timeoutPayment) {
-            revert NoTimeout();
-        }
-
-        if (transaction.amount == 0) {
-            revert InvalidAmount(0);
-        }
-
-        transaction.status = Status.Resolved;
-
-        uint256 amount = transaction.amount;
-        transaction.amount = 0;
-
-        uint256 feeAmount = _calculateFeeAmount(amount, transaction.feeBasisPoint);
-        _transferTo(feeRecipient, feeAmount);
-
-        _sendTo(transaction.receiver, amount - feeAmount);
-
-        emit FeeRecipientPayment(_transactionID, feeAmount);
-    }
-
     /** @dev Reimburse sender if receiver fails to pay the fee.
      *  @param _transactionID The index of the transaction.
      */

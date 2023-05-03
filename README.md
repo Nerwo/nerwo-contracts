@@ -44,14 +44,6 @@ The function checks whether the caller is the transaction receiver,
 whether the transaction has a valid status,
 and whether the amount to be reimbursed is within the valid range before proceeding.
 
-### executeTransaction
-
-`executeTransaction(uint256 _transactionID)`
-
-Allows anyone to transfer the transaction amount to the receiver if the timeout has passed.
-The function checks whether the transaction has a valid status,
-whether the timeout has been reached, and whether the transaction amount is valid before proceeding.
-
 ### timeOutBySender
 
 `timeOutBySender(uint256 _transactionID)`
