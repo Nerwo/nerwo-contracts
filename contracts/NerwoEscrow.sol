@@ -294,8 +294,14 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
             revert InvalidPriceThresholds();
         }
 
+        uint maxPrice = 0;
+
         delete priceThresholds;
         for (uint i = 0; i < _priceThresholds.length; i++) {
+            if (_priceThresholds[i].maxPrice < maxPrice) {
+                revert InvalidPriceThresholds();
+            }
+            maxPrice = _priceThresholds[i].maxPrice;
             priceThresholds.push(_priceThresholds[i]);
         }
     }

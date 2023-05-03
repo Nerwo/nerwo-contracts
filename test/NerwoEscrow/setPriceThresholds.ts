@@ -21,6 +21,14 @@ describe('NerwoEscrow: setPriceThresholds', function () {
       feeBasisPoint: '0'
     };
 
+    const badPrices = [{
+      maxPrice: ethers.BigNumber.from(100),
+      feeBasisPoint: '0'
+    }, {
+      maxPrice: ethers.BigNumber.from(50),
+      feeBasisPoint: '0'
+    }];
+
     expect(constants.FEE_PRICE_THRESHOLDS).to.be.an('array').that.lengthOf.at.least(1);
 
     expect((await escrow.priceThresholds(0)).maxPrice)
@@ -32,7 +40,9 @@ describe('NerwoEscrow: setPriceThresholds', function () {
     await expect(escrow.priceThresholds(1))
       .to.be.revertedWithoutReason();
 
-    // reset back to original
+    await expect(escrow.connect(deployer).setPriceThresholds(badPrices))
+      .to.be.revertedWithCustomError(escrow, 'InvalidPriceThresholds');
+
     await escrow.connect(deployer).setPriceThresholds(constants.FEE_PRICE_THRESHOLDS);
 
     for (const priceThreshold of constants.FEE_PRICE_THRESHOLDS) {
