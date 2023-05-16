@@ -4,18 +4,16 @@ import { BigNumber, Contract, Signer, Wallet } from 'ethers';
 import { Interface } from 'ethers/lib/utils';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 
-import { NerwoCentralizedArbitrator, NerwoEscrow, Rogue } from '../typechain-types';
-
-import * as constants from '../constants';
+import { ClaimableToken, NerwoCentralizedArbitrator, NerwoEscrow, TetherToken } from '../typechain-types';
 
 type Account = Contract | Wallet;
 
 export async function getContracts() {
     const arbitrator: NerwoCentralizedArbitrator = await ethers.getContract('NerwoCentralizedArbitrator');
     const escrow: NerwoEscrow = await ethers.getContract('NerwoEscrow');
-    const rogue: Rogue = await ethers.getContract('Rogue');
+    const usdt: TetherToken = await ethers.getContract('TetherToken');
 
-    return { arbitrator, escrow, rogue };
+    return { arbitrator, escrow, usdt };
 }
 
 export async function getSigners() {
@@ -32,8 +30,8 @@ export async function fund(recipient: Account, amount: BigNumber) {
 export async function createTransaction(
     sender: SignerWithAddress,
     receiver_address: string,
+    token: ClaimableToken,
     amount: BigNumber,
-    timeoutPayment = constants.TIMEOUT_PAYMENT,
     metaEvidence = '') {
 
     const blockNumber = await ethers.provider.getBlockNumber();
@@ -41,9 +39,13 @@ export async function createTransaction(
     const { escrow } = await getContracts();
     const { platform } = await getSigners();
 
+    token.connect(sender).claim(amount);
+    token.connect(sender).approve(escrow.address, amount);
+
     await expect(escrow.connect(sender).createTransaction(
-        timeoutPayment, receiver_address, metaEvidence, { value: amount }))
-        .to.changeEtherBalances(
+        token.address, amount, receiver_address, metaEvidence))
+        .to.changeTokenBalances(
+            token,
             [platform, sender],
             [0, amount.mul(-1)]
         )

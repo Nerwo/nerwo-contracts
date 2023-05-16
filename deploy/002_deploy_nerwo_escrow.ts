@@ -16,7 +16,7 @@ const func: DeployFunction = async function ({ deployments: { get, deploy }, get
       constants.FEE_TIMEOUT,              /* _feeTimeout */
       constants.MINIMAL_AMOUNT,           /* _minimalAmount */
       platform,                           /* _feeRecipient */
-      constants.FEE_PRICE_THRESHOLDS      /* _priceThresholds */
+      constants.FEE_RECIPIENT_BASISPOINT  /* _feeRecipientBasisPoint */
     ],
     log: true,
     deterministicDeployment: true

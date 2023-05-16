@@ -7,7 +7,7 @@ declare global {
             NERWO_ARBITRATION_PRICE: string;
             NERWO_MINIMAL_AMOUNT: string;
             NERWO_FEE_TIMEOUT: string;
-            NERWO_FEE_PRICE_THRESHOLDS: string;
+            NERWO_FEE_RECIPIENT_BASISPOINT: string;
         }
     }
 }

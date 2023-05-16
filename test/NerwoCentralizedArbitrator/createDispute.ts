@@ -6,7 +6,7 @@ import { getContracts, getSigners } from '../utils';
 
 describe('NerwoCentralizedArbitrator: createDispute', function () {
   before(async () => {
-    await deployments.fixture(['NerwoEscrow', 'Rogue'], {
+    await deployments.fixture(['NerwoEscrow', 'TetherToken'], {
       keepExistingDeployments: true
     });
   });

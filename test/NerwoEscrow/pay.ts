@@ -1,25 +1,21 @@
 import { expect } from 'chai';
-import { deployments, ethers } from 'hardhat';
-import { anyValue } from '@nomicfoundation/hardhat-chai-matchers/withArgs';
+import { deployments } from 'hardhat';
 
-import * as constants from '../../constants';
-import { getContracts, getSigners, fund, createTransaction } from '../utils';
+import { getContracts, getSigners, createTransaction, randomAmount } from '../utils';
 
 describe('NerwoEscrow: pay', function () {
   before(async () => {
-    await deployments.fixture(['NerwoEscrow', 'Rogue'], {
+    await deployments.fixture(['NerwoEscrow', 'TetherToken'], {
       keepExistingDeployments: true
     });
   });
 
-  it('rogue as recipient', async () => {
-    const { escrow, rogue } = await getContracts();
-    const { platform, sender } = await getSigners();
+  it('create a transaction and pay', async () => {
+    const { escrow, usdt } = await getContracts();
+    const { platform, sender, receiver } = await getSigners();
 
-    await fund(rogue, ethers.utils.parseEther('999.0'));
-
-    let amount = ethers.utils.parseEther('0.02');
-    const _transactionID = await createTransaction(sender, rogue.address, amount);
+    let amount = await randomAmount();
+    const _transactionID = await createTransaction(sender, receiver.address, usdt, amount);
 
     await expect(escrow.connect(sender).pay(_transactionID, 0))
       .to.be.revertedWithCustomError(escrow, 'InvalidAmount').withArgs(amount);
@@ -29,19 +25,13 @@ describe('NerwoEscrow: pay', function () {
 
     const feeAmount = await escrow.calculateFeeRecipientAmount(amount);
 
-    await rogue.setAmount(amount.div(2));
-
-    // FIXME: emit order in sol
-    // FIXME: make SendFailed and Payment mutually exclusive?
-    await rogue.setAction(constants.RogueAction.Pay);
     await expect(escrow.connect(sender).pay(_transactionID, amount))
-      .to.changeEtherBalances(
-        [escrow, platform, rogue],
-        [feeAmount.mul(-1), feeAmount, 0]
+      .to.changeTokenBalances(
+        usdt,
+        [escrow, platform, receiver],
+        [amount.mul(-1), feeAmount, amount.sub(feeAmount)]
       )
-      .to.emit(escrow, 'SendFailed').withArgs(rogue.address, amount.sub(feeAmount), anyValue)
-      .to.emit(escrow, 'Payment').withArgs(_transactionID, amount, sender.address)
+      .to.emit(escrow, 'Payment').withArgs(_transactionID, usdt.address, amount, sender.address)
       .to.emit(escrow, 'FeeRecipientPayment');
-    await rogue.setAction(constants.RogueAction.None);
   });
 });

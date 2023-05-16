@@ -20,32 +20,28 @@
  * 7. Submit evidence: Both parties can submit evidence to support their case during a dispute.
  * 8. Arbitrator ruling: The external arbitrator can provide a ruling to resolve the dispute. The ruling is
  *    executed by the contract, which redistributes the funds accordingly.
- *
- * The contract follows best practices for security, gas optimization, and error handling. It uses Solidity's
- * custom errors, nonReentrant modifier, and events for better tracking and debugging.
  */
 
 pragma solidity ^0.8.0;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {ERC165} from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import {IArbitrator} from "./kleros/IArbitrator.sol";
 import {IArbitrable} from "./kleros/IArbitrable.sol";
 
 error NullAddress();
-error TransferFailed(address recipient, uint256 amount, bytes data);
+error TransferFailed(address recipient, address token, uint256 amount, bytes data);
 error NoTimeout();
 error InvalidRuling();
 error InvalidCaller(address expected);
 error InvalidStatus(uint256 expected);
 error InvalidAmount(uint256 amount);
-error InvalidPriceThresholds();
 error NoLostFunds();
 
-contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
+contract NerwoEscrow is Ownable, IArbitrable, ERC165 {
     using SafeCast for uint256;
 
     // **************************** //
@@ -60,11 +56,6 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
         Receiver
     }
 
-    struct PriceThreshold {
-        uint256 maxPrice;
-        uint256 feeBasisPoint;
-    }
-
     enum Status {
         NoDispute,
         WaitingSender,
@@ -75,31 +66,32 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
 
     struct Transaction {
         Status status;
-        address payable sender;
-        address payable receiver;
-        uint32 timeoutPayment; // Time in seconds after which the transaction can be automatically executed if not disputed.
         uint32 lastInteraction; // Last interaction for the dispute procedure.
-        uint32 feeBasisPoint;
+        address sender;
+        address receiver;
+        IERC20 token;
         uint256 amount;
         uint256 disputeId; // If dispute exists, the ID of the dispute.
         uint256 senderFee; // Total fees paid by the sender.
         uint256 receiverFee; // Total fees paid by the receiver.
     }
 
-    PriceThreshold[] public priceThresholds;
+    uint256 public index;
 
-    Transaction[] public transactions;
-    bytes public arbitratorExtraData; // Extra data to set up the arbitration.
     IArbitrator public arbitrator; // Address of the arbitrator contract.
 
     uint256 public feeTimeout; // Time in seconds a party can take to pay arbitration fees before being considered unresponding and lose the dispute.
     uint256 public minimalAmount;
 
-    address payable public feeRecipient; // Address which receives a share of receiver payment.
+    address public feeRecipient; // Address which receives a share of receiver payment.
+    uint256 public feeRecipientBasisPoint; // The share of fee to be received by the feeRecipient, down to 2 decimal places as 550 = 5.5%.
 
     uint256 public lostFunds; // failed to receive funds, e.g. error in _sendTo()
 
+    mapping(uint256 => Transaction) public transactions;
     mapping(uint256 => uint256) private disputeIDtoTransactionID; // One-to-one relationship between the dispute and the transaction.
+
+    bytes public arbitratorExtraData; // Extra data to set up the arbitration.
 
     // **************************** //
     // *          Events          * //
@@ -107,10 +99,11 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
 
     /** @dev To be emitted when a party pays or reimburses the other.
      *  @param _transactionID The index of the transaction.
+     *  @param _token The token address.
      *  @param _amount The amount paid.
      *  @param _party The party that paid.
      */
-    event Payment(uint256 indexed _transactionID, uint256 _amount, address indexed _party);
+    event Payment(uint256 indexed _transactionID, address indexed _token, uint256 _amount, address indexed _party);
 
     /** @dev Indicate that a party has to pay a fee or would otherwise be considered as losing.
      *  @param _transactionID The index of the transaction.
@@ -122,20 +115,23 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
      *  @param _transactionID The index of the transaction.
      *  @param _sender The address of the sender.
      *  @param _receiver The address of the receiver.
+     *  @param _token The token address
      *  @param _amount The initial amount in the transaction.
      */
     event TransactionCreated(
         uint256 _transactionID,
         address indexed _sender,
         address indexed _receiver,
+        address indexed _token,
         uint256 _amount
     );
 
     /** @dev To be emitted when a fee is received by the feeRecipient.
      *  @param _transactionID The index of the transaction.
+     *  @param _token The Token Address.
      *  @param _amount The amount paid.
      */
-    event FeeRecipientPayment(uint256 indexed _transactionID, uint256 _amount);
+    event FeeRecipientPayment(uint256 indexed _transactionID, address indexed _token, uint256 _amount);
 
     /** @dev To be emitted when a feeRecipient is changed.
      *  @param _oldFeeRecipient Previous feeRecipient.
@@ -177,10 +173,11 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
 
     /** @dev To be emitted if a transfer to a party fails
      *  @param recipient The target of the failed operation
+     *  @param token The token address
      *  @param amount The amount
      *  @param data Failed call data
      */
-    event SendFailed(address indexed recipient, uint256 amount, bytes data);
+    event SendFailed(address indexed recipient, address indexed token, uint256 amount, bytes data);
 
     /** @dev To be emitted when the owner withdraw lost funds
      *  @param recipient The owner at the moment of withdrawal
@@ -206,7 +203,7 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
      *  @param _arbitratorExtraData Extra data for the arbitrator.
      *  @param _feeTimeout Arbitration fee timeout for the parties.
      *  @param _feeRecipient Address which receives a share of receiver payment.
-     *  @param _priceThresholds List of tuple to calculate fee amount based on price
+     *  @param _feeRecipientBasisPoint The share of fee to be received by the feeRecipient, down to 2 decimal places as 550 = 5.5%
      */
     constructor(
         address _owner,
@@ -215,12 +212,11 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
         uint256 _feeTimeout,
         uint256 _minimalAmount,
         address _feeRecipient,
-        PriceThreshold[] memory _priceThresholds
+        uint256 _feeRecipientBasisPoint
     ) {
         _setArbitrator(_arbitrator, _arbitratorExtraData, _feeTimeout);
         _setMinimalAmount(_minimalAmount);
-        _setFeeRecipient(_feeRecipient);
-        _setPriceThresholds(_priceThresholds);
+        _setFeeRecipientAndBasisPoint(_feeRecipient, _feeRecipientBasisPoint);
         _transferOwnership(_owner);
     }
 
@@ -272,46 +268,22 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
     /**
      *  @dev modifies fee recipient and basis point - Internal function without access restriction
      *  @param _feeRecipient Address which receives a share of receiver payment.
+     *  @param _feeRecipientBasisPoint The share of fee to be received by the feeRecipient,
+     *         down to 2 decimal places as 550 = 5.5%
      */
-    function _setFeeRecipient(address _feeRecipient) internal {
+    function _setFeeRecipientAndBasisPoint(address _feeRecipient, uint256 _feeRecipientBasisPoint) internal {
         feeRecipient = payable(_feeRecipient);
+        feeRecipientBasisPoint = _feeRecipientBasisPoint;
     }
 
     /**
      *  @dev modifies fee recipient and basis point - External function onlyOwner
      *  @param _feeRecipient Address which receives a share of receiver payment.
+     *  @param _feeRecipientBasisPoint The share of fee to be received by the feeRecipient,
+     *         down to 2 decimal places as 550 = 5.5%
      */
-    function setFeeRecipient(address _feeRecipient) external onlyOwner {
-        _setFeeRecipient(_feeRecipient);
-    }
-
-    /**
-     * @dev Sets the price thresholds array - Internal function without access restriction
-     * @param _priceThresholds An array of PriceThreshold structs to set as the new price thresholds.
-     */
-    function _setPriceThresholds(PriceThreshold[] memory _priceThresholds) internal {
-        if (_priceThresholds.length == 0) {
-            revert InvalidPriceThresholds();
-        }
-
-        uint maxPrice = 0;
-
-        delete priceThresholds;
-        for (uint i = 0; i < _priceThresholds.length; i++) {
-            if (_priceThresholds[i].maxPrice < maxPrice) {
-                revert InvalidPriceThresholds();
-            }
-            maxPrice = _priceThresholds[i].maxPrice;
-            priceThresholds.push(_priceThresholds[i]);
-        }
-    }
-
-    /**
-     * @dev Sets the price thresholds array - External function onlyOwner
-     * @param _priceThresholds An array of PriceThreshold structs to set as the new price thresholds.
-     */
-    function setPriceThresholds(PriceThreshold[] calldata _priceThresholds) external onlyOwner {
-        _setPriceThresholds(_priceThresholds);
+    function setFeeRecipientAndBasisPoint(address _feeRecipient, uint256 _feeRecipientBasisPoint) external onlyOwner {
+        _setFeeRecipientAndBasisPoint(_feeRecipient, _feeRecipientBasisPoint);
     }
 
     /**
@@ -322,24 +294,11 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
         return address(this).balance;
     }
 
-    function _findFeeBasisPoint(uint256 _amount) internal view returns (uint256 feeBasisPoint) {
-        for (uint i = 0; i < priceThresholds.length; i++) {
-            feeBasisPoint = priceThresholds[i].feeBasisPoint;
-            if (_amount <= priceThresholds[i].maxPrice) {
-                return feeBasisPoint;
-            }
-        }
-    }
-
     /** @dev Calculate the amount to be paid in wei according to feeRecipientBasisPoint for a particular amount.
      *  @param _amount Amount to pay in wei.
      */
-    function calculateFeeRecipientAmount(uint256 _amount) external view returns (uint256) {
-        return (_amount * _findFeeBasisPoint(_amount)) / 10000;
-    }
-
-    function _calculateFeeAmount(uint256 _amount, uint32 _feeBasisPoint) internal pure returns (uint256) {
-        return (_amount * _feeBasisPoint) / 10000;
+    function calculateFeeRecipientAmount(uint256 _amount) public view returns (uint256) {
+        return (_amount * feeRecipientBasisPoint) / 10000;
     }
 
     /** @dev Change Fee Recipient.
@@ -354,7 +313,7 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
             revert NullAddress();
         }
 
-        feeRecipient = payable(_newFeeRecipient);
+        feeRecipient = _newFeeRecipient;
         emit FeeRecipientChanged(_msgSender(), _newFeeRecipient);
     }
 
@@ -362,31 +321,65 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
      *  @param target To address to send to
      *  @param amount Transaction amount
      */
-    function _sendTo(address payable target, uint256 amount) internal {
-        (bool success, bytes memory data) = target.call{value: amount}("");
+    function _sendTo(address target, uint256 amount) internal {
+        (bool success, bytes memory data) = payable(target).call{value: amount}("");
         if (!success) {
-            emit SendFailed(target, amount, data);
             lostFunds += amount;
+            emit SendFailed(target, address(0), amount, data);
+        }
+    }
+
+    /**
+     * @dev Transfers token to a specified address
+     * @param to The address to transfer to.
+     * @param token The address of the token contract.
+     * @param amount The amount to be transferred.
+     */
+    function _safeTransferToken(
+        address to,
+        IERC20 token,
+        uint256 amount
+    ) internal returns (bool success, bytes memory data) {
+        // solhint-disable-next-line avoid-low-level-calls
+        (success, data) = address(token).call(abi.encodeWithSignature("transfer(address,uint256)", to, amount));
+
+        if (success && data.length > 0) {
+            success = abi.decode(data, (bool));
+        }
+    }
+
+    /** @dev Send to recipent, emit a log when fails
+     *  @param to To address to send to
+     *  @param token The token address
+     *  @param amount Transaction amount
+     */
+    function _sendToken(address to, IERC20 token, uint256 amount) internal {
+        (bool success, bytes memory data) = _safeTransferToken(to, token, amount);
+        if (!success) {
+            emit SendFailed(to, address(token), amount, data);
         }
     }
 
     /** @dev Send to recipent, reverts on failure
-     *  @param target To address to send to
+     *  @param to To address to send to
+     *  @param token The token address
      *  @param amount Transaction amount
      */
-    function _transferTo(address payable target, uint256 amount) internal {
+    function _transferToken(address to, IERC20 token, uint256 amount) internal {
         if (amount == 0) {
             return;
         }
 
-        (bool success, bytes memory data) = target.call{value: amount}("");
+        (bool success, bytes memory data) = _safeTransferToken(to, token, amount);
         if (!success) {
-            revert TransferFailed(target, amount, data);
+            revert TransferFailed(to, address(token), amount, data);
         }
     }
 
-    /** @dev Withdraw lost founds (when _sendTo() fails) */
-    function withdrawLostFunds() external onlyOwner nonReentrant {
+    /** @dev Withdraw lost founds (when _sendTo() fails)
+     *  @dev since we use erc20 only for arbitrage reimburses
+     */
+    function withdrawLostFunds() external onlyOwner {
         if (lostFunds == 0) {
             revert NoLostFunds();
         }
@@ -394,26 +387,28 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
         uint256 amount = lostFunds;
         lostFunds = 0;
 
-        _transferTo(payable(_msgSender()), amount);
+        _sendTo(payable(_msgSender()), amount);
         emit FundsRecovered(_msgSender(), amount);
     }
 
     /** @dev Create a transaction.
-     *  @param _timeoutPayment Time after which a party can automatically execute the arbitrable transaction.
+     *  @param _token The ERC20 token contract.
+     *  @param _amount The amount of tokens in this transaction.
      *  @param _receiver The recipient of the transaction.
      *  @param _metaEvidence Link to the meta-evidence.
      *  @return transactionID The index of the transaction.
      */
     function createTransaction(
-        uint256 _timeoutPayment,
+        IERC20 _token,
+        uint256 _amount,
         address _receiver,
         string calldata _metaEvidence
-    ) external payable returns (uint256 transactionID) {
+    ) external returns (uint256 transactionID) {
         if (_receiver == address(0)) {
             revert NullAddress();
         }
 
-        if (msg.value < minimalAmount) {
+        if (_amount < minimalAmount) {
             revert InvalidAmount(minimalAmount);
         }
 
@@ -421,32 +416,35 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
             revert InvalidCaller(_receiver);
         }
 
-        transactionID = transactions.length;
+        // first transfer tokens to the contract
+        // NOTE: user must have approved the allowance
+        if (!_token.transferFrom(_msgSender(), address(this), _amount)) {
+            revert InvalidAmount(0);
+        }
 
-        transactions.push(
-            Transaction({
-                sender: payable(_msgSender()),
-                receiver: payable(_receiver),
-                amount: msg.value,
-                feeBasisPoint: _findFeeBasisPoint(msg.value).toUint32(),
-                timeoutPayment: _timeoutPayment.toUint32(),
-                disputeId: 0,
-                senderFee: 0,
-                receiverFee: 0,
-                lastInteraction: uint32(block.timestamp),
-                status: Status.NoDispute
-            })
-        );
+        transactionID = ++index;
+
+        transactions[index] = Transaction({
+            status: Status.NoDispute,
+            lastInteraction: uint32(block.timestamp),
+            sender: _msgSender(),
+            receiver: _receiver,
+            token: _token,
+            amount: _amount,
+            disputeId: 0,
+            senderFee: 0,
+            receiverFee: 0
+        });
 
         emit MetaEvidence(transactionID, _metaEvidence);
-        emit TransactionCreated(transactionID, _msgSender(), _receiver, msg.value);
+        emit TransactionCreated(transactionID, _msgSender(), _receiver, address(_token), _amount);
     }
 
     /** @dev Pay receiver. To be called if the good or service is provided.
      *  @param _transactionID The index of the transaction.
      *  @param _amount Amount to pay in wei.
      */
-    function pay(uint256 _transactionID, uint256 _amount) external nonReentrant {
+    function pay(uint256 _transactionID, uint256 _amount) external {
         Transaction storage transaction = transactions[_transactionID];
 
         if (_msgSender() != transaction.sender) {
@@ -463,20 +461,19 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
 
         transaction.amount -= _amount;
 
-        uint256 feeAmount = _calculateFeeAmount(_amount, transaction.feeBasisPoint);
-        _transferTo(feeRecipient, feeAmount);
+        uint256 feeAmount = calculateFeeRecipientAmount(_amount);
+        _transferToken(feeRecipient, transaction.token, feeAmount);
+        emit FeeRecipientPayment(_transactionID, address(transaction.token), feeAmount);
 
-        _sendTo(transaction.receiver, _amount - feeAmount);
-
-        emit Payment(_transactionID, _amount, _msgSender());
-        emit FeeRecipientPayment(_transactionID, feeAmount);
+        _sendToken(transaction.receiver, transaction.token, _amount - feeAmount);
+        emit Payment(_transactionID, address(transaction.token), _amount, _msgSender());
     }
 
     /** @dev Reimburse sender. To be called if the good or service can't be fully provided.
      *  @param _transactionID The index of the transaction.
      *  @param _amountReimbursed Amount to reimburse in wei.
      */
-    function reimburse(uint256 _transactionID, uint256 _amountReimbursed) external nonReentrant {
+    function reimburse(uint256 _transactionID, uint256 _amountReimbursed) external {
         Transaction storage transaction = transactions[_transactionID];
 
         if (_msgSender() != transaction.receiver) {
@@ -492,15 +489,14 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
         }
 
         transaction.amount -= _amountReimbursed;
-        _sendTo(transaction.sender, _amountReimbursed);
-
-        emit Payment(_transactionID, _amountReimbursed, _msgSender());
+        _sendToken(transaction.sender, transaction.token, _amountReimbursed);
+        emit Payment(_transactionID, address(transaction.token), _amountReimbursed, _msgSender());
     }
 
     /** @dev Reimburse sender if receiver fails to pay the fee.
      *  @param _transactionID The index of the transaction.
      */
-    function timeOutBySender(uint256 _transactionID) external nonReentrant {
+    function timeOutBySender(uint256 _transactionID) external {
         Transaction storage transaction = transactions[_transactionID];
 
         if (transaction.status != Status.WaitingReceiver) {
@@ -517,7 +513,7 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
     /** @dev Pay receiver if sender fails to pay the fee.
      *  @param _transactionID The index of the transaction.
      */
-    function timeOutByReceiver(uint256 _transactionID) external nonReentrant {
+    function timeOutByReceiver(uint256 _transactionID) external {
         Transaction storage transaction = transactions[_transactionID];
 
         if (transaction.status != Status.WaitingSender) {
@@ -536,7 +532,7 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
      *  This is not a vulnerability as the arbitrator can rule in favor of one party anyway.
      *  @param _transactionID The index of the transaction.
      */
-    function payArbitrationFeeBySender(uint256 _transactionID) external payable nonReentrant {
+    function payArbitrationFeeBySender(uint256 _transactionID) external payable {
         Transaction storage transaction = transactions[_transactionID];
 
         if (_msgSender() != transaction.sender) {
@@ -556,7 +552,8 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
         transaction.senderFee = msg.value;
         transaction.lastInteraction = uint32(block.timestamp);
 
-        // The receiver still has to pay. This can also happen if he has paid, but arbitrationCost has increased.
+        // The receiver still has to pay. This can also happen if he has paid,
+        // but arbitrationCost has increased.
         if (transaction.receiverFee == 0) {
             transaction.status = Status.WaitingReceiver;
             emit HasToPayFee(_transactionID, Party.Receiver);
@@ -570,7 +567,7 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
      *  Note that this function mirrors payArbitrationFeeBySender.
      *  @param _transactionID The index of the transaction.
      */
-    function payArbitrationFeeByReceiver(uint256 _transactionID) external payable nonReentrant {
+    function payArbitrationFeeByReceiver(uint256 _transactionID) external payable {
         Transaction storage transaction = transactions[_transactionID];
 
         if (_msgSender() != transaction.receiver) {
@@ -590,7 +587,8 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
         transaction.receiverFee = msg.value;
         transaction.lastInteraction = uint32(block.timestamp);
 
-        // The sender still has to pay. This can also happen if he has paid, but arbitrationCost has increased.
+        // The sender still has to pay. This can also happen if he has paid,
+        // but arbitrationCost has increased.
         if (transaction.senderFee == 0) {
             transaction.status = Status.WaitingSender;
             emit HasToPayFee(_transactionID, Party.Sender);
@@ -612,7 +610,9 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
             AMOUNT_OF_CHOICES,
             arbitratorExtraData
         );
+
         disputeIDtoTransactionID[transaction.disputeId] = _transactionID;
+
         emit Dispute(arbitrator, transaction.disputeId, _transactionID, _transactionID);
     }
 
@@ -635,13 +635,19 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
     }
 
     /** @dev Give a ruling for a dispute. Must be called by the arbitrator.
-     *  The purpose of this function is to ensure that the address calling it has the right to rule on the contract.
+     *  The purpose of this function is to ensure that the address calling
+     *  it has the right to rule on the contract.
      *  @param _disputeID ID of the dispute in the Arbitrator contract.
-     *  @param _ruling Ruling given by the arbitrator. Note that 0 is reserved for "Not able/wanting to make a decision".
+     *  @param _ruling Ruling given by the arbitrator.
+     *                 Note that 0 is reserved for "Not able/wanting to make a decision".
      */
-    function rule(uint256 _disputeID, uint256 _ruling) external override nonReentrant {
+    function rule(uint256 _disputeID, uint256 _ruling) external override {
         if (_msgSender() != address(arbitrator)) {
             revert InvalidCaller(address(arbitrator));
+        }
+
+        if (_ruling > AMOUNT_OF_CHOICES) {
+            revert InvalidRuling();
         }
 
         uint256 transactionID = disputeIDtoTransactionID[_disputeID];
@@ -659,10 +665,6 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
      *  @param _ruling Ruling given by the arbitrator. 1 : Reimburse the receiver. 2 : Pay the sender.
      */
     function _executeRuling(uint256 _transactionID, uint256 _ruling) internal {
-        if (_ruling > AMOUNT_OF_CHOICES) {
-            revert InvalidRuling();
-        }
-
         Transaction storage transaction = transactions[_transactionID];
 
         uint256 amount = transaction.amount;
@@ -679,25 +681,29 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
         // Give the arbitration fee back.
         // Note that we use send to prevent a party from blocking the execution.
         if (_ruling == SENDER_WINS) {
-            _sendTo(transaction.sender, senderArbitrationFee + amount);
+            _sendToken(transaction.sender, transaction.token, amount);
+            _sendTo(transaction.sender, senderArbitrationFee);
         } else if (_ruling == RECEIVER_WINS) {
-            feeAmount = _calculateFeeAmount(amount, transaction.feeBasisPoint);
-            _transferTo(feeRecipient, feeAmount);
+            feeAmount = calculateFeeRecipientAmount(amount);
+            _transferToken(feeRecipient, transaction.token, feeAmount);
+            emit FeeRecipientPayment(_transactionID, address(transaction.token), feeAmount);
 
-            _sendTo(transaction.receiver, receiverArbitrationFee + amount - feeAmount);
-
-            emit FeeRecipientPayment(_transactionID, feeAmount);
+            _sendToken(transaction.receiver, transaction.token, amount - feeAmount);
+            _sendTo(transaction.receiver, receiverArbitrationFee);
         } else {
             uint256 splitArbitration = senderArbitrationFee / 2;
             uint256 splitAmount = amount / 2;
 
-            feeAmount = _calculateFeeAmount(splitAmount, transaction.feeBasisPoint);
-            _transferTo(feeRecipient, feeAmount);
+            feeAmount = calculateFeeRecipientAmount(splitAmount);
+            _transferToken(feeRecipient, transaction.token, feeAmount);
+            emit FeeRecipientPayment(_transactionID, address(transaction.token), feeAmount);
 
-            _sendTo(transaction.sender, splitArbitration + splitAmount);
-            _sendTo(transaction.receiver, splitArbitration + splitAmount - feeAmount);
+            // In the case of an uneven token amount, one basic token unit can be burnt.
+            _sendToken(transaction.sender, transaction.token, splitAmount);
+            _sendToken(transaction.receiver, transaction.token, splitAmount - feeAmount);
 
-            emit FeeRecipientPayment(_transactionID, feeAmount);
+            _sendTo(transaction.sender, splitArbitration);
+            _sendTo(transaction.receiver, splitArbitration);
         }
     }
 }

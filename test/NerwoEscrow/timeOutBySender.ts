@@ -7,18 +7,18 @@ import { getContracts, getSigners, createTransaction, randomAmount } from '../ut
 
 describe('NerwoEscrow: timeOutBySender', function () {
   before(async () => {
-    await deployments.fixture(['NerwoEscrow', 'Rogue'], {
+    await deployments.fixture(['NerwoEscrow', 'TetherToken'], {
       keepExistingDeployments: true
     });
   });
 
   it('NoTimeout', async () => {
-    const { arbitrator, escrow } = await getContracts();
+    const { arbitrator, escrow, usdt } = await getContracts();
     const { sender, receiver } = await getSigners();
 
     const amount = await randomAmount();
     const arbitrationPrice = await arbitrator.arbitrationCost([]);
-    const transactionID = await createTransaction(sender, receiver.address, amount);
+    const transactionID = await createTransaction(sender, receiver.address, usdt, amount);
 
     await expect(escrow.connect(sender).payArbitrationFeeBySender(
       transactionID, { value: arbitrationPrice }))
@@ -29,23 +29,23 @@ describe('NerwoEscrow: timeOutBySender', function () {
   });
 
   it('InvalidStatus', async () => {
-    const { escrow } = await getContracts();
+    const { escrow, usdt } = await getContracts();
     const { sender, receiver } = await getSigners();
 
     const amount = await randomAmount();
-    const transactionID = await createTransaction(sender, receiver.address, amount);
+    const transactionID = await createTransaction(sender, receiver.address, usdt, amount);
 
     await expect(escrow.connect(sender).timeOutBySender(transactionID))
       .to.be.revertedWithCustomError(escrow, 'InvalidStatus');
   });
 
   it('Timeout', async () => {
-    const { arbitrator, escrow } = await getContracts();
+    const { arbitrator, escrow, usdt } = await getContracts();
     const { sender, receiver } = await getSigners();
 
     const amount = await randomAmount();
     const arbitrationPrice = await arbitrator.arbitrationCost([]);
-    const transactionID = await createTransaction(sender, receiver.address, amount);
+    const transactionID = await createTransaction(sender, receiver.address, usdt, amount);
 
     await expect(escrow.connect(sender).payArbitrationFeeBySender(
       transactionID, { value: arbitrationPrice }))
@@ -59,8 +59,13 @@ describe('NerwoEscrow: timeOutBySender', function () {
 
     await expect(escrow.connect(sender).timeOutBySender(transactionID))
       .to.changeEtherBalances(
-        [escrow, sender],
-        [amount.add(arbitrationPrice).mul(-1), amount.add(arbitrationPrice)]
-      );
+        [escrow, sender, receiver],
+        [arbitrationPrice.mul(-1), arbitrationPrice, 0]
+      )
+      .to.changeTokenBalances(
+        usdt,
+        [escrow, sender, receiver],
+        [amount.mul(-1), amount, 0]
+      )
   });
 });

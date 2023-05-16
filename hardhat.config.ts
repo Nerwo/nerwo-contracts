@@ -11,7 +11,7 @@ dotenv.config();
 
 const config: HardhatUserConfig = {
   solidity: {
-    version: '0.8.19',
+    version: '0.8.20',
     settings: {
       optimizer: {
         enabled: true,
@@ -27,7 +27,7 @@ const config: HardhatUserConfig = {
   gasReporter: {
     enabled: (process.env.REPORT_GAS) ? true : false,
     coinmarketcap: process.env.COINMARKETCAP_API_KEY,
-    excludeContracts: ['Rogue']
+    excludeContracts: ['Rogue', 'TetherToken']
   },
   networks: {
     sepolia: {
