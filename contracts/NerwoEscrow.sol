@@ -29,21 +29,21 @@ import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {ERC165} from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-
 import {IArbitrator} from "@kleros/erc-792/contracts/IArbitrator.sol";
 import {IArbitrable} from "@kleros/erc-792/contracts/IArbitrable.sol";
 
-error NullAddress();
-error TransferFailed(address recipient, address token, uint256 amount, bytes data);
-error NoTimeout();
-error InvalidRuling();
-error InvalidCaller(address expected);
-error InvalidStatus(uint256 expected);
-error InvalidAmount(uint256 amount);
-error NoLostFunds();
-
 contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
     using SafeCast for uint256;
+
+    error NullAddress();
+    error NoTimeout();
+    error InvalidRuling();
+    error InvalidCaller(address expected);
+    error InvalidStatus(uint256 expected);
+    error InvalidAmount(uint256 amount);
+    error NoLostFunds();
+
+    error TransferFailed(address recipient, address token, uint256 amount, bytes data);
 
     // **************************** //
     // *    Contract variables    * //
