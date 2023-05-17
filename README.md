@@ -21,10 +21,11 @@ The main features of the contract include:
 
 ### createTransaction
 
-`createTransaction(address _receiver, uint32 _timeoutPayment, uint256 _amount, uint16 _feeBasisPoint)`
+`createTransaction(address _token, uint256 _amount, address _receiver, string calldata _metaEvidence)`
 
-Allows the sender to create a new transaction by providing the receiver's address,
-the transaction amount, a timeout for the payment, and a fee basis point.
+Allows the sender to create a new transaction by providing the ERC20 token,
+receiver's address, the transaction amount, and meta evidence uri.
+The sender must have approved the amount the ERC20 token transfer.
 
 ### pay
 
@@ -117,17 +118,10 @@ It reimburses the arbitration fee to the winning party and updates the transacti
 
 ### Payment
 
-`event Payment(uint256 indexed _transactionID, uint256 _amount, address indexed _sender);`
+`event Payment(uint256 indexed _transactionID, address indexed _token, uint256 _amount, address indexed _sender);`
 
 Emitted when a payment is made.
-It provides the transaction ID, the amount paid, and the address of the sender.
-
-### FeeRecipientPayment
-
-`event FeeRecipientPayment(uint256 indexed _transactionID, uint256 _feeAmount);`
-
-Emitted when a fee payment is made to the fee recipient.
-It provides the transaction ID and the fee amount.
+It provides the transaction ID, the ERC20 token address, the amount paid, and the address of the sender.
 
 ### HasToPayFee
 
@@ -135,6 +129,34 @@ It provides the transaction ID and the fee amount.
 
 Emitted when a party has to pay an arbitration fee.
 It provides the transaction ID and the party that has to pay the fee.
+
+### TransactionCreated
+
+`event TransactionCreated(uint256 _transactionID, address indexed _sender, address indexed _receiver, address indexed _token, uint256 _amount);`
+
+Emitted when a new transacction is created (the Escrow).
+It provides all needed informations.
+
+### FeeRecipientPayment
+
+`event FeeRecipientPayment(uint256 indexed _transactionID, address indexed _token, uint256 _feeAmount);`
+
+Emitted when a fee payment is made to the fee recipient.
+It provides the transaction ID, the ERC20 token address and the fee amount.
+
+### FeeRecipientChanged
+
+`event FeeRecipientChanged(address indexed _oldFeeRecipient, address indexed _newFeeRecipient);`
+
+Emitted when fee recipent is changed (admin function).
+It provides the old and new fee recipient.
+
+### MetaEvidence
+
+`event MetaEvidence(uint256 indexed _metaEvidenceID, string _evidence);`
+
+Emitted when a meta-evidence is submitted.
+It provides the uri of meta-evidence.
 
 ### Dispute
 
@@ -151,6 +173,19 @@ Emitted when evidence is submitted for a dispute.
 It provides the arbitrator, the transaction ID, the address of the party submitting the evidence,
 and the link to the evidence.
 
+### SendFailed
+
+`event SendFailed(address indexed recipient, address indexed token, uint256 amount, bytes data);`
+
+Emitted when sending funds fails. It the address of the ERC20 is 0
+it refers to the native token (used for arbitration).
+
+### FundsRecovered
+
+`event FundsRecovered(address indexed recipient, uint256 amount);`
+
+Emitted when the owner calls withdrawLostFunds to recover failed to send arbitration reimburses.
+
 ### Ruling
 
 `event Ruling(IArbitrator indexed _arbitrator, uint256 indexed _disputeID, uint256 _ruling);`
@@ -159,6 +194,24 @@ Emitted when a ruling is given for a dispute.
 It provides the arbitrator, the dispute ID, and the ruling.
 
 ## Custom Errors
+
+### NullAddress
+
+`error NullAddress();`
+
+Thrown when a required address is instead null.
+
+### NoTimeout
+
+`error NoTimeout();`
+
+Thrown when the function is called before the required timeout period has passed.
+
+### InvalidRuling
+
+`error InvalidRuling();`
+
+Thrown when the arbitrator gives an invalid ruling.
 
 ### InvalidCaller
 
@@ -178,17 +231,11 @@ Thrown when the function is called with an invalid transaction status.
 
 Thrown when the function is called with an invalid amount.
 
-### NoTimeout
+### NoLostFunds
 
-`error NoTimeout();`
+`error NoLostFunds();`
 
-Thrown when the function is called before the required timeout period has passed.
-
-### InvalidRuling
-
-`error InvalidRuling();`
-
-Thrown when the arbitrator gives an invalid ruling.
+Thrown when are no lost funds to recover.
 
 ## Enumerations
 
@@ -206,11 +253,10 @@ Represents the current status of a transaction:
 
 ### Party
 
-`enum Party {None, Sender, Receiver}`
+`enum Party {Sender, Receiver}`
 
 Represents the parties involved in a transaction:
 
-- `None`: No party.
 - `Sender`: The party sending the payment.
 - `Receiver`: The party receiving the payment.
 
