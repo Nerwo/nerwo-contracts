@@ -37,13 +37,14 @@ const config: HardhatUserConfig = {
         etherscan: {
           apiKey: process.env.ETHERSCAN_API_KEY
         }
-      }
+      },
+      deploy: ['deploy', 'deploy-testing']
     },
     hardhat: {
       accounts: {
         mnemonic: process.env.HARDHAT_MNEMONIC || HARDHAT_NETWORK_MNEMONIC
       },
-      deploy: ['deploy', 'deploy-hardhat']
+      deploy: ['deploy', 'deploy-testing']
     }
   },
   etherscan: {
