@@ -23,15 +23,16 @@ describe('NerwoCentralizedArbitrator: createDispute', function () {
       .to.be.revertedWithCustomError(arbitrator, 'InvalidCaller');
   });
 
-  it('InsufficientFunding', async () => {
+  it('InsufficientPayment', async () => {
     const { arbitrator } = await getContracts();
     const { sender } = await getSigners();
 
     const arbitrationPrice = await arbitrator.arbitrationCost([]);
     const choices = BigNumber.from(2);
 
+    // the amount is checked before the supportInterface
     await expect(arbitrator.connect(sender).createDispute(choices, []))
-      .to.be.revertedWithCustomError(arbitrator, 'InsufficientFunding')
-      .withArgs(arbitrationPrice);
+      .to.be.revertedWithCustomError(arbitrator, 'InsufficientPayment')
+      .withArgs(0, arbitrationPrice);
   });
 });
