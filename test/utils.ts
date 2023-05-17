@@ -39,8 +39,8 @@ export async function createTransaction(
     const { escrow } = await getContracts();
     const { platform } = await getSigners();
 
-    token.connect(sender).claim(amount);
-    token.connect(sender).approve(escrow.address, amount);
+    await token.connect(sender).claim(amount);
+    await token.connect(sender).approve(escrow.address, amount);
 
     await expect(escrow.connect(sender).createTransaction(
         token.address, amount, receiver_address, metaEvidence))
