@@ -30,8 +30,8 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.
 import {ERC165} from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-import {IArbitrator} from "./kleros/IArbitrator.sol";
-import {IArbitrable} from "./kleros/IArbitrable.sol";
+import {IArbitrator} from "@kleros/erc-792/contracts/IArbitrator.sol";
+import {IArbitrable} from "@kleros/erc-792/contracts/IArbitrable.sol";
 
 error NullAddress();
 error TransferFailed(address recipient, address token, uint256 amount, bytes data);

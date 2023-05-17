@@ -8,8 +8,8 @@ import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {ERC165Checker} from "@openzeppelin/contracts/utils/introspection/ERC165Checker.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
-import {IArbitrator} from "./kleros/IArbitrator.sol";
-import {IArbitrable} from "./kleros/IArbitrable.sol";
+import {IArbitrator} from "@kleros/erc-792/contracts/IArbitrator.sol";
+import {IArbitrable} from "@kleros/erc-792/contracts/IArbitrable.sol";
 
 error InvalidRuling();
 error InvalidCaller(address expected);
@@ -22,12 +22,6 @@ error InsufficientFunding(uint256 required);
 contract NerwoCentralizedArbitrator is Ownable, ReentrancyGuard, IArbitrator, ERC165 {
     using SafeCast for uint256;
     using ERC165Checker for address;
-
-    enum DisputeStatus {
-        Waiting,
-        Appealable,
-        Solved
-    }
 
     uint256 private arbitrationPrice; // Not public because arbitrationCost already acts as an accessor.
     uint256 private constant NOT_PAYABLE_VALUE = (2 ** 256 - 2) / 2; // High value to be sure that the appeal is too expensive.
@@ -60,18 +54,6 @@ contract NerwoCentralizedArbitrator is Ownable, ReentrancyGuard, IArbitrator, ER
         }
         _;
     }
-
-    /** @dev To be raised when a dispute can be appealed.
-     *  @param _disputeID ID of the dispute.
-     *  @param _arbitrable The contract which created the dispute.
-     */
-    event AppealPossible(uint256 indexed _disputeID, IArbitrable indexed _arbitrable);
-
-    /** @dev To be raised when the current ruling is appealed.
-     *  @param _disputeID ID of the dispute.
-     *  @param _arbitrable The contract which created the dispute.
-     */
-    event AppealDecision(uint256 indexed _disputeID, IArbitrable indexed _arbitrable);
 
     /**
      * @dev Emitted when the arbitration price is updated by the owner.
