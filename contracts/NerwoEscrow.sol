@@ -425,7 +425,7 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
 
         transactionID = ++index;
 
-        transactions[index] = Transaction({
+        transactions[transactionID] = Transaction({
             status: Status.NoDispute,
             lastInteraction: uint32(block.timestamp),
             sender: _msgSender(),
