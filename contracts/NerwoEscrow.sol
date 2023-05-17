@@ -400,7 +400,7 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
      *  @return transactionID The index of the transaction.
      */
     function createTransaction(
-        IERC20 _token,
+        address _token,
         uint256 _amount,
         address _receiver,
         string calldata _metaEvidence
@@ -413,13 +413,17 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
             revert InvalidAmount(minimalAmount);
         }
 
-        if (_msgSender() == _receiver) {
+        address sender = _msgSender();
+
+        if (sender == _receiver) {
             revert InvalidCaller(_receiver);
         }
 
+        IERC20 token = IERC20(_token);
+
         // first transfer tokens to the contract
         // NOTE: user must have approved the allowance
-        if (!_token.transferFrom(_msgSender(), address(this), _amount)) {
+        if (!token.transferFrom(sender, address(this), _amount)) {
             revert InvalidAmount(0);
         }
 
@@ -428,9 +432,9 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
         transactions[transactionID] = Transaction({
             status: Status.NoDispute,
             lastInteraction: uint32(block.timestamp),
-            sender: _msgSender(),
+            sender: sender,
             receiver: _receiver,
-            token: _token,
+            token: token,
             amount: _amount,
             disputeId: 0,
             senderFee: 0,
@@ -438,7 +442,7 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
         });
 
         emit MetaEvidence(transactionID, _metaEvidence);
-        emit TransactionCreated(transactionID, _msgSender(), _receiver, address(_token), _amount);
+        emit TransactionCreated(transactionID, sender, _receiver, _token, _amount);
     }
 
     /** @dev Pay receiver. To be called if the good or service is provided.
