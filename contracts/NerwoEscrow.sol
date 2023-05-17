@@ -22,7 +22,7 @@
  *    executed by the contract, which redistributes the funds accordingly.
  */
 
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.18;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
