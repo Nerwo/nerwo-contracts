@@ -26,6 +26,7 @@ pragma solidity ^0.8.0;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {ERC165} from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
@@ -41,7 +42,7 @@ error InvalidStatus(uint256 expected);
 error InvalidAmount(uint256 amount);
 error NoLostFunds();
 
-contract NerwoEscrow is Ownable, IArbitrable, ERC165 {
+contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
     using SafeCast for uint256;
 
     // **************************** //
@@ -664,7 +665,7 @@ contract NerwoEscrow is Ownable, IArbitrable, ERC165 {
      *  @param _transactionID The index of the transaction.
      *  @param _ruling Ruling given by the arbitrator. 1 : Reimburse the receiver. 2 : Pay the sender.
      */
-    function _executeRuling(uint256 _transactionID, uint256 _ruling) internal {
+    function _executeRuling(uint256 _transactionID, uint256 _ruling) internal nonReentrant {
         Transaction storage transaction = transactions[_transactionID];
 
         uint256 amount = transaction.amount;
