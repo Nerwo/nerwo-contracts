@@ -114,6 +114,13 @@ and whether the ruling is valid before proceeding.
 Internal function to execute a ruling of a dispute.
 It reimburses the arbitration fee to the winning party and updates the transaction status accordingly.
 
+### getTransaction
+
+`getTransaction(uint256 _transactionID)`
+
+External function helper for frontend calls, it returns the transaction
+or raises an error if the transaction does not exist.
+
 ## Events
 
 ### Payment
