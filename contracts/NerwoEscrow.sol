@@ -40,6 +40,7 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
     error InvalidAmount(uint256 amount);
     error NoLostFunds();
     error InvalidTransaction(uint256 transactionID);
+    error InvalidToken(address token);
 
     error TransferFailed(address recipient, address token, uint256 amount, bytes data);
 
@@ -76,6 +77,8 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
     }
 
     uint256 public lastTransaction;
+
+    IERC20[] public tokensWhitelist; // whitelisted ERC20 tokens
 
     IArbitrator public arbitrator; // Address of the arbitrator contract.
 
@@ -213,7 +216,9 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
      *  @param _arbitratorExtraData Extra data for the arbitrator.
      *  @param _feeTimeout Arbitration fee timeout for the parties.
      *  @param _feeRecipient Address which receives a share of receiver payment.
-     *  @param _feeRecipientBasisPoint The share of fee to be received by the feeRecipient, down to 2 decimal places as 550 = 5.5%
+     *  @param _feeRecipientBasisPoint The share of fee to be received by the feeRecipient,
+     *                                 down to 2 decimal places as 550 = 5.5%
+     *  @param _tokensWhitelist List of whitelisted ERC20 tokens
      */
     constructor(
         address _owner,
@@ -222,11 +227,13 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
         uint256 _feeTimeout,
         uint256 _minimalAmount,
         address _feeRecipient,
-        uint256 _feeRecipientBasisPoint
+        uint256 _feeRecipientBasisPoint,
+        IERC20[] memory _tokensWhitelist
     ) {
         _setArbitrator(_arbitrator, _arbitratorExtraData, _feeTimeout);
         _setMinimalAmount(_minimalAmount);
         _setFeeRecipientAndBasisPoint(_feeRecipient, _feeRecipientBasisPoint);
+        _setTokensWhitelist(_tokensWhitelist);
         _transferOwnership(_owner);
     }
 
@@ -294,6 +301,25 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
      */
     function setFeeRecipientAndBasisPoint(address _feeRecipient, uint256 _feeRecipientBasisPoint) external onlyOwner {
         _setFeeRecipientAndBasisPoint(_feeRecipient, _feeRecipientBasisPoint);
+    }
+
+    function setTokensWhitelist(IERC20[] memory _tokensWhitelist) external onlyOwner {
+        _setTokensWhitelist(_tokensWhitelist);
+    }
+
+    /**
+     * @dev Sets the whitelist of ERC20 tokens
+     * @param _tokensWhitelist An array of ERC20 tokens
+     */
+    function _setTokensWhitelist(IERC20[] memory _tokensWhitelist) internal {
+        if (_tokensWhitelist.length == 0) {
+            revert InvalidToken(address(0));
+        }
+
+        delete tokensWhitelist;
+        for (uint i = 0; i < _tokensWhitelist.length; i++) {
+            tokensWhitelist.push(_tokensWhitelist[i]);
+        }
     }
 
     /** @dev Calculate the amount to be paid in wei according to feeRecipientBasisPoint for a particular amount.
@@ -401,7 +427,7 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
      *  @return transactionID The index of the transaction.
      */
     function createTransaction(
-        address _token,
+        IERC20 _token,
         uint256 _amount,
         address _receiver,
         string calldata _metaEvidence
@@ -415,12 +441,21 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
         }
 
         address sender = _msgSender();
-
         if (sender == _receiver) {
             revert InvalidCaller(_receiver);
         }
 
-        IERC20 token = IERC20(_token);
+        IERC20 token;
+        for (uint i = 0; i < tokensWhitelist.length; i++) {
+            if (_token == tokensWhitelist[i]) {
+                token = _token;
+                break;
+            }
+        }
+
+        if (address(token) == address(0)) {
+            revert InvalidToken(address(_token));
+        }
 
         // first transfer tokens to the contract
         // NOTE: user must have approved the allowance
@@ -445,7 +480,7 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
         });
 
         emit MetaEvidence(transactionID, _metaEvidence);
-        emit TransactionCreated(transactionID, sender, _receiver, _token, _amount);
+        emit TransactionCreated(transactionID, sender, _receiver, address(_token), _amount);
     }
 
     /** @dev Pay receiver. To be called if the good or service is provided.

@@ -5,7 +5,7 @@ import { getContracts, getSigners, createTransaction, randomAmount } from '../ut
 
 describe('NerwoEscrow: createTransaction', function () {
   before(async () => {
-    await deployments.fixture(['NerwoEscrow', 'TetherToken'], {
+    await deployments.fixture(['NerwoEscrow', 'NerwoTetherToken'], {
       keepExistingDeployments: true
     });
   });
@@ -43,5 +43,14 @@ describe('NerwoEscrow: createTransaction', function () {
     const minimalAmount = await escrow.minimalAmount();
     await expect(createTransaction(sender, receiver.address, usdt, minimalAmount.sub(1)))
       .to.be.revertedWithCustomError(escrow, 'InvalidAmount').withArgs(minimalAmount);
+  });
+
+  it('InvalidToken', async () => {
+    const { escrow } = await getContracts();
+    const { sender, receiver } = await getSigners();
+
+    const amount = await randomAmount();
+    await expect(escrow.connect(sender).createTransaction(escrow.address, amount, receiver.address, ''))
+      .to.be.revertedWithCustomError(escrow, 'InvalidToken');
   });
 });

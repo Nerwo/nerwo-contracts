@@ -8,6 +8,7 @@ declare global {
             NERWO_MINIMAL_AMOUNT: string;
             NERWO_FEE_TIMEOUT: string;
             NERWO_FEE_RECIPIENT_BASISPOINT: string;
+            NERWO_TOKENS_WHITELIST: string;
         }
     }
 }

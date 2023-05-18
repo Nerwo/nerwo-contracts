@@ -3,7 +3,7 @@ import { DeployFunction } from 'hardhat-deploy/types';
 const func: DeployFunction = async function ({ deployments: { deploy }, getNamedAccounts }) {
     const { deployer } = await getNamedAccounts();
 
-    await deploy('TetherToken', {
+    await deploy('NerwoTetherToken', {
         from: deployer,
         log: true,
         deterministicDeployment: true
@@ -11,4 +11,4 @@ const func: DeployFunction = async function ({ deployments: { deploy }, getNamed
 }
 
 export default func;
-func.tags = ['TetherToken'];
+func.tags = ['NerwoTetherToken'];

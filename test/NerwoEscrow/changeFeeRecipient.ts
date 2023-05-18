@@ -4,7 +4,7 @@ import { getContracts, getSigners } from '../utils';
 
 describe('NerwoEscrow: changeFeeRecipient', function () {
   before(async () => {
-    await deployments.fixture(['NerwoEscrow', 'TetherToken'], {
+    await deployments.fixture(['NerwoEscrow', 'NerwoTetherToken'], {
       keepExistingDeployments: true
     });
   });

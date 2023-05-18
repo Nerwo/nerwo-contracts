@@ -7,7 +7,7 @@ import { getContracts, getSigners, createTransaction, randomAmount } from '../ut
 
 describe('NerwoEscrow: timeOutByReceiver', function () {
   before(async () => {
-    await deployments.fixture(['NerwoEscrow', 'TetherToken'], {
+    await deployments.fixture(['NerwoEscrow', 'NerwoTetherToken'], {
       keepExistingDeployments: true
     });
   });

@@ -10,6 +10,6 @@ pragma solidity ^0.8.0;
 
 import {ClaimableToken} from "./ClaimableToken.sol";
 
-contract TetherToken is ClaimableToken {
-    constructor() ClaimableToken("Tether USD Like", "USDT") {}
+contract NerwoTetherToken is ClaimableToken {
+    constructor() ClaimableToken("NerwoTetherToken Tether USD", "USDT") {}
 }

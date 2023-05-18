@@ -1,3 +1,3 @@
 module.exports = {
-    skipFiles: ['Rogue.sol', 'ClaimableToken.sol', 'TetherToken.sol']
+    skipFiles: ['Rogue.sol', 'ClaimableToken.sol', 'NerwoTetherToken.sol']
 };

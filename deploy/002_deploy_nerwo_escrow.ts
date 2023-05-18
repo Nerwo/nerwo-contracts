@@ -7,6 +7,15 @@ const func: DeployFunction = async function ({ deployments: { get, deploy }, get
 
   const arbitrator = await get('NerwoCentralizedArbitrator');
 
+  let whitelist = constants.TOKENS_WHITELIST;
+
+  // whitelist our test token if deployed
+  // fake first address, for gas calculation
+  try {
+    const nerwoUSDT = await get('NerwoTetherToken');
+    whitelist = process.env.REPORT_GAS ? [arbitrator.address, nerwoUSDT.address] : [nerwoUSDT.address];
+  } catch (_) { }
+
   await deploy('NerwoEscrow', {
     from: deployer,
     args: [
@@ -16,7 +25,8 @@ const func: DeployFunction = async function ({ deployments: { get, deploy }, get
       constants.FEE_TIMEOUT,              /* _feeTimeout */
       constants.MINIMAL_AMOUNT,           /* _minimalAmount */
       platform,                           /* _feeRecipient */
-      constants.FEE_RECIPIENT_BASISPOINT  /* _feeRecipientBasisPoint */
+      constants.FEE_RECIPIENT_BASISPOINT, /* _feeRecipientBasisPoint */
+      whitelist                           /* _tokensWhitelist */
     ],
     log: true,
     deterministicDeployment: true

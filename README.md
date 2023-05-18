@@ -21,7 +21,7 @@ The main features of the contract include:
 
 ### createTransaction
 
-`createTransaction(address _token, uint256 _amount, address _receiver, string calldata _metaEvidence)`
+`createTransaction(IERC20 _token, uint256 _amount, address _receiver, string calldata _metaEvidence)`
 
 Allows the sender to create a new transaction by providing the ERC20 token,
 receiver's address, the transaction amount, and meta evidence uri.

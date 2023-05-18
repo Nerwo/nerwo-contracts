@@ -7,7 +7,7 @@ import { BigNumber } from 'ethers';
 
 describe('NerwoEscrow: rule', function () {
   before(async () => {
-    await deployments.fixture(['NerwoEscrow', 'TetherToken'], {
+    await deployments.fixture(['NerwoEscrow', 'NerwoTetherToken'], {
       keepExistingDeployments: true
     });
   });

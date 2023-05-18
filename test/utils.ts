@@ -4,14 +4,14 @@ import { BigNumber, Contract, Signer, Wallet } from 'ethers';
 import { Interface } from 'ethers/lib/utils';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 
-import { ClaimableToken, NerwoCentralizedArbitrator, NerwoEscrow, TetherToken } from '../typechain-types';
+import { ClaimableToken, NerwoCentralizedArbitrator, NerwoEscrow, NerwoTetherToken } from '../typechain-types';
 
 type Account = Contract | Wallet;
 
 export async function getContracts() {
     const arbitrator: NerwoCentralizedArbitrator = await ethers.getContract('NerwoCentralizedArbitrator');
     const escrow: NerwoEscrow = await ethers.getContract('NerwoEscrow');
-    const usdt: TetherToken = await ethers.getContract('TetherToken');
+    const usdt: NerwoTetherToken = await ethers.getContract('NerwoTetherToken');
 
     return { arbitrator, escrow, usdt };
 }

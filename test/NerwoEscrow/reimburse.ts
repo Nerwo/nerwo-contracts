@@ -6,7 +6,7 @@ import { getContracts, getSigners, fund, createTransaction, randomAmount } from 
 
 describe('NerwoEscrow: reimburse', function () {
   before(async () => {
-    await deployments.fixture(['NerwoEscrow', 'TetherToken'], {
+    await deployments.fixture(['NerwoEscrow', 'NerwoTetherToken'], {
       keepExistingDeployments: true
     });
   });
