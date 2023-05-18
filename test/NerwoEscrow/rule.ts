@@ -39,21 +39,21 @@ describe('NerwoEscrow: rule', function () {
     expect(events).to.be.an('array');
     expect(events.at(-1)?.args?._disputeID).is.not.undefined;
     disputeID = events.at(-1)!.args!._disputeID!;
-
-    await expect(escrow.connect(sender).pay(transactionID, amount))
-      .to.revertedWithCustomError(escrow, 'InvalidStatus');
-
   });
 
   it('testing errors', async () => {
-    const { arbitrator, escrow, usdt } = await getContracts();
-    const { platform, court, sender, receiver } = await getSigners();
+    const { arbitrator, escrow } = await getContracts();
+    const { platform, court, sender } = await getSigners();
 
     await expect(arbitrator.connect(platform).giveRuling(disputeID, 0))
       .to.be.revertedWith('Ownable: caller is not the owner');
 
     await expect(arbitrator.connect(court).giveRuling(0, 0))
       .to.be.revertedWithCustomError(arbitrator, 'InvalidDispute');
+
+    const transactionID = await escrow.index();
+    await expect(escrow.connect(sender).pay(transactionID, amount))
+      .to.revertedWithCustomError(escrow, 'InvalidStatus');
   });
 
   it('SENDER_WINS -> no platform fee', async () => {
