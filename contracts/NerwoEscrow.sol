@@ -439,7 +439,9 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
             revert InvalidAmount(0);
         }
 
-        transactionID = ++index;
+        unchecked {
+            transactionID = ++index;
+        }
 
         transactions[transactionID] = Transaction({
             status: Status.NoDispute,

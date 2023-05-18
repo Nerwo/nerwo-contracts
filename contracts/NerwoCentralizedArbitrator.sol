@@ -107,7 +107,10 @@ contract NerwoCentralizedArbitrator is Ownable, ReentrancyGuard, IArbitrator, ER
         IArbitrable arbitrabled = IArbitrable(_msgSender());
 
         // Create the dispute and return its number.
-        disputeID = ++index;
+        unchecked {
+            disputeID = ++index;
+        }
+
         disputes[disputeID] = Dispute({
             arbitrated: arbitrabled,
             choices: _choices.toUint8(),
@@ -122,7 +125,7 @@ contract NerwoCentralizedArbitrator is Ownable, ReentrancyGuard, IArbitrator, ER
      *  _extraData Not used by this contract.
      *  @return cost Amount to be paid.
      */
-    function arbitrationCost(bytes memory /*_extraData*/) public view override returns (uint256 cost) {
+    function arbitrationCost(bytes calldata /*_extraData*/) public view override returns (uint256 cost) {
         return arbitrationPrice;
     }
 
@@ -201,7 +204,7 @@ contract NerwoCentralizedArbitrator is Ownable, ReentrancyGuard, IArbitrator, ER
         dispute.ruling = _ruling.toUint8();
         dispute.status = DisputeStatus.Solved;
 
-        _transferTo(payable(_msgSender()), arbitrationCost(""));
+        _transferTo(payable(_msgSender()), arbitrationPrice);
 
         dispute.arbitrated.rule(_disputeID, _ruling);
     }
