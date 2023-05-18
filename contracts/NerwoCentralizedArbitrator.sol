@@ -27,6 +27,7 @@ contract NerwoCentralizedArbitrator is Ownable, ReentrancyGuard, IArbitrator, ER
 
     error TransferFailed(address recipient, uint256 amount, bytes data);
     error InvalidCaller(address expected);
+    error InvalidDispute(uint256 disputeID);
 
     struct Dispute {
         IArbitrable arbitrated;
@@ -46,6 +47,13 @@ contract NerwoCentralizedArbitrator is Ownable, ReentrancyGuard, IArbitrator, ER
      * @param newPrice The updated arbitration price.
      */
     event ArbitrationPriceChanged(uint256 previousPrice, uint256 newPrice);
+
+    modifier onlyValidDispute(uint256 _disputeID) {
+        if (address(disputes[_disputeID].arbitrated) == address(0)) {
+            revert InvalidDispute(_disputeID);
+        }
+        _;
+    }
 
     /**
      * @dev See {IERC165-supportsInterface}.
@@ -154,7 +162,9 @@ contract NerwoCentralizedArbitrator is Ownable, ReentrancyGuard, IArbitrator, ER
      * @param _disputeID ID of the dispute to rule.
      * @return status The status of the dispute.
      */
-    function disputeStatus(uint256 _disputeID) external view override returns (DisputeStatus status) {
+    function disputeStatus(
+        uint256 _disputeID
+    ) external view override onlyValidDispute(_disputeID) returns (DisputeStatus status) {
         status = disputes[_disputeID].status;
     }
 
@@ -163,7 +173,9 @@ contract NerwoCentralizedArbitrator is Ownable, ReentrancyGuard, IArbitrator, ER
      * @param _disputeID ID of the dispute.
      * @return ruling The ruling which has been given or the one which will be given if there is no appeal.
      */
-    function currentRuling(uint256 _disputeID) external view override returns (uint256 ruling) {
+    function currentRuling(
+        uint256 _disputeID
+    ) external view override onlyValidDispute(_disputeID) returns (uint256 ruling) {
         ruling = disputes[_disputeID].ruling;
     }
 
@@ -172,7 +184,10 @@ contract NerwoCentralizedArbitrator is Ownable, ReentrancyGuard, IArbitrator, ER
      *  @param _ruling Ruling given by the arbitrator.
      *                 Note that 0 means "Not able/wanting to make a decision".
      */
-    function giveRuling(uint256 _disputeID, uint256 _ruling) external onlyOwner nonReentrant {
+    function giveRuling(
+        uint256 _disputeID,
+        uint256 _ruling
+    ) external onlyValidDispute(_disputeID) onlyOwner nonReentrant {
         Dispute storage dispute = disputes[_disputeID];
 
         if (_ruling > dispute.choices) {

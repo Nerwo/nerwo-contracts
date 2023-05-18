@@ -42,6 +42,7 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
     error InvalidStatus(uint256 expected);
     error InvalidAmount(uint256 amount);
     error NoLostFunds();
+    error InvalidTransaction(uint256 transactionID);
 
     error TransferFailed(address recipient, address token, uint256 amount, bytes data);
 
@@ -197,6 +198,17 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
     // *    Arbitrable functions  * //
     // *    Modifying the state   * //
     // **************************** //
+
+    function requireValidTransaction(uint256 _transactionID) internal view {
+        if (transactions[_transactionID].receiver == address(0)) {
+            revert InvalidTransaction(_transactionID);
+        }
+    }
+
+    modifier onlyValidTransaction(uint256 _transactionID) {
+        requireValidTransaction(_transactionID);
+        _;
+    }
 
     /** @dev constructor
      *  @param _owner The initial owner
@@ -449,7 +461,7 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
      *  @param _transactionID The index of the transaction.
      *  @param _amount Amount to pay in wei.
      */
-    function pay(uint256 _transactionID, uint256 _amount) external {
+    function pay(uint256 _transactionID, uint256 _amount) external onlyValidTransaction(_transactionID) {
         Transaction storage transaction = transactions[_transactionID];
 
         if (_msgSender() != transaction.sender) {
@@ -478,7 +490,10 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
      *  @param _transactionID The index of the transaction.
      *  @param _amountReimbursed Amount to reimburse in wei.
      */
-    function reimburse(uint256 _transactionID, uint256 _amountReimbursed) external {
+    function reimburse(
+        uint256 _transactionID,
+        uint256 _amountReimbursed
+    ) external onlyValidTransaction(_transactionID) {
         Transaction storage transaction = transactions[_transactionID];
 
         if (_msgSender() != transaction.receiver) {
@@ -501,7 +516,7 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
     /** @dev Reimburse sender if receiver fails to pay the fee.
      *  @param _transactionID The index of the transaction.
      */
-    function timeOutBySender(uint256 _transactionID) external {
+    function timeOutBySender(uint256 _transactionID) external onlyValidTransaction(_transactionID) {
         Transaction storage transaction = transactions[_transactionID];
 
         if (transaction.status != Status.WaitingReceiver) {
@@ -518,7 +533,7 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
     /** @dev Pay receiver if sender fails to pay the fee.
      *  @param _transactionID The index of the transaction.
      */
-    function timeOutByReceiver(uint256 _transactionID) external {
+    function timeOutByReceiver(uint256 _transactionID) external onlyValidTransaction(_transactionID) {
         Transaction storage transaction = transactions[_transactionID];
 
         if (transaction.status != Status.WaitingSender) {
@@ -537,7 +552,7 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
      *  This is not a vulnerability as the arbitrator can rule in favor of one party anyway.
      *  @param _transactionID The index of the transaction.
      */
-    function payArbitrationFeeBySender(uint256 _transactionID) external payable {
+    function payArbitrationFeeBySender(uint256 _transactionID) external payable onlyValidTransaction(_transactionID) {
         Transaction storage transaction = transactions[_transactionID];
 
         if (_msgSender() != transaction.sender) {
@@ -572,7 +587,7 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
      *  Note that this function mirrors payArbitrationFeeBySender.
      *  @param _transactionID The index of the transaction.
      */
-    function payArbitrationFeeByReceiver(uint256 _transactionID) external payable {
+    function payArbitrationFeeByReceiver(uint256 _transactionID) external payable onlyValidTransaction(_transactionID) {
         Transaction storage transaction = transactions[_transactionID];
 
         if (_msgSender() != transaction.receiver) {
@@ -625,7 +640,10 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
      *  @param _transactionID The index of the transaction.
      *  @param _evidence A link to an evidence using its URI.
      */
-    function submitEvidence(uint256 _transactionID, string calldata _evidence) external {
+    function submitEvidence(
+        uint256 _transactionID,
+        string calldata _evidence
+    ) external onlyValidTransaction(_transactionID) {
         Transaction storage transaction = transactions[_transactionID];
 
         if (_msgSender() != transaction.sender && _msgSender() != transaction.receiver) {
@@ -656,6 +674,8 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
         }
 
         uint256 transactionID = disputeIDtoTransactionID[_disputeID];
+        requireValidTransaction(transactionID);
+
         if (transactions[transactionID].status != Status.DisputeCreated) {
             revert InvalidStatus(uint256(Status.DisputeCreated));
         }

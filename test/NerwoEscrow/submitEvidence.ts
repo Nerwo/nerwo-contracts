@@ -21,7 +21,7 @@ describe('NerwoEscrow: submitEvidence', function () {
       .to.revertedWithCustomError(escrow, 'InvalidCaller');
 
     await expect(escrow.connect(sender).submitEvidence(0, 'invalid transactionID'))
-      .to.revertedWithCustomError(escrow, 'InvalidCaller');
+      .to.revertedWithCustomError(escrow, 'InvalidTransaction');
 
     const arbitrator = await escrow.arbitrator();
 
