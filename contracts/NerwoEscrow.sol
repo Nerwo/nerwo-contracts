@@ -25,7 +25,6 @@
 pragma solidity ^0.8.18;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {ERC165} from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -33,8 +32,6 @@ import {IArbitrator} from "@kleros/erc-792/contracts/IArbitrator.sol";
 import {IArbitrable} from "@kleros/erc-792/contracts/IArbitrable.sol";
 
 contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
-    using SafeCast for uint256;
-
     error NullAddress();
     error NoTimeout();
     error InvalidRuling();
@@ -297,14 +294,6 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
      */
     function setFeeRecipientAndBasisPoint(address _feeRecipient, uint256 _feeRecipientBasisPoint) external onlyOwner {
         _setFeeRecipientAndBasisPoint(_feeRecipient, _feeRecipientBasisPoint);
-    }
-
-    /**
-     * @dev Returns the current ETH balance of the contract.
-     * @return The current balance of the contract.
-     */
-    function getBalance() external view returns (uint256) {
-        return address(this).balance;
     }
 
     /** @dev Calculate the amount to be paid in wei according to feeRecipientBasisPoint for a particular amount.
