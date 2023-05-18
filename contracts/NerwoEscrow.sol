@@ -75,7 +75,7 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
         uint256 receiverFee; // Total fees paid by the receiver.
     }
 
-    uint256 public index;
+    uint256 public lastTransaction;
 
     IArbitrator public arbitrator; // Address of the arbitrator contract.
 
@@ -429,7 +429,7 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
         }
 
         unchecked {
-            transactionID = ++index;
+            transactionID = ++lastTransaction;
         }
 
         transactions[transactionID] = Transaction({
@@ -721,5 +721,11 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
             _sendTo(transaction.sender, splitArbitration);
             _sendTo(transaction.receiver, splitArbitration);
         }
+    }
+
+    function getTransaction(
+        uint256 _transactionID
+    ) external view onlyValidTransaction(_transactionID) returns (Transaction memory) {
+        return transactions[_transactionID];
     }
 }

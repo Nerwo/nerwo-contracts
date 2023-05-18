@@ -36,7 +36,7 @@ contract NerwoCentralizedArbitrator is Ownable, ReentrancyGuard, IArbitrator, ER
         DisputeStatus status;
     }
 
-    uint256 public index;
+    uint256 public lastDispute;
     mapping(uint256 => Dispute) public disputes;
     uint256 private arbitrationPrice; // Not public because arbitrationCost already acts as an accessor.
     uint256 private constant NOT_PAYABLE_VALUE = type(uint256).max; // High value to be sure that the appeal is too expensive.
@@ -108,7 +108,7 @@ contract NerwoCentralizedArbitrator is Ownable, ReentrancyGuard, IArbitrator, ER
 
         // Create the dispute and return its number.
         unchecked {
-            disputeID = ++index;
+            disputeID = ++lastDispute;
         }
 
         disputes[disputeID] = Dispute({
@@ -207,5 +207,9 @@ contract NerwoCentralizedArbitrator is Ownable, ReentrancyGuard, IArbitrator, ER
         _transferTo(payable(_msgSender()), arbitrationPrice);
 
         dispute.arbitrated.rule(_disputeID, _ruling);
+    }
+
+    function getDispute(uint256 _disputeID) external view onlyValidDispute(_disputeID) returns (Dispute memory) {
+        return disputes[_disputeID];
     }
 }

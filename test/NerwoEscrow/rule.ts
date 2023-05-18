@@ -51,7 +51,7 @@ describe('NerwoEscrow: rule', function () {
     await expect(arbitrator.connect(court).giveRuling(0, 0))
       .to.be.revertedWithCustomError(arbitrator, 'InvalidDispute');
 
-    const transactionID = await escrow.index();
+    const transactionID = await escrow.lastTransaction();
     await expect(escrow.connect(sender).pay(transactionID, amount))
       .to.revertedWithCustomError(escrow, 'InvalidStatus');
   });
