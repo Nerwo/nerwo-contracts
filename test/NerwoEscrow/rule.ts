@@ -45,6 +45,17 @@ describe('NerwoEscrow: rule', function () {
 
   });
 
+  it('testing errors', async () => {
+    const { arbitrator, escrow, usdt } = await getContracts();
+    const { platform, court, sender, receiver } = await getSigners();
+
+    await expect(arbitrator.connect(platform).giveRuling(disputeID, 0))
+      .to.be.revertedWith('Ownable: caller is not the owner');
+
+    await expect(arbitrator.connect(court).giveRuling(0, 0))
+      .to.be.revertedWithCustomError(arbitrator, 'InvalidDispute');
+  });
+
   it('SENDER_WINS -> no platform fee', async () => {
     const { arbitrator, escrow, usdt } = await getContracts();
     const { platform, court, sender, receiver } = await getSigners();

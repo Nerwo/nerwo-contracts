@@ -190,7 +190,7 @@ contract NerwoCentralizedArbitrator is Ownable, ReentrancyGuard, IArbitrator, ER
     function giveRuling(
         uint256 _disputeID,
         uint256 _ruling
-    ) external onlyValidDispute(_disputeID) onlyOwner nonReentrant {
+    ) external onlyOwner onlyValidDispute(_disputeID) nonReentrant {
         Dispute storage dispute = disputes[_disputeID];
 
         if (_ruling > dispute.choices) {
