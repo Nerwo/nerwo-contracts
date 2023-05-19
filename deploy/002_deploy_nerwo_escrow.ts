@@ -23,7 +23,6 @@ const func: DeployFunction = async function ({ deployments: { get, deploy }, get
       arbitrator.address,                 /* _arbitrator */
       [],                                 /* _arbitratorExtraData */
       constants.FEE_TIMEOUT,              /* _feeTimeout */
-      constants.MINIMAL_AMOUNT,           /* _minimalAmount */
       platform,                           /* _feeRecipient */
       constants.FEE_RECIPIENT_BASISPOINT, /* _feeRecipientBasisPoint */
       whitelist                           /* _tokensWhitelist */

@@ -36,13 +36,12 @@ describe('NerwoEscrow: createTransaction', function () {
       .to.be.revertedWithCustomError(escrow, 'NullAddress');
   });
 
-  it('Creating a transaction < minimalAmount', async () => {
+  it('Creating a transaction with 0 amount', async () => {
     const { escrow, usdt } = await getContracts();
     const { sender, receiver } = await getSigners();
 
-    const minimalAmount = await escrow.minimalAmount();
-    await expect(createTransaction(sender, receiver.address, usdt, minimalAmount.sub(1)))
-      .to.be.revertedWithCustomError(escrow, 'InvalidAmount').withArgs(minimalAmount);
+    await expect(createTransaction(sender, receiver.address, usdt))
+      .to.be.revertedWithCustomError(escrow, 'InvalidAmount').withArgs(0);
   });
 
   it('InvalidToken', async () => {

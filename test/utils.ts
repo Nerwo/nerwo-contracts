@@ -31,7 +31,7 @@ export async function createTransaction(
     sender: SignerWithAddress,
     receiver_address: string,
     token: ClaimableToken,
-    amount: BigNumber,
+    amount: BigNumber = BigNumber.from(0),
     metaEvidence = '') {
 
     const blockNumber = await ethers.provider.getBlockNumber();
@@ -81,7 +81,7 @@ export async function createDispute(sender: Signer, receiver: Signer, transactio
 
 export async function randomAmount() {
     const { escrow } = await getContracts();
-    const minimalAmount = await escrow.minimalAmount();
+    const minimalAmount = BigNumber.from(10);
     return minimalAmount.mul(Math.floor(10 / Math.random()));
 }
 

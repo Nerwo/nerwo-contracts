@@ -82,7 +82,6 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
     IArbitrator public arbitrator; // Address of the arbitrator contract.
 
     uint256 public feeTimeout; // Time in seconds a party can take to pay arbitration fees before being considered unresponding and lose the dispute.
-    uint256 public minimalAmount;
 
     address public feeRecipient; // Address which receives a share of receiver payment.
     uint256 public feeRecipientBasisPoint; // The share of fee to be received by the feeRecipient, down to 2 decimal places as 550 = 5.5%.
@@ -216,13 +215,11 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
         address _arbitrator,
         bytes memory _arbitratorExtraData,
         uint256 _feeTimeout,
-        uint256 _minimalAmount,
         address _feeRecipient,
         uint256 _feeRecipientBasisPoint,
         IERC20[] memory _tokensWhitelist
     ) {
         _setArbitrator(_arbitrator, _arbitratorExtraData, _feeTimeout);
-        _setMinimalAmount(_minimalAmount);
         _setFeeRecipientAndBasisPoint(_feeRecipient, _feeRecipientBasisPoint);
         _setTokensWhitelist(_tokensWhitelist);
         _transferOwnership(_owner);
@@ -252,25 +249,6 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
         uint256 _feeTimeout
     ) external onlyOwner {
         _setArbitrator(_arbitrator, _arbitratorExtraData, _feeTimeout);
-    }
-
-    /**
-     * @dev Modifies the minimum amount that can be sent in a transaction.
-     * @param _minimalAmount The new minimum amount.
-     */
-    function _setMinimalAmount(uint256 _minimalAmount) internal {
-        if (_minimalAmount == 0) {
-            revert InvalidAmount(0);
-        }
-        minimalAmount = _minimalAmount;
-    }
-
-    /**
-     * @dev Modifies the minimum amount that can be sent in a transaction. Only the contract owner can call this function.
-     * @param _minimalAmount The new minimum amount.
-     */
-    function setMinimalAmount(uint256 _minimalAmount) external onlyOwner {
-        _setMinimalAmount(_minimalAmount);
     }
 
     /**
@@ -411,8 +389,8 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
             revert NullAddress();
         }
 
-        if (_amount < minimalAmount) {
-            revert InvalidAmount(minimalAmount);
+        if (_amount == 0) {
+            revert InvalidAmount(0);
         }
 
         address sender = _msgSender();

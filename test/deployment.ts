@@ -19,7 +19,6 @@ import * as constants from '../constants';
             deployer.address,                       /* _arbitrator */
             [],                                     /* _arbitratorExtraData */
             constants.FEE_TIMEOUT,                  /* _feeTimeout */
-            constants.MINIMAL_AMOUNT,               /* _minimalAmount */
             deployer.address,                       /* _feeRecipient */
             constants.FEE_RECIPIENT_BASISPOINT,     /* _feeRecipientBasisPoint */
             [deployer.address, deployer.address],   /* _tokensWhitelist */
