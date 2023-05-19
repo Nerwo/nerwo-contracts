@@ -1,3 +1,4 @@
+import { parseArgs } from 'node:util';
 import { HardhatUserConfig } from 'hardhat/config';
 import { HARDHAT_NETWORK_MNEMONIC } from 'hardhat/internal/core/config/default-config';
 import '@nomicfoundation/hardhat-toolbox';
@@ -8,6 +9,15 @@ import 'hardhat-deploy';
 
 import * as dotenv from 'dotenv';
 dotenv.config();
+
+const options = { network: { type: 'string' as 'string' } };
+const network = parseArgs({ options: options, strict: false }).values.network;
+
+if (network) {
+  dotenv.config({ path: `.env.${network}`, override: true });
+}
+
+const BUILDBEAR_CONTAINER_NAME = process.env.BUILDBEAR_CONTAINER_NAME || 'invalid';
 
 const config: HardhatUserConfig = {
   solidity: {
@@ -45,10 +55,36 @@ const config: HardhatUserConfig = {
         mnemonic: process.env.HARDHAT_MNEMONIC || HARDHAT_NETWORK_MNEMONIC
       },
       deploy: ['deploy', 'deploy-testing']
+    },
+    buildbear: {
+      url: `https://rpc.buildbear.io/${BUILDBEAR_CONTAINER_NAME}`,
+      accounts: {
+        mnemonic: process.env.BUILDBEAR_MNEMONIC || HARDHAT_NETWORK_MNEMONIC
+      },
+      verify: {
+        etherscan: {
+          apiKey: 'verifyContract',
+          // FIXME: 404 /api?
+          apiUrl: `https://rpc.buildbear.io/verify/etherscan/${BUILDBEAR_CONTAINER_NAME}`
+        }
+      }
     }
   },
   etherscan: {
-    apiKey: process.env.ETHERSCAN_API_KEY
+    apiKey: {
+      mainnet: process.env.ETHERSCAN_API_KEY || '',
+      buildbear: 'verifyContract'
+    },
+    customChains: [
+      {
+        network: 'buildbear',
+        chainId: parseInt(process.env.BUILDBEAR_CHAINID || '1', 10),
+        urls: {
+          apiURL: `https://rpc.buildbear.io/verify/etherscan/${BUILDBEAR_CONTAINER_NAME}`,
+          browserURL: `https://explorer.buildbear.io/${BUILDBEAR_CONTAINER_NAME}`,
+        },
+      },
+    ],
   }
 };
 
