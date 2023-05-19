@@ -80,7 +80,6 @@ export async function createDispute(sender: Signer, receiver: Signer, transactio
 }
 
 export async function randomAmount() {
-    const { escrow } = await getContracts();
     const minimalAmount = BigNumber.from(10);
     return minimalAmount.mul(Math.floor(10 / Math.random()));
 }
