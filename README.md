@@ -187,12 +187,6 @@ and the link to the evidence.
 Emitted when sending funds fails. It the address of the ERC20 is 0
 it refers to the native token (used for arbitration).
 
-### FundsRecovered
-
-`event FundsRecovered(address indexed recipient, uint256 amount);`
-
-Emitted when the owner calls withdrawLostFunds to recover failed to send arbitration reimburses.
-
 ### Ruling
 
 `event Ruling(IArbitrator indexed _arbitrator, uint256 indexed _disputeID, uint256 _ruling);`
@@ -237,12 +231,6 @@ Thrown when the function is called with an invalid transaction status.
 `error InvalidAmount(uint256 expected);`
 
 Thrown when the function is called with an invalid amount.
-
-### NoLostFunds
-
-`error NoLostFunds();`
-
-Thrown when are no lost funds to recover.
 
 ## Enumerations
 

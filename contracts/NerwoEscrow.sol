@@ -38,7 +38,6 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
     error InvalidCaller(address expected);
     error InvalidStatus(uint256 expected);
     error InvalidAmount(uint256 amount);
-    error NoLostFunds();
     error InvalidTransaction(uint256 transactionID);
     error InvalidToken(address token);
 
@@ -87,8 +86,6 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
 
     address public feeRecipient; // Address which receives a share of receiver payment.
     uint256 public feeRecipientBasisPoint; // The share of fee to be received by the feeRecipient, down to 2 decimal places as 550 = 5.5%.
-
-    uint256 public lostFunds; // failed to receive funds, e.g. error in _sendTo()
 
     mapping(uint256 => Transaction) public transactions;
     mapping(uint256 => uint256) private disputeIDtoTransactionID; // One-to-one relationship between the dispute and the transaction.
@@ -180,12 +177,6 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
      *  @param data Failed call data
      */
     event SendFailed(address indexed recipient, address indexed token, uint256 amount, bytes data);
-
-    /** @dev To be emitted when the owner withdraw lost funds
-     *  @param recipient The owner at the moment of withdrawal
-     *  @param amount The amount
-     */
-    event FundsRecovered(address indexed recipient, uint256 amount);
 
     /**
      * @dev See {IERC165-supportsInterface}.
@@ -352,7 +343,6 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
     function _sendTo(address target, uint256 amount) internal {
         (bool success, bytes memory data) = payable(target).call{value: amount}("");
         if (!success) {
-            lostFunds += amount;
             emit SendFailed(target, address(0), amount, data);
         }
     }
@@ -402,21 +392,6 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
         if (!success) {
             revert TransferFailed(to, address(token), amount, data);
         }
-    }
-
-    /** @dev Withdraw lost founds (when _sendTo() fails)
-     *  @dev since we use erc20 only for arbitrage reimburses
-     */
-    function withdrawLostFunds() external onlyOwner {
-        if (lostFunds == 0) {
-            revert NoLostFunds();
-        }
-
-        uint256 amount = lostFunds;
-        lostFunds = 0;
-
-        _sendTo(payable(_msgSender()), amount);
-        emit FundsRecovered(_msgSender(), amount);
     }
 
     /** @dev Create a transaction.
