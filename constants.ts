@@ -24,3 +24,21 @@ export const enum RogueAction {
     PayArbitrationFeeBySender,
     Revert
 }
+
+export function getTokenWhitelist(usdt?: string | undefined) {
+    let whitelist = TOKENS_WHITELIST;
+
+    if (!whitelist.length && usdt) {
+        // whitelist our test token if deployed
+        whitelist = [{
+            token: usdt,
+            name: 'USDT'
+        }];
+
+        // fake first address, for gas calculation
+        if (process.env.REPORT_GAS) {
+            whitelist = [{ token: ethers.constants.AddressZero, name: 'DUMMY' }, whitelist[0]];
+        }
+    };
+    return whitelist;
+}

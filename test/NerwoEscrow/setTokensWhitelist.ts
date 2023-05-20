@@ -2,6 +2,7 @@ import { expect } from 'chai';
 import { deployments } from 'hardhat';
 
 import { getContracts, getSigners } from '../utils';
+import * as constants from '../../constants';
 
 describe('NerwoEscrow: setTokensWhitelist', function () {
   before(async () => {
@@ -14,16 +15,11 @@ describe('NerwoEscrow: setTokensWhitelist', function () {
     const { escrow, usdt } = await getContracts();
     const { deployer } = await getSigners();
 
-    const USDT = {
-      token: usdt.address,
-      name: await usdt.name()
-    };
-
-    await escrow.connect(deployer).setTokensWhitelist([USDT]);
+    await escrow.connect(deployer).setTokensWhitelist(constants.getTokenWhitelist(usdt.address));
   });
 
   it('errors', async () => {
-    const { escrow, } = await getContracts();
+    const { escrow } = await getContracts();
     const { sender } = await getSigners();
 
     await expect(escrow.connect(sender).setTokensWhitelist([]))

@@ -6,20 +6,8 @@ export function arbitratorArgs(court: string) {
 
 export function escrowArgs(owner: string, arbitrator: string, feeRecipient: string,
     usdt?: string | undefined) {
-    let whitelist = constants.TOKENS_WHITELIST;
 
-    if (!whitelist.length && usdt) {
-        // whitelist our test token if deployed
-        whitelist = [{
-            token: usdt,
-            name: 'USDT'
-        }];
-
-        // fake first address, for gas calculation
-        if (process.env.REPORT_GAS) {
-            whitelist = [{ token: arbitrator, name: 'DUMMY' }, whitelist[0]];
-        }
-    };
+    const whitelist = constants.getTokenWhitelist(usdt);
 
     return [
         process.env.NERWO_OWNER_ADDRESS || owner,           /* _owner */
