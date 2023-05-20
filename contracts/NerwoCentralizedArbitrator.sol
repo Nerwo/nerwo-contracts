@@ -14,10 +14,11 @@ import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {ERC165} from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 import {ERC165Checker} from "@openzeppelin/contracts/utils/introspection/ERC165Checker.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import {IArbitrator} from "@kleros/erc-792/contracts/IArbitrator.sol";
 import {IArbitrable} from "@kleros/erc-792/contracts/IArbitrable.sol";
 
-contract NerwoCentralizedArbitrator is Ownable, ReentrancyGuard, IArbitrator, ERC165 {
+contract NerwoCentralizedArbitrator is Ownable, Initializable, ReentrancyGuard, IArbitrator, ERC165 {
     using ERC165Checker for address;
     using SafeCast for uint256;
 
@@ -62,11 +63,11 @@ contract NerwoCentralizedArbitrator is Ownable, ReentrancyGuard, IArbitrator, ER
         return interfaceId == type(IArbitrator).interfaceId || super.supportsInterface(interfaceId);
     }
 
-    /** @dev initializer
+    /** @dev initialize (deferred constructor)
      *  @param _owner The initial owner
      *  @param _arbitrationPrice Amount to be paid for arbitration.
      */
-    constructor(address _owner, uint256 _arbitrationPrice) {
+    function initialize(address _owner, uint256 _arbitrationPrice) public initializer {
         arbitrationPrice = _arbitrationPrice;
         _transferOwnership(_owner);
     }

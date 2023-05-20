@@ -11,7 +11,7 @@ describe('NerwoEscrow: createTransaction', function () {
   });
 
   it('Creating a simple transaction', async () => {
-    const { usdt } = await getContracts();
+    const { escrow, usdt } = await getContracts();
     const { sender, receiver } = await getSigners();
 
     const amount = await randomAmount();

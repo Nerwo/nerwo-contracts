@@ -1,12 +1,17 @@
 import { DeployFunction } from 'hardhat-deploy/types';
-import * as constants from '../constants';
 import { escrowArgs } from '../constructors';
 
-const func: DeployFunction = async function ({ deployments: { get, deploy }, getNamedAccounts }) {
+const func: DeployFunction = async function ({ deployments: { get, deploy, execute }, getNamedAccounts }) {
   let { deployer, platform } = await getNamedAccounts();
   platform = platform || deployer;
 
   const arbitrator = await get('NerwoCentralizedArbitrator');
+
+  await deploy('NerwoEscrow', {
+    from: deployer,
+    log: true,
+    deterministicDeployment: true
+  });
 
   let usdt;
   try {
@@ -14,13 +19,10 @@ const func: DeployFunction = async function ({ deployments: { get, deploy }, get
   } catch (_) { }
 
   const args = escrowArgs(deployer, arbitrator.address, platform, usdt?.address);
-
-  await deploy('NerwoEscrow', {
+  await execute('NerwoEscrow', {
     from: deployer,
-    args: args,
-    log: true,
-    deterministicDeployment: true
-  });
+    log: true
+  }, 'initialize', ...args);
 };
 
 export default func;

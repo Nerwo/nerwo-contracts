@@ -1,21 +1,26 @@
 import { ethers } from 'hardhat';
 
 import { arbitratorArgs, escrowArgs } from '../constructors';
+import { NerwoCentralizedArbitrator, NerwoEscrow } from '../typechain-types';
 
 (process.env.REPORT_GAS ? describe : describe.skip)('Deployment: for gas calculation', function () {
     it('NerwoCentralizedArbitrator', async () => {
         const [deployer] = await ethers.getSigners();
         const NerwoCentralizedArbitrator = await ethers.getContractFactory('NerwoCentralizedArbitrator');
-        const args = arbitratorArgs(deployer.address);
-        const arbitrator = await NerwoCentralizedArbitrator.deploy(...args);
+        const arbitrator: NerwoCentralizedArbitrator = await NerwoCentralizedArbitrator.deploy() as NerwoCentralizedArbitrator;
         await arbitrator.deployed();
+        const args = arbitratorArgs(deployer.address) as [string, string];
+        await arbitrator.initialize(...args);
     });
 
     it('NerwoEscrow', async () => {
         const [deployer] = await ethers.getSigners();
         const NerwoEscrow = await ethers.getContractFactory('NerwoEscrow');
-        const args = escrowArgs(deployer.address, deployer.address, deployer.address, deployer.address);
-        const escrow = await NerwoEscrow.deploy(...args);
+        const escrow: NerwoEscrow = await NerwoEscrow.deploy() as NerwoEscrow;
         await escrow.deployed();
+        const args = escrowArgs(deployer.address, deployer.address, deployer.address) as [
+            string, string, string, string, string, string, any[] // wft
+        ];
+        await escrow.initialize(...args);
     });
 });

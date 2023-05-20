@@ -1,10 +1,13 @@
 import * as constants from './constants';
 
-export function arbitratorArgs(court: string) {
+export function arbitratorArgs(court: string | undefined) {
     return [process.env.NERWO_COURT_ADDRESS || court, constants.ARBITRATOR_PRICE];
 }
 
-export function escrowArgs(owner: string, arbitrator: string, feeRecipient: string,
+export function escrowArgs(
+    owner: string | undefined,
+    arbitrator: string | undefined,
+    feeRecipient: string | undefined,
     usdt?: string | undefined) {
 
     const whitelist = constants.getTokenWhitelist(usdt);
@@ -14,7 +17,7 @@ export function escrowArgs(owner: string, arbitrator: string, feeRecipient: stri
         process.env.NERWO_ARBITRATOR_ADDRESS || arbitrator, /* _arbitrator */
         [],                                                 /* _arbitratorExtraData */
         constants.FEE_TIMEOUT,                              /* _feeTimeout */
-        feeRecipient,                                       /* _feeRecipient */
+        process.env.NERWO_PLATFORM_ADDRESS || feeRecipient, /* _feeRecipient */
         constants.FEE_RECIPIENT_BASISPOINT,                 /* _feeRecipientBasisPoint */
         whitelist                                           /* _tokensWhitelist */
     ];

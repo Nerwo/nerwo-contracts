@@ -11,10 +11,10 @@ import * as dotenv from 'dotenv';
 dotenv.config();
 
 const options = { network: { type: 'string' as 'string' } };
-const network = parseArgs({ options: options, strict: false }).values.network;
+global.network = String(parseArgs({ options: options, strict: false }).values.network || 'localhost');
 
 if (network) {
-  dotenv.config({ path: `.env.${network}`, override: true });
+  dotenv.config({ path: `.env.${global.network}`, override: true });
 }
 
 const BUILDBEAR_CONTAINER_NAME = process.env.BUILDBEAR_CONTAINER_NAME || 'invalid';

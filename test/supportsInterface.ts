@@ -7,7 +7,7 @@ import { getContracts, getInterfaceID } from './utils';
 
 describe('supportsInterface', function () {
   before(async () => {
-    await deployments.fixture(['NerwoEscrow', 'NerwoCentralizedArbitrator'], {
+    await deployments.fixture(['NerwoEscrow', 'NerwoTetherToken'], {
       keepExistingDeployments: true
     });
   });

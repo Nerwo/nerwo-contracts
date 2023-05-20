@@ -28,10 +28,11 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {ERC165} from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import {IArbitrator} from "@kleros/erc-792/contracts/IArbitrator.sol";
 import {IArbitrable} from "@kleros/erc-792/contracts/IArbitrable.sol";
 
-contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
+contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard, IArbitrable, ERC165 {
     error NullAddress();
     error NoTimeout();
     error InvalidRuling();
@@ -200,7 +201,7 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
         _;
     }
 
-    /** @dev constructor
+    /** @dev initialize (deferred constructor)
      *  @param _owner The initial owner
      *  @param _arbitrator The arbitrator of the contract.
      *  @param _arbitratorExtraData Extra data for the arbitrator.
@@ -210,23 +211,18 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
      *                                 down to 2 decimal places as 550 = 5.5%
      *  @param _tokensWhitelist List of whitelisted ERC20 tokens
      */
-    constructor(
+    function initialize(
         address _owner,
         address _arbitrator,
-        bytes memory _arbitratorExtraData,
+        bytes calldata _arbitratorExtraData,
         uint256 _feeTimeout,
         address _feeRecipient,
         uint256 _feeRecipientBasisPoint,
-        Token[] memory _tokensWhitelist
-    ) {
+        Token[] calldata _tokensWhitelist
+    ) public initializer {
         _setArbitrator(_arbitrator, _arbitratorExtraData, _feeTimeout);
         _setFeeRecipientAndBasisPoint(_feeRecipient, _feeRecipientBasisPoint);
-
-        // avoid calling _setTokensWhitelist() with memory argument
-        for (uint i = 0; i < _tokensWhitelist.length; i++) {
-            tokensWhitelist.push(Token(_tokensWhitelist[i].token, _tokensWhitelist[i].name));
-        }
-
+        _setTokensWhitelist(_tokensWhitelist);
         _transferOwnership(_owner);
     }
 

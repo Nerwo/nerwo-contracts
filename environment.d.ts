@@ -1,4 +1,6 @@
+
 declare global {
+    var network: string;
     namespace NodeJS {
         interface ProcessEnv {
             PRIVATE_KEY: string;
