@@ -733,4 +733,8 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
     ) external view onlyValidTransaction(_transactionID) returns (Transaction memory) {
         return transactions[_transactionID];
     }
+
+    function getSupportedTokens() external view returns (Token[] memory) {
+        return tokensWhitelist;
+    }
 }
