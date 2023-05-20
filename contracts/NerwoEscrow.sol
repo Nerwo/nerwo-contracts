@@ -91,7 +91,7 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
     address public feeRecipient; // Address which receives a share of receiver payment.
     uint256 public feeRecipientBasisPoint; // The share of fee to be received by the feeRecipient, down to 2 decimal places as 550 = 5.5%.
 
-    mapping(uint256 => Transaction) public transactions;
+    mapping(uint256 => Transaction) private transactions;
     mapping(uint256 => uint256) private disputeIDtoTransactionID; // One-to-one relationship between the dispute and the transaction.
 
     bytes public arbitratorExtraData; // Extra data to set up the arbitration.

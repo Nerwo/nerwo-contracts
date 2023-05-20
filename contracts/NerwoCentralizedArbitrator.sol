@@ -37,7 +37,7 @@ contract NerwoCentralizedArbitrator is Ownable, ReentrancyGuard, IArbitrator, ER
     }
 
     uint256 public lastDispute;
-    mapping(uint256 => Dispute) public disputes;
+    mapping(uint256 => Dispute) private disputes;
     uint256 private arbitrationPrice; // Not public because arbitrationCost already acts as an accessor.
     uint256 private constant NOT_PAYABLE_VALUE = type(uint256).max; // High value to be sure that the appeal is too expensive.
 
