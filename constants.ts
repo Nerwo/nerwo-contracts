@@ -9,7 +9,12 @@ export const FEE_TIMEOUT = parseInt(process.env.NERWO_FEE_TIMEOUT, 10);
 export const FEE_RECIPIENT_BASISPOINT = parseInt(process.env.NERWO_FEE_RECIPIENT_BASISPOINT);
 
 export const ARBITRATOR_PRICE = parseEther(process.env.NERWO_ARBITRATION_PRICE);
-export const TOKENS_WHITELIST = process.env.NERWO_TOKENS_WHITELIST?.split(',') ?? [];
+
+export const TOKENS_WHITELIST = process.env.NERWO_TOKENS_WHITELIST ?
+    process.env.NERWO_TOKENS_WHITELIST.split(',').map((tuple: string) => {
+        const [token, name] = tuple.split('=');
+        return { token, name };
+    }) : [];
 
 export const enum RogueAction {
     None,

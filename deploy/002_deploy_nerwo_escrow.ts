@@ -1,5 +1,6 @@
 import { DeployFunction } from 'hardhat-deploy/types';
 import * as constants from '../constants';
+import { escrowArgs } from './constructors';
 
 const func: DeployFunction = async function ({ deployments: { get, deploy }, getNamedAccounts }) {
   let { deployer, platform } = await getNamedAccounts();
@@ -7,26 +8,16 @@ const func: DeployFunction = async function ({ deployments: { get, deploy }, get
 
   const arbitrator = await get('NerwoCentralizedArbitrator');
 
-  let whitelist = constants.TOKENS_WHITELIST;
-
-  // whitelist our test token if deployed
-  // fake first address, for gas calculation
+  let usdt;
   try {
-    const nerwoUSDT = await get('NerwoTetherToken');
-    whitelist = process.env.REPORT_GAS ? [arbitrator.address, nerwoUSDT.address] : [nerwoUSDT.address];
+    usdt = await get('NerwoTetherToken');
   } catch (_) { }
+
+  const args = escrowArgs(deployer, arbitrator.address, platform, usdt?.address);
 
   await deploy('NerwoEscrow', {
     from: deployer,
-    args: [
-      deployer,                           /* _owner */
-      arbitrator.address,                 /* _arbitrator */
-      [],                                 /* _arbitratorExtraData */
-      constants.FEE_TIMEOUT,              /* _feeTimeout */
-      platform,                           /* _feeRecipient */
-      constants.FEE_RECIPIENT_BASISPOINT, /* _feeRecipientBasisPoint */
-      whitelist                           /* _tokensWhitelist */
-    ],
+    args: args,
     log: true,
     deterministicDeployment: true
   });

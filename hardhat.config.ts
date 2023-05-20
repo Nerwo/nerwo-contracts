@@ -48,13 +48,13 @@ const config: HardhatUserConfig = {
           apiKey: process.env.ETHERSCAN_API_KEY
         }
       },
-      deploy: ['deploy', 'deploy-testing']
+      deploy: ['deploy-testing', 'deploy']
     },
     hardhat: {
       accounts: {
         mnemonic: process.env.HARDHAT_MNEMONIC || HARDHAT_NETWORK_MNEMONIC
       },
-      deploy: ['deploy', 'deploy-testing']
+      deploy: ['deploy-testing', 'deploy']
     },
     buildbear: {
       url: `https://rpc.buildbear.io/${BUILDBEAR_CONTAINER_NAME}`,

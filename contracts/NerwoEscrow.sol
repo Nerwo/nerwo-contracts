@@ -75,9 +75,14 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
         uint256 receiverFee; // Total fees paid by the receiver.
     }
 
+    struct Token {
+        IERC20 token;
+        string name;
+    }
+
     uint256 public lastTransaction;
 
-    IERC20[] public tokensWhitelist; // whitelisted ERC20 tokens
+    Token[] public tokensWhitelist; // whitelisted ERC20 tokens
 
     IArbitrator public arbitrator; // Address of the arbitrator contract.
 
@@ -217,11 +222,16 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
         uint256 _feeTimeout,
         address _feeRecipient,
         uint256 _feeRecipientBasisPoint,
-        IERC20[] memory _tokensWhitelist
+        Token[] memory _tokensWhitelist
     ) {
         _setArbitrator(_arbitrator, _arbitratorExtraData, _feeTimeout);
         _setFeeRecipientAndBasisPoint(_feeRecipient, _feeRecipientBasisPoint);
-        _setTokensWhitelist(_tokensWhitelist);
+
+        // avoid calling _setTokensWhitelist() with memory argument
+        for (uint i = 0; i < _tokensWhitelist.length; i++) {
+            tokensWhitelist.push(Token(_tokensWhitelist[i].token, _tokensWhitelist[i].name));
+        }
+
         _transferOwnership(_owner);
     }
 
@@ -272,7 +282,7 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
         _setFeeRecipientAndBasisPoint(_feeRecipient, _feeRecipientBasisPoint);
     }
 
-    function setTokensWhitelist(IERC20[] memory _tokensWhitelist) external onlyOwner {
+    function setTokensWhitelist(Token[] calldata _tokensWhitelist) external onlyOwner {
         _setTokensWhitelist(_tokensWhitelist);
     }
 
@@ -280,14 +290,10 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
      * @dev Sets the whitelist of ERC20 tokens
      * @param _tokensWhitelist An array of ERC20 tokens
      */
-    function _setTokensWhitelist(IERC20[] memory _tokensWhitelist) internal {
-        if (_tokensWhitelist.length == 0) {
-            revert InvalidToken(address(0));
-        }
-
+    function _setTokensWhitelist(Token[] calldata _tokensWhitelist) internal {
         delete tokensWhitelist;
         for (uint i = 0; i < _tokensWhitelist.length; i++) {
-            tokensWhitelist.push(_tokensWhitelist[i]);
+            tokensWhitelist.push(Token(_tokensWhitelist[i].token, _tokensWhitelist[i].name));
         }
     }
 
@@ -400,7 +406,7 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
 
         IERC20 token;
         for (uint i = 0; i < tokensWhitelist.length; i++) {
-            if (_token == tokensWhitelist[i]) {
+            if (_token == tokensWhitelist[i].token) {
                 token = _token;
                 break;
             }

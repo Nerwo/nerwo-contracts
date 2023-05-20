@@ -1,14 +1,14 @@
 import { DeployFunction } from 'hardhat-deploy/types';
 
-import * as constants from '../constants';
+import { arbitratorArgs } from './constructors';
 
 const func: DeployFunction = async function ({ deployments: { deploy }, getNamedAccounts }) {
-  let { deployer, court } = await getNamedAccounts();
-  court = court || process.env.NERWO_COURT_ADDRESS;
+  const { deployer, court } = await getNamedAccounts();
+  const args = arbitratorArgs(court);
 
   await deploy('NerwoCentralizedArbitrator', {
     from: deployer,
-    args: [court, constants.ARBITRATOR_PRICE],
+    args: args,
     log: true,
     deterministicDeployment: true
   });

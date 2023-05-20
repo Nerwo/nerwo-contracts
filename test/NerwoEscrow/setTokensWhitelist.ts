@@ -14,17 +14,19 @@ describe('NerwoEscrow: setTokensWhitelist', function () {
     const { escrow, usdt } = await getContracts();
     const { deployer } = await getSigners();
 
-    await escrow.connect(deployer).setTokensWhitelist([usdt.address]);
+    const USDT = {
+      token: usdt.address,
+      name: await usdt.name()
+    };
+
+    await escrow.connect(deployer).setTokensWhitelist([USDT]);
   });
 
   it('errors', async () => {
     const { escrow, } = await getContracts();
-    const { deployer, sender } = await getSigners();
+    const { sender } = await getSigners();
 
     await expect(escrow.connect(sender).setTokensWhitelist([]))
       .to.be.revertedWith('Ownable: caller is not the owner');
-
-    await expect(escrow.connect(deployer).setTokensWhitelist([]))
-      .to.be.revertedWithCustomError(escrow, 'InvalidToken');
   });
 });
