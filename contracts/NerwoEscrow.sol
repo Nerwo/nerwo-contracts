@@ -189,11 +189,6 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
         return interfaceId == type(IArbitrable).interfaceId || super.supportsInterface(interfaceId);
     }
 
-    // **************************** //
-    // *    Arbitrable functions  * //
-    // *    Modifying the state   * //
-    // **************************** //
-
     function requireValidTransaction(uint256 _transactionID) internal view {
         if (transactions[_transactionID].receiver == address(0)) {
             revert InvalidTransaction(_transactionID);
@@ -234,6 +229,10 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
 
         _transferOwnership(_owner);
     }
+
+    // **************************** //
+    // *        Setters           * //
+    // **************************** //
 
     /**
      *  @dev modifies Arbitrator - Internal function without access restriction
@@ -297,13 +296,6 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
         }
     }
 
-    /** @dev Calculate the amount to be paid in wei according to feeRecipientBasisPoint for a particular amount.
-     *  @param _amount Amount to pay in wei.
-     */
-    function calculateFeeRecipientAmount(uint256 _amount) public view returns (uint256) {
-        return (_amount * feeRecipientBasisPoint) / 10000;
-    }
-
     /** @dev Change Fee Recipient.
      *  @param _newFeeRecipient Address of the new Fee Recipient.
      */
@@ -319,6 +311,10 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
         feeRecipient = _newFeeRecipient;
         emit FeeRecipientChanged(_msgSender(), _newFeeRecipient);
     }
+
+    // **************************** //
+    // *    Transfer functions    * //
+    // **************************** //
 
     /** @dev Send to recipent, emit a log when fails
      *  @param target To address to send to
@@ -376,6 +372,17 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
         if (!success) {
             revert TransferFailed(to, address(token), amount, data);
         }
+    }
+
+    // **************************** //
+    // *   Arbitrable functions   * //
+    // **************************** //
+
+    /** @dev Calculate the amount to be paid in wei according to feeRecipientBasisPoint for a particular amount.
+     *  @param _amount Amount to pay in wei.
+     */
+    function calculateFeeRecipientAmount(uint256 _amount) public view returns (uint256) {
+        return (_amount * feeRecipientBasisPoint) / 10000;
     }
 
     /** @dev Create a transaction.
@@ -716,6 +723,10 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable, ERC165 {
             _sendTo(transaction.receiver, splitArbitration);
         }
     }
+
+    // **************************** //
+    // *   Utils for frontends    * //
+    // **************************** //
 
     function getTransaction(
         uint256 _transactionID
