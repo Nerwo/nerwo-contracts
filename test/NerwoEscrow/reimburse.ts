@@ -1,6 +1,5 @@
 import { expect } from 'chai';
-import { deployments, ethers } from 'hardhat';
-import { anyUint } from '@nomicfoundation/hardhat-chai-matchers/withArgs';
+import { deployments } from 'hardhat';
 
 import { getContracts, getSigners, fund, createTransaction, randomAmount } from '../utils';
 
