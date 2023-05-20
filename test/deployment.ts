@@ -1,6 +1,6 @@
 import { ethers } from 'hardhat';
 
-import { arbitratorArgs, escrowArgs } from '../deploy/constructors';
+import { arbitratorArgs, escrowArgs } from '../constructors';
 
 (process.env.REPORT_GAS ? describe : describe.skip)('Deployment: for gas calculation', function () {
     it('NerwoCentralizedArbitrator', async () => {

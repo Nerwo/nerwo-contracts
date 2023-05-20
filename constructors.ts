@@ -1,4 +1,4 @@
-import * as constants from '../constants';
+import * as constants from './constants';
 
 export function arbitratorArgs(court: string) {
     return [process.env.NERWO_COURT_ADDRESS || court, constants.ARBITRATOR_PRICE];

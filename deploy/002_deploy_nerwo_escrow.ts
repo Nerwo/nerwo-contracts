@@ -1,6 +1,6 @@
 import { DeployFunction } from 'hardhat-deploy/types';
 import * as constants from '../constants';
-import { escrowArgs } from './constructors';
+import { escrowArgs } from '../constructors';
 
 const func: DeployFunction = async function ({ deployments: { get, deploy }, getNamedAccounts }) {
   let { deployer, platform } = await getNamedAccounts();

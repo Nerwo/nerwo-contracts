@@ -1,6 +1,6 @@
 import { DeployFunction } from 'hardhat-deploy/types';
 
-import { arbitratorArgs } from './constructors';
+import { arbitratorArgs } from '../constructors';
 
 const func: DeployFunction = async function ({ deployments: { deploy }, getNamedAccounts }) {
   const { deployer, court } = await getNamedAccounts();
