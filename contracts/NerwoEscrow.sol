@@ -236,7 +236,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard, IArbitrable, ER
      *  @param _arbitratorExtraData Extra data for the arbitrator.
      *  @param _feeTimeout Arbitration fee timeout for the parties.
      */
-    function _setArbitrator(address _arbitrator, bytes memory _arbitratorExtraData, uint256 _feeTimeout) internal {
+    function _setArbitrator(address _arbitrator, bytes calldata _arbitratorExtraData, uint256 _feeTimeout) internal {
         arbitrator = IArbitrator(_arbitrator);
         arbitratorExtraData = _arbitratorExtraData;
         feeTimeout = _feeTimeout;
@@ -464,7 +464,10 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard, IArbitrable, ER
             revert InvalidAmount(transaction.amount);
         }
 
-        transaction.amount -= _amount;
+        // _amount <= transaction.amount
+        unchecked {
+            transaction.amount -= _amount;
+        }
 
         uint256 feeAmount = calculateFeeRecipientAmount(_amount);
         _transferToken(feeRecipient, transaction.token, feeAmount);
@@ -496,7 +499,10 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard, IArbitrable, ER
             revert InvalidAmount(transaction.amount);
         }
 
-        transaction.amount -= _amountReimbursed;
+        // _amountReimbursed <= transaction.amount
+        unchecked {
+            transaction.amount -= _amountReimbursed;
+        }
         _sendToken(transaction.sender, transaction.token, _amountReimbursed);
         emit Payment(_transactionID, address(transaction.token), _amountReimbursed, _msgSender());
     }
