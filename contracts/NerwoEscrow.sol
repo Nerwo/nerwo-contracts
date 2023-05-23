@@ -190,14 +190,14 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard, IArbitrable, ER
         return interfaceId == type(IArbitrable).interfaceId || super.supportsInterface(interfaceId);
     }
 
-    function requireValidTransaction(uint256 _transactionID) internal view {
+    function _requireValidTransaction(uint256 _transactionID) internal view {
         if (transactions[_transactionID].receiver == address(0)) {
             revert InvalidTransaction(_transactionID);
         }
     }
 
     modifier onlyValidTransaction(uint256 _transactionID) {
-        requireValidTransaction(_transactionID);
+        _requireValidTransaction(_transactionID);
         _;
     }
 
@@ -668,7 +668,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard, IArbitrable, ER
         }
 
         uint256 transactionID = disputeIDtoTransactionID[_disputeID];
-        requireValidTransaction(transactionID);
+        _requireValidTransaction(transactionID);
 
         if (transactions[transactionID].status != Status.DisputeCreated) {
             revert InvalidStatus(uint256(Status.DisputeCreated));
