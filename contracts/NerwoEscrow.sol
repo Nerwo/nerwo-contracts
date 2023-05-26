@@ -78,7 +78,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard, IArbitrable, ER
 
     uint256 public lastTransaction;
 
-    IERC20[] public tokensWhitelist; // whitelisted ERC20 tokens
+    IERC20[] private tokensWhitelist; // whitelisted ERC20 tokens
 
     IArbitrator public arbitrator; // Address of the arbitrator contract.
 
