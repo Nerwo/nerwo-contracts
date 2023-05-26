@@ -196,6 +196,15 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard, IArbitrable, ER
         _;
     }
 
+    /** @dev contructor
+     *  @notice set ownership before calling initialize to avoid front running in deployment
+     *  @notice since we are using hardhat-deploy deterministic deployment the sender
+     *  @notice is 0x4e59b44847b379578588920ca78fbf26c0b4956c
+     */
+    constructor() {
+        _transferOwnership(tx.origin);
+    }
+
     /** @dev initialize (deferred constructor)
      *  @param _owner The initial owner
      *  @param _arbitrator The arbitrator of the contract.
@@ -214,11 +223,11 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard, IArbitrable, ER
         address _feeRecipient,
         uint256 _feeRecipientBasisPoint,
         IERC20[] calldata _tokensWhitelist
-    ) public initializer {
+    ) external onlyOwner initializer {
+        _transferOwnership(_owner);
         _setArbitrator(_arbitrator, _arbitratorExtraData, _feeTimeout);
         _setFeeRecipientAndBasisPoint(_feeRecipient, _feeRecipientBasisPoint);
         _setTokensWhitelist(_tokensWhitelist);
-        _transferOwnership(_owner);
     }
 
     // **************************** //

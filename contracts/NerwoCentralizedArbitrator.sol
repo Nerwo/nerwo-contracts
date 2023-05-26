@@ -63,13 +63,22 @@ contract NerwoCentralizedArbitrator is Ownable, Initializable, ReentrancyGuard, 
         return interfaceId == type(IArbitrator).interfaceId || super.supportsInterface(interfaceId);
     }
 
+    /** @dev contructor
+     *  @notice set ownership before calling initialize to avoid front running in deployment
+     *  @notice since we are using hardhat-deploy deterministic deployment the sender
+     *  @notice is 0x4e59b44847b379578588920ca78fbf26c0b4956c
+     */
+    constructor() {
+        _transferOwnership(tx.origin);
+    }
+
     /** @dev initialize (deferred constructor)
      *  @param _owner The initial owner
      *  @param _arbitrationPrice Amount to be paid for arbitration.
      */
-    function initialize(address _owner, uint256 _arbitrationPrice) public initializer {
-        arbitrationPrice = _arbitrationPrice;
+    function initialize(address _owner, uint256 _arbitrationPrice) external onlyOwner initializer {
         _transferOwnership(_owner);
+        arbitrationPrice = _arbitrationPrice;
     }
 
     /** @dev Send to recipent, reverts on failure
