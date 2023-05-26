@@ -11,10 +11,8 @@ export const FEE_RECIPIENT_BASISPOINT = parseInt(process.env.NERWO_FEE_RECIPIENT
 export const ARBITRATOR_PRICE = parseEther(process.env.NERWO_ARBITRATION_PRICE);
 
 export const TOKENS_WHITELIST = process.env.NERWO_TOKENS_WHITELIST ?
-    process.env.NERWO_TOKENS_WHITELIST.split(',').map((tuple: string) => {
-        const [token, name] = tuple.split('=');
-        return { token, name };
-    }) : [];
+    process.env.NERWO_TOKENS_WHITELIST.split(',').map((address: string) => address.trim())
+    : [];
 
 export const enum RogueAction {
     None,
@@ -30,14 +28,11 @@ export function getTokenWhitelist(usdt?: string | undefined) {
 
     if (!whitelist.length && usdt) {
         // whitelist our test token if deployed
-        whitelist = [{
-            token: usdt,
-            name: 'USDT'
-        }];
+        whitelist = [usdt];
 
         // fake first address, for gas calculation
         if (process.env.REPORT_GAS) {
-            whitelist = [{ token: ethers.constants.AddressZero, name: 'DUMMY' }, whitelist[0]];
+            whitelist = [ethers.constants.AddressZero, whitelist[0]];
         }
     };
     return whitelist;
