@@ -4,7 +4,7 @@
   "description": "Nerwo Platform: Smart contracts",
   "scripts": {
     "test": "hardhat test",
-    "solhint": "solhint contracts/*.sol contracts/**/*.sol",
+    "solhint": "solhint contracts/*.sol",
     "storage:escrow": "sol2uml storage contracts,node_modules/@openzeppelin/contracts,node_modules/@kleros/erc-792/contracts -c NerwoEscrow"
   },
   "author": "Gianluigi Tiesi <sherpya@gmail.com>",
