@@ -41,6 +41,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard, IArbitrable, ER
     error InvalidAmount(uint256 amount);
     error InvalidTransaction(uint256 transactionID);
     error InvalidToken(address token);
+    error InvalidFeeBasisPoint();
 
     error TransferFailed(address recipient, address token, uint256 amount, bytes data);
 
@@ -50,6 +51,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard, IArbitrable, ER
     uint8 private constant AMOUNT_OF_CHOICES = 2;
     uint8 private constant SENDER_WINS = 1;
     uint8 private constant RECEIVER_WINS = 2;
+    uint256 private constant MULTIPLIER_DIVISOR = 10000; // Divisor parameter for multipliers.
 
     enum Party {
         Sender,
@@ -267,6 +269,10 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard, IArbitrable, ER
      *         down to 2 decimal places as 550 = 5.5%
      */
     function _setFeeRecipientAndBasisPoint(address _feeRecipient, uint256 _feeRecipientBasisPoint) internal {
+        if (_feeRecipientBasisPoint > MULTIPLIER_DIVISOR) {
+            revert InvalidFeeBasisPoint();
+        }
+
         feeRecipient = payable(_feeRecipient);
         feeRecipientBasisPoint = _feeRecipientBasisPoint;
     }
@@ -382,7 +388,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard, IArbitrable, ER
      *  @param _amount Amount to pay in wei.
      */
     function calculateFeeRecipientAmount(uint256 _amount) public view returns (uint256) {
-        return (_amount * feeRecipientBasisPoint) / 10000;
+        return (_amount * feeRecipientBasisPoint) / MULTIPLIER_DIVISOR;
     }
 
     /** @dev Create a transaction.
@@ -404,6 +410,14 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard, IArbitrable, ER
 
         if (_amount == 0) {
             revert InvalidAmount(0);
+        }
+
+        // Amount too low to pay fee
+        // WTF: solidity, nested if consumes less gas
+        if (feeRecipientBasisPoint > 0) {
+            if ((_amount * feeRecipientBasisPoint) < MULTIPLIER_DIVISOR) {
+                revert InvalidAmount(_amount);
+            }
         }
 
         address sender = _msgSender();
