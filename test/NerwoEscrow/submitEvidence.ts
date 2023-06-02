@@ -1,5 +1,5 @@
 import { expect } from 'chai';
-import { deployments, ethers } from 'hardhat';
+import { deployments } from 'hardhat';
 
 import { getContracts, getSigners, createTransaction, randomAmount } from '../utils';
 
@@ -23,12 +23,12 @@ describe('NerwoEscrow: submitEvidence', function () {
     await expect(escrow.connect(sender).submitEvidence(0, 'invalid transactionID'))
       .to.revertedWithCustomError(escrow, 'InvalidTransaction');
 
-    const arbitrator = await escrow.arbitrator();
+    const arbitratorData = await escrow.arbitratorData();
 
     await expect(escrow.connect(sender).submitEvidence(transactionID, 'sender evidence'))
-      .to.emit(escrow, 'Evidence').withArgs(arbitrator, transactionID, sender.address, 'sender evidence');
+      .to.emit(escrow, 'Evidence').withArgs(arbitratorData.arbitrator, transactionID, sender.address, 'sender evidence');
 
     await expect(escrow.connect(receiver).submitEvidence(transactionID, 'receiver evidence'))
-      .to.emit(escrow, 'Evidence').withArgs(arbitrator, transactionID, receiver.address, 'receiver evidence');
+      .to.emit(escrow, 'Evidence').withArgs(arbitratorData.arbitrator, transactionID, receiver.address, 'receiver evidence');
   });
 });

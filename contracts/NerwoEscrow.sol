@@ -82,9 +82,12 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard, IArbitrable, ER
 
     IERC20[] private tokensWhitelist; // whitelisted ERC20 tokens
 
-    IArbitrator public arbitrator; // Address of the arbitrator contract.
+    struct ArbitratorData {
+        IArbitrator arbitrator; // Address of the arbitrator contract.
+        uint32 feeTimeout; // Time in seconds a party can take to pay arbitration fees before being considered unresponding and lose the dispute.
+    }
 
-    uint256 public feeTimeout; // Time in seconds a party can take to pay arbitration fees before being considered unresponding and lose the dispute.
+    ArbitratorData public arbitratorData;
 
     struct FeeRecipientData {
         address feeRecipient; // Address which receives a share of receiver payment.
@@ -248,9 +251,9 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard, IArbitrable, ER
      *  @param _feeTimeout Arbitration fee timeout for the parties.
      */
     function _setArbitrator(address _arbitrator, bytes calldata _arbitratorExtraData, uint256 _feeTimeout) internal {
-        arbitrator = IArbitrator(_arbitrator);
+        arbitratorData.arbitrator = IArbitrator(_arbitrator);
         arbitratorExtraData = _arbitratorExtraData;
-        feeTimeout = _feeTimeout;
+        arbitratorData.feeTimeout = uint32(_feeTimeout);
     }
 
     /**
@@ -541,7 +544,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard, IArbitrable, ER
             revert InvalidStatus(uint256(Status.WaitingReceiver));
         }
 
-        if (block.timestamp - transaction.lastInteraction < feeTimeout) {
+        if (block.timestamp - transaction.lastInteraction < arbitratorData.feeTimeout) {
             revert NoTimeout();
         }
 
@@ -558,7 +561,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard, IArbitrable, ER
             revert InvalidStatus(uint256(Status.WaitingSender));
         }
 
-        if (block.timestamp - transaction.lastInteraction < feeTimeout) {
+        if (block.timestamp - transaction.lastInteraction < arbitratorData.feeTimeout) {
             revert NoTimeout();
         }
 
@@ -581,7 +584,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard, IArbitrable, ER
             revert InvalidStatus(uint256(Status.DisputeCreated));
         }
 
-        uint256 _arbitrationCost = arbitrator.arbitrationCost(arbitratorExtraData);
+        uint256 _arbitrationCost = arbitratorData.arbitrator.arbitrationCost(arbitratorExtraData);
 
         if (msg.value != _arbitrationCost) {
             revert InvalidAmount(_arbitrationCost);
@@ -616,7 +619,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard, IArbitrable, ER
             revert InvalidStatus(uint256(Status.DisputeCreated));
         }
 
-        uint256 _arbitrationCost = arbitrator.arbitrationCost(arbitratorExtraData);
+        uint256 _arbitrationCost = arbitratorData.arbitrator.arbitrationCost(arbitratorExtraData);
 
         if (msg.value != _arbitrationCost) {
             revert InvalidAmount(_arbitrationCost);
@@ -644,14 +647,14 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard, IArbitrable, ER
         Transaction storage transaction = transactions[_transactionID];
         transaction.status = Status.DisputeCreated;
 
-        transaction.disputeId = arbitrator.createDispute{value: _arbitrationCost}(
+        transaction.disputeId = arbitratorData.arbitrator.createDispute{value: _arbitrationCost}(
             AMOUNT_OF_CHOICES,
             arbitratorExtraData
         );
 
         disputeIDtoTransactionID[transaction.disputeId] = _transactionID;
 
-        emit Dispute(arbitrator, transaction.disputeId, _transactionID, _transactionID);
+        emit Dispute(arbitratorData.arbitrator, transaction.disputeId, _transactionID, _transactionID);
     }
 
     /** @dev Submit a reference to evidence. EVENT.
@@ -672,7 +675,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard, IArbitrable, ER
             revert InvalidStatus(uint256(Status.Resolved));
         }
 
-        emit Evidence(arbitrator, _transactionID, _msgSender(), _evidence);
+        emit Evidence(arbitratorData.arbitrator, _transactionID, _msgSender(), _evidence);
     }
 
     /** @dev Give a ruling for a dispute. Must be called by the arbitrator.
@@ -683,8 +686,8 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard, IArbitrable, ER
      *                 Note that 0 is reserved for "Not able/wanting to make a decision".
      */
     function rule(uint256 _disputeID, uint256 _ruling) external override {
-        if (_msgSender() != address(arbitrator)) {
-            revert InvalidCaller(address(arbitrator));
+        if (_msgSender() != address(arbitratorData.arbitrator)) {
+            revert InvalidCaller(address(arbitratorData.arbitrator));
         }
 
         if (_ruling > AMOUNT_OF_CHOICES) {
@@ -777,6 +780,6 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard, IArbitrable, ER
      * @return cost Amount to be paid.
      */
     function arbitrationCost() external view returns (uint256 cost) {
-        cost = arbitrator.arbitrationCost(arbitratorExtraData);
+        cost = arbitratorData.arbitrator.arbitrationCost(arbitratorExtraData);
     }
 }
