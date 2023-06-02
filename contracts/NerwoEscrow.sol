@@ -86,8 +86,12 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard, IArbitrable, ER
 
     uint256 public feeTimeout; // Time in seconds a party can take to pay arbitration fees before being considered unresponding and lose the dispute.
 
-    address public feeRecipient; // Address which receives a share of receiver payment.
-    uint256 public feeRecipientBasisPoint; // The share of fee to be received by the feeRecipient, down to 2 decimal places as 550 = 5.5%.
+    struct FeeRecipientData {
+        address feeRecipient; // Address which receives a share of receiver payment.
+        uint16 feeRecipientBasisPoint; // The share of fee to be received by the feeRecipient, in basis points. Note that this value shouldn't exceed Divisor.
+    }
+
+    FeeRecipientData public feeRecipientData;
 
     mapping(uint256 => Transaction) private transactions;
     mapping(uint256 => uint256) private disputeIDtoTransactionID; // One-to-one relationship between the dispute and the transaction.
@@ -270,12 +274,13 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard, IArbitrable, ER
      *         down to 2 decimal places as 550 = 5.5%
      */
     function _setFeeRecipientAndBasisPoint(address _feeRecipient, uint256 _feeRecipientBasisPoint) internal {
-        if (_feeRecipientBasisPoint > MULTIPLIER_DIVISOR) {
+        uint16 feeRecipientBasisPoint = uint16(_feeRecipientBasisPoint);
+        if (feeRecipientBasisPoint > MULTIPLIER_DIVISOR) {
             revert InvalidFeeBasisPoint();
         }
 
-        feeRecipient = payable(_feeRecipient);
-        feeRecipientBasisPoint = _feeRecipientBasisPoint;
+        feeRecipientData.feeRecipient = payable(_feeRecipient);
+        feeRecipientData.feeRecipientBasisPoint = feeRecipientBasisPoint;
     }
 
     /**
@@ -307,15 +312,15 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard, IArbitrable, ER
      *  @param _newFeeRecipient Address of the new Fee Recipient.
      */
     function changeFeeRecipient(address _newFeeRecipient) external {
-        if (_msgSender() != feeRecipient) {
-            revert InvalidCaller(feeRecipient);
+        if (_msgSender() != feeRecipientData.feeRecipient) {
+            revert InvalidCaller(feeRecipientData.feeRecipient);
         }
 
         if (_newFeeRecipient == address(0)) {
             revert NullAddress();
         }
 
-        feeRecipient = _newFeeRecipient;
+        feeRecipientData.feeRecipient = _newFeeRecipient;
         emit FeeRecipientChanged(_msgSender(), _newFeeRecipient);
     }
 
@@ -389,7 +394,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard, IArbitrable, ER
      *  @param _amount Amount to pay in wei.
      */
     function calculateFeeRecipientAmount(uint256 _amount) public view returns (uint256) {
-        return (_amount * feeRecipientBasisPoint) / MULTIPLIER_DIVISOR;
+        return (_amount * feeRecipientData.feeRecipientBasisPoint) / MULTIPLIER_DIVISOR;
     }
 
     /** @dev Create a transaction.
@@ -415,8 +420,8 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard, IArbitrable, ER
 
         // Amount too low to pay fee
         // WTF: solidity, nested if consumes less gas
-        if (feeRecipientBasisPoint > 0) {
-            if ((_amount * feeRecipientBasisPoint) < MULTIPLIER_DIVISOR) {
+        if (feeRecipientData.feeRecipientBasisPoint > 0) {
+            if ((_amount * feeRecipientData.feeRecipientBasisPoint) < MULTIPLIER_DIVISOR) {
                 revert InvalidAmount(_amount);
             }
         }
@@ -489,7 +494,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard, IArbitrable, ER
         }
 
         uint256 feeAmount = calculateFeeRecipientAmount(_amount);
-        _transferToken(feeRecipient, transaction.token, feeAmount);
+        _transferToken(feeRecipientData.feeRecipient, transaction.token, feeAmount);
         emit FeeRecipientPayment(_transactionID, address(transaction.token), feeAmount);
 
         _sendToken(transaction.receiver, transaction.token, _amount - feeAmount);
@@ -723,7 +728,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard, IArbitrable, ER
             _sendTo(transaction.sender, senderArbitrationFee);
         } else if (_ruling == RECEIVER_WINS) {
             feeAmount = calculateFeeRecipientAmount(amount);
-            _transferToken(feeRecipient, transaction.token, feeAmount);
+            _transferToken(feeRecipientData.feeRecipient, transaction.token, feeAmount);
             emit FeeRecipientPayment(_transactionID, address(transaction.token), feeAmount);
 
             _sendToken(transaction.receiver, transaction.token, amount - feeAmount);
@@ -733,7 +738,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard, IArbitrable, ER
             uint256 splitAmount = amount / 2;
 
             feeAmount = calculateFeeRecipientAmount(splitAmount);
-            _transferToken(feeRecipient, transaction.token, feeAmount);
+            _transferToken(feeRecipientData.feeRecipient, transaction.token, feeAmount);
             emit FeeRecipientPayment(_transactionID, address(transaction.token), feeAmount);
 
             // In the case of an uneven token amount, one basic token unit can be burnt.
