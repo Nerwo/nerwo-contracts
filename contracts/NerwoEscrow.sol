@@ -561,10 +561,10 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard, IArbitrable, ER
             revert InvalidStatus(uint256(Status.DisputeCreated));
         }
 
-        uint256 arbitrationCost = arbitrator.arbitrationCost(arbitratorExtraData);
+        uint256 _arbitrationCost = arbitrator.arbitrationCost(arbitratorExtraData);
 
-        if (msg.value != arbitrationCost) {
-            revert InvalidAmount(arbitrationCost);
+        if (msg.value != _arbitrationCost) {
+            revert InvalidAmount(_arbitrationCost);
         }
 
         transaction.senderFee = msg.value;
@@ -577,7 +577,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard, IArbitrable, ER
             emit HasToPayFee(_transactionID, Party.Receiver);
         } else {
             // The receiver has also paid the fee. We create the dispute.
-            _raiseDispute(_transactionID, arbitrationCost);
+            _raiseDispute(_transactionID, _arbitrationCost);
         }
     }
 
@@ -596,10 +596,10 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard, IArbitrable, ER
             revert InvalidStatus(uint256(Status.DisputeCreated));
         }
 
-        uint256 arbitrationCost = arbitrator.arbitrationCost(arbitratorExtraData);
+        uint256 _arbitrationCost = arbitrator.arbitrationCost(arbitratorExtraData);
 
-        if (msg.value != arbitrationCost) {
-            revert InvalidAmount(arbitrationCost);
+        if (msg.value != _arbitrationCost) {
+            revert InvalidAmount(_arbitrationCost);
         }
 
         transaction.receiverFee = msg.value;
@@ -612,7 +612,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard, IArbitrable, ER
             emit HasToPayFee(_transactionID, Party.Sender);
         } else {
             // The sender has also paid the fee. We create the dispute.
-            _raiseDispute(_transactionID, arbitrationCost);
+            _raiseDispute(_transactionID, _arbitrationCost);
         }
     }
 
@@ -742,5 +742,13 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard, IArbitrable, ER
 
     function getSupportedTokens() external view returns (IERC20[] memory) {
         return tokensWhitelist;
+    }
+
+    /**
+     * @dev Ask arbitrator for abitration cost
+     * @return cost Amount to be paid.
+     */
+    function arbitrationCost() external view returns (uint256 cost) {
+        cost = arbitrator.arbitrationCost(arbitratorExtraData);
     }
 }
