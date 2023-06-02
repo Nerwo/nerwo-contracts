@@ -96,6 +96,9 @@ describe('NerwoEscrow: rule', function () {
     const { arbitrator, escrow, usdt } = await getContracts();
     const { platform, court, sender, receiver } = await getSigners();
 
+    const splitAmount = amount.div(2);
+    const splitFee = feeAmount.div(2);
+
     await expect(arbitrator.connect(court).giveRuling(disputeID, 0))
       .to.changeEtherBalances(
         [escrow, sender, receiver],
@@ -104,7 +107,7 @@ describe('NerwoEscrow: rule', function () {
       .to.changeTokenBalances(
         usdt,
         [escrow, platform, sender, receiver],
-        [amount.mul(-1), feeAmount, amount.div(2), amount.div(2).sub(feeAmount)]
+        [amount.mul(-1), splitFee, splitAmount, splitAmount.sub(splitFee)]
       )
       .to.emit(escrow, 'Ruling');
   });
