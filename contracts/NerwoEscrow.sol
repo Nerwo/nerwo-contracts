@@ -734,12 +734,20 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard, IArbitrable, ER
     // *   Utils for frontends    * //
     // **************************** //
 
+    /**
+     * @dev Get transaction by id
+     * @return transaction
+     */
     function getTransaction(
         uint256 _transactionID
     ) external view onlyValidTransaction(_transactionID) returns (Transaction memory) {
         return transactions[_transactionID];
     }
 
+    /**
+     * @dev Get supported ERC20 tokens
+     * @return tokens array of addresses of supported tokens
+     */
     function getSupportedTokens() external view returns (IERC20[] memory) {
         return tokensWhitelist;
     }
