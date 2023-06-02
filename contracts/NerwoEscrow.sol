@@ -204,6 +204,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard, IArbitrable, ER
      *  @notice is 0x4e59b44847b379578588920ca78fbf26c0b4956c
      */
     constructor() {
+        /* solhint-disable avoid-tx-origin */
         _transferOwnership(tx.origin);
     }
 
