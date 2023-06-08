@@ -3,7 +3,6 @@ import { deployments, ethers } from 'hardhat';
 
 import * as constants from '../../constants';
 import { getContracts, getSigners, createTransaction, randomAmount } from '../utils';
-import { BigNumber } from 'ethers';
 
 describe('NerwoEscrow: rule', function () {
   before(async () => {
@@ -12,16 +11,16 @@ describe('NerwoEscrow: rule', function () {
     });
   });
 
-  let amount: BigNumber, feeAmount: BigNumber;
-  let arbitrationPrice: BigNumber;
-  let disputeID: BigNumber;
+  let amount: bigint, feeAmount: bigint;
+  let arbitrationPrice: bigint;
+  let disputeID: bigint;
 
   beforeEach(async () => {
     const { arbitrator, escrow, usdt } = await getContracts();
     const { sender, receiver } = await getSigners();
     amount = await randomAmount();
     feeAmount = await escrow.calculateFeeRecipientAmount(amount);
-    arbitrationPrice = await arbitrator.arbitrationCost([]);
+    arbitrationPrice = await escrow.arbitrationCost();
 
     const transactionID = await createTransaction(sender, receiver.address, usdt, amount);
 
@@ -82,12 +81,12 @@ describe('NerwoEscrow: rule', function () {
     await expect(arbitrator.connect(court).giveRuling(disputeID, constants.RECEIVER_WINS))
       .to.changeEtherBalances(
         [escrow, sender, receiver],
-        [arbitrationPrice.mul(-1), 0, arbitrationPrice]
+        [-arbitrationPrice, 0, arbitrationPrice]
       )
       .to.changeTokenBalances(
         usdt,
         [escrow, platform, sender, receiver],
-        [amount.mul(-1), feeAmount, 0, amount.sub(feeAmount)]
+        [-amount, feeAmount, 0, amount - feeAmount]
       )
       .to.emit(escrow, 'Ruling');
   });
@@ -96,18 +95,18 @@ describe('NerwoEscrow: rule', function () {
     const { arbitrator, escrow, usdt } = await getContracts();
     const { platform, court, sender, receiver } = await getSigners();
 
-    const splitAmount = amount.div(2);
-    const splitFee = feeAmount.div(2);
+    const splitAmount = amount / 2n;
+    const splitFee = feeAmount / 2n;
 
     await expect(arbitrator.connect(court).giveRuling(disputeID, 0))
       .to.changeEtherBalances(
         [escrow, sender, receiver],
-        [arbitrationPrice.mul(-1), 0, arbitrationPrice]
+        [-arbitrationPrice, 0, arbitrationPrice]
       )
       .to.changeTokenBalances(
         usdt,
         [escrow, platform, sender, receiver],
-        [amount.mul(-1), splitFee, splitAmount, splitAmount.sub(splitFee)]
+        [-amount, splitFee, splitAmount, splitAmount - splitFee]
       )
       .to.emit(escrow, 'Ruling');
   });

@@ -20,7 +20,7 @@ describe('NerwoEscrow: pay', function () {
     await expect(escrow.connect(sender).pay(_transactionID, 0))
       .to.be.revertedWithCustomError(escrow, 'InvalidAmount').withArgs(amount);
 
-    await expect(escrow.connect(sender).pay(_transactionID, amount.mul(2)))
+    await expect(escrow.connect(sender).pay(_transactionID, amount * 2n))
       .to.be.revertedWithCustomError(escrow, 'InvalidAmount').withArgs(amount);
 
     const feeAmount = await escrow.calculateFeeRecipientAmount(amount);
@@ -29,9 +29,9 @@ describe('NerwoEscrow: pay', function () {
       .to.changeTokenBalances(
         usdt,
         [escrow, platform, receiver],
-        [amount.mul(-1), feeAmount, amount.sub(feeAmount)]
+        [-amount, feeAmount, amount - feeAmount]
       )
-      .to.emit(escrow, 'Payment').withArgs(_transactionID, usdt.address, amount, sender.address)
+      .to.emit(escrow, 'Payment').withArgs(_transactionID, (await usdt.getAddress()), amount, sender.address)
       .to.emit(escrow, 'FeeRecipientPayment');
   });
 });

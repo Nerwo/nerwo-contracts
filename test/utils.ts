@@ -1,17 +1,19 @@
 import { expect } from 'chai';
-import { ethers } from 'hardhat';
-import { BigNumber, Contract, Signer, Wallet } from 'ethers';
-import { Interface } from 'ethers/lib/utils';
-import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
+import { deployments, ethers } from 'hardhat';
+import { BaseContract, ContractRunner, Interface, Signer } from 'ethers';
 
 import { ClaimableToken, NerwoCentralizedArbitrator, NerwoEscrow, NerwoTetherToken } from '../typechain-types';
 
-type Account = Contract | Wallet;
+export async function getContract<T extends BaseContract>(contractName: string, signer?: Signer): Promise<T> {
+    const deployment = await deployments.get(contractName);
+    const contract = await ethers.getContractAt(contractName, deployment.address, signer);
+    return contract as unknown as T;
+}
 
 export async function getContracts() {
-    const arbitrator: NerwoCentralizedArbitrator = await ethers.getContract('NerwoCentralizedArbitrator');
-    const escrow: NerwoEscrow = await ethers.getContract('NerwoEscrow');
-    const usdt: NerwoTetherToken = await ethers.getContract('NerwoTetherToken');
+    const arbitrator: NerwoCentralizedArbitrator = await getContract('NerwoCentralizedArbitrator');
+    const escrow: NerwoEscrow = await getContract('NerwoEscrow');
+    const usdt: NerwoTetherToken = await getContract('NerwoTetherToken');
 
     return { arbitrator, escrow, usdt };
 }
@@ -21,17 +23,11 @@ export async function getSigners() {
     return { deployer, platform, court, sender, receiver };
 }
 
-export async function fund(recipient: Account, amount: BigNumber) {
-    const { deployer } = await getSigners();
-    await expect(deployer.sendTransaction({ to: recipient.address, value: amount }))
-        .to.changeEtherBalance(recipient, amount);
-}
-
 export async function createTransaction(
-    sender: SignerWithAddress,
+    sender: ContractRunner,
     receiver_address: string,
     token: ClaimableToken,
-    amount: BigNumber = BigNumber.from(0),
+    amount: bigint = 0n,
     metaEvidence = '') {
 
     const blockNumber = await ethers.provider.getBlockNumber();
@@ -40,14 +36,14 @@ export async function createTransaction(
     const { platform } = await getSigners();
 
     await token.connect(sender).claim(amount);
-    await token.connect(sender).approve(escrow.address, amount);
+    await token.connect(sender).approve(await escrow.getAddress(), amount);
 
     await expect(escrow.connect(sender).createTransaction(
-        token.address, amount, receiver_address, metaEvidence))
+        (await token.getAddress()), amount, receiver_address, metaEvidence))
         .to.changeTokenBalances(
             token,
             [platform, sender],
-            [0, amount.mul(-1)]
+            [0, -amount]
         )
         .to.emit(escrow, 'TransactionCreated');
 
@@ -58,9 +54,9 @@ export async function createTransaction(
     return events.at(-1)!.args!._transactionID!;
 }
 
-export async function createDispute(sender: Signer, receiver: Signer, transactionID: BigNumber) {
-    const { arbitrator, escrow } = await getContracts();
-    const arbitrationPrice = await arbitrator.arbitrationCost([]);
+export async function createDispute(sender: Signer, receiver: Signer, transactionID: bigint) {
+    const { escrow } = await getContracts();
+    const arbitrationPrice = await escrow.arbitrationCost();
 
     await expect(escrow.connect(sender).payArbitrationFeeBySender(
         transactionID, { value: arbitrationPrice }))
@@ -97,18 +93,18 @@ function sfc32(a: number, b: number, c: number, d: number) {
 const rand = sfc32(0x9e3779b9, 0x243f6a88, 0xb7e15162, 42 ^ 1337);
 
 export async function randomAmount() {
-    const minimalAmount = BigNumber.from(100000000000000);
-    return minimalAmount.mul(Math.floor(100000 / rand()));
+    const minimalAmount = 100000000000000n;
+    return minimalAmount * BigInt(Math.floor(100000 / rand()));
 }
 
 // https://ethereum.stackexchange.com/a/123567/115740
+// upgraded to v6
 export function getInterfaceID(contractInterface: Interface) {
-    let interfaceID: BigNumber = ethers.constants.Zero;
-    const functions: string[] = Object.keys(contractInterface.functions);
+    let interfaceID: bigint = 0n;
 
-    for (let i = 0; i < functions.length; i++) {
-        interfaceID = interfaceID.xor(contractInterface.getSighash(functions[i]));
-    }
+    contractInterface.forEachFunction((func => {
+        interfaceID = interfaceID ^ BigInt(func.selector);
+    }));
 
-    return interfaceID.toHexString();
+    return `0x${interfaceID.toString(16).padStart(8, '0')}`;
 }

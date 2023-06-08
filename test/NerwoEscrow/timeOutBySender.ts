@@ -13,11 +13,11 @@ describe('NerwoEscrow: timeOutBySender', function () {
   });
 
   it('NoTimeout', async () => {
-    const { arbitrator, escrow, usdt } = await getContracts();
+    const { escrow, usdt } = await getContracts();
     const { sender, receiver } = await getSigners();
 
     const amount = await randomAmount();
-    const arbitrationPrice = await arbitrator.arbitrationCost([]);
+    const arbitrationPrice = await escrow.arbitrationCost();
     const transactionID = await createTransaction(sender, receiver.address, usdt, amount);
 
     await expect(escrow.connect(sender).payArbitrationFeeBySender(
@@ -40,18 +40,18 @@ describe('NerwoEscrow: timeOutBySender', function () {
   });
 
   it('Timeout', async () => {
-    const { arbitrator, escrow, usdt } = await getContracts();
+    const { escrow, usdt } = await getContracts();
     const { sender, receiver } = await getSigners();
 
     const amount = await randomAmount();
-    const arbitrationPrice = await arbitrator.arbitrationCost([]);
+    const arbitrationPrice = await escrow.arbitrationCost();
     const transactionID = await createTransaction(sender, receiver.address, usdt, amount);
 
     await expect(escrow.connect(sender).payArbitrationFeeBySender(
       transactionID, { value: arbitrationPrice }))
       .to.changeEtherBalances(
         [escrow, sender],
-        [arbitrationPrice, arbitrationPrice.mul(-1)]
+        [arbitrationPrice, -arbitrationPrice]
       )
       .to.emit(escrow, 'HasToPayFee');
 
@@ -60,12 +60,12 @@ describe('NerwoEscrow: timeOutBySender', function () {
     await expect(escrow.connect(sender).timeOutBySender(transactionID))
       .to.changeEtherBalances(
         [escrow, sender, receiver],
-        [arbitrationPrice.mul(-1), arbitrationPrice, 0]
+        [-arbitrationPrice, arbitrationPrice, 0]
       )
       .to.changeTokenBalances(
         usdt,
         [escrow, sender, receiver],
-        [amount.mul(-1), amount, 0]
-      )
+        [-amount, amount, 0]
+      );
   });
 });

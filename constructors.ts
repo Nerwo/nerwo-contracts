@@ -15,7 +15,7 @@ export function escrowArgs(
     return [
         process.env.NERWO_OWNER_ADDRESS || owner,           /* _owner */
         process.env.NERWO_ARBITRATOR_ADDRESS || arbitrator, /* _arbitrator */
-        [],                                                 /* _arbitratorExtraData */
+        '0x00',                                             /* _arbitratorExtraData */
         constants.FEE_TIMEOUT,                              /* _feeTimeout */
         process.env.NERWO_PLATFORM_ADDRESS || feeRecipient, /* _feeRecipient */
         constants.FEE_RECIPIENT_BASISPOINT,                 /* _feeRecipientBasisPoint */

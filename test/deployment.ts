@@ -8,7 +8,7 @@ import { NerwoCentralizedArbitrator, NerwoEscrow } from '../typechain-types';
         const [deployer] = await ethers.getSigners();
         const NerwoCentralizedArbitrator = await ethers.getContractFactory('NerwoCentralizedArbitrator');
         const arbitrator: NerwoCentralizedArbitrator = await NerwoCentralizedArbitrator.deploy() as NerwoCentralizedArbitrator;
-        await arbitrator.deployed();
+        await arbitrator.waitForDeployment();
         const args = arbitratorArgs(deployer.address) as [string, string];
         await arbitrator.initialize(...args);
     });
@@ -17,7 +17,7 @@ import { NerwoCentralizedArbitrator, NerwoEscrow } from '../typechain-types';
         const [deployer] = await ethers.getSigners();
         const NerwoEscrow = await ethers.getContractFactory('NerwoEscrow');
         const escrow: NerwoEscrow = await NerwoEscrow.deploy() as NerwoEscrow;
-        await escrow.deployed();
+        await escrow.waitForDeployment();
         const args = escrowArgs(deployer.address, deployer.address, deployer.address) as [
             string, string, string, string, string, string, any[] // wft
         ];

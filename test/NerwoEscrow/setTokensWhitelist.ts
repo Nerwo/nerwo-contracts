@@ -15,7 +15,7 @@ describe('NerwoEscrow: setTokensWhitelist', function () {
     const { escrow, usdt } = await getContracts();
     const { deployer } = await getSigners();
 
-    await escrow.connect(deployer).setTokensWhitelist(constants.getTokenWhitelist(usdt.address));
+    await escrow.connect(deployer).setTokensWhitelist(constants.getTokenWhitelist((await usdt.getAddress())));
   });
 
   it('errors', async () => {

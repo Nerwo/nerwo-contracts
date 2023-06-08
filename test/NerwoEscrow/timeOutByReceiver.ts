@@ -13,11 +13,11 @@ describe('NerwoEscrow: timeOutByReceiver', function () {
   });
 
   it('NoTimeout', async () => {
-    const { arbitrator, escrow, usdt } = await getContracts();
+    const { escrow, usdt } = await getContracts();
     const { sender, receiver } = await getSigners();
 
     const amount = await randomAmount();
-    const arbitrationPrice = await arbitrator.arbitrationCost([]);
+    const arbitrationPrice = await escrow.arbitrationCost();
     const transactionID = await createTransaction(sender, receiver.address, usdt, amount);
 
     await expect(escrow.connect(receiver).payArbitrationFeeByReceiver(
@@ -40,19 +40,19 @@ describe('NerwoEscrow: timeOutByReceiver', function () {
   });
 
   it('Timeout', async () => {
-    const { arbitrator, escrow, usdt } = await getContracts();
+    const { escrow, usdt } = await getContracts();
     const { platform, sender, receiver } = await getSigners();
 
     const amount = await randomAmount();
     const feeAmount = await escrow.calculateFeeRecipientAmount(amount);
-    const arbitrationPrice = await arbitrator.arbitrationCost([]);
+    const arbitrationPrice = await escrow.arbitrationCost();
     const transactionID = await createTransaction(sender, receiver.address, usdt, amount);
 
     await expect(escrow.connect(receiver).payArbitrationFeeByReceiver(
       transactionID, { value: arbitrationPrice }))
       .to.changeEtherBalances(
         [escrow, sender, receiver],
-        [arbitrationPrice, 0, arbitrationPrice.mul(-1)]
+        [arbitrationPrice, 0, -arbitrationPrice]
       )
       .to.emit(escrow, 'HasToPayFee');
 
@@ -61,12 +61,12 @@ describe('NerwoEscrow: timeOutByReceiver', function () {
     await expect(escrow.connect(receiver).timeOutByReceiver(transactionID))
       .to.changeEtherBalances(
         [escrow, platform, receiver],
-        [arbitrationPrice.mul(-1), 0, arbitrationPrice]
+        [-arbitrationPrice, 0, arbitrationPrice]
       )
       .to.changeTokenBalances(
         usdt,
         [escrow, platform, sender, receiver],
-        [amount.mul(-1), feeAmount, 0, amount.sub(feeAmount)]
+        [-amount, feeAmount, 0, amount - feeAmount]
       );
   });
 });

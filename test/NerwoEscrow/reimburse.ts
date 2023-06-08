@@ -1,7 +1,7 @@
 import { expect } from 'chai';
 import { deployments } from 'hardhat';
 
-import { getContracts, getSigners, fund, createTransaction, randomAmount } from '../utils';
+import { getContracts, getSigners, createTransaction, randomAmount } from '../utils';
 
 describe('NerwoEscrow: reimburse', function () {
   before(async () => {
@@ -23,28 +23,28 @@ describe('NerwoEscrow: reimburse', function () {
     await expect(escrow.connect(receiver).reimburse(transactionID, 0))
       .to.be.revertedWithCustomError(escrow, 'InvalidAmount').withArgs(amount);
 
-    await expect(escrow.connect(receiver).reimburse(transactionID, amount.mul(2)))
+    await expect(escrow.connect(receiver).reimburse(transactionID, amount * 2n))
       .to.be.revertedWithCustomError(escrow, 'InvalidAmount').withArgs(amount);
 
-    const partialAmount = amount.div(2);
+    const partialAmount = amount / 2n;
     const feeAmount = await escrow.calculateFeeRecipientAmount(partialAmount);
 
     await expect(escrow.connect(receiver).reimburse(transactionID, partialAmount))
       .to.changeTokenBalances(
         usdt,
         [escrow, sender, receiver],
-        [partialAmount.mul(-1), partialAmount, 0]
+        [-partialAmount, partialAmount, 0]
       )
-      .to.emit(escrow, 'Payment').withArgs(transactionID, usdt.address, partialAmount, receiver.address);
+      .to.emit(escrow, 'Payment').withArgs(transactionID, (await usdt.getAddress()), partialAmount, receiver.address);
 
     await expect(escrow.connect(sender).pay(transactionID, partialAmount))
       .to.changeTokenBalances(
         usdt,
         [escrow, platform, receiver],
-        [partialAmount.mul(-1), feeAmount, partialAmount.sub(feeAmount)]
+        [-partialAmount, feeAmount, partialAmount - feeAmount]
       )
-      .to.emit(escrow, 'Payment').withArgs(transactionID, usdt.address, partialAmount, sender.address)
-      .to.emit(escrow, 'FeeRecipientPayment').withArgs(transactionID, usdt.address, feeAmount);
+      .to.emit(escrow, 'Payment').withArgs(transactionID, (await usdt.getAddress()), partialAmount, sender.address)
+      .to.emit(escrow, 'FeeRecipientPayment').withArgs(transactionID, (await usdt.getAddress()), feeAmount);
 
     await expect(escrow.connect(receiver).reimburse(transactionID, partialAmount))
       .to.be.revertedWithCustomError(escrow, 'InvalidAmount').withArgs(0);

@@ -1,6 +1,4 @@
-import { ethers } from 'hardhat';
-
-const { parseEther } = ethers.utils;
+import { ZeroAddress, parseEther } from 'ethers';
 
 export const SENDER_WINS = 1;
 export const RECEIVER_WINS = 2;
@@ -32,7 +30,7 @@ export function getTokenWhitelist(usdt?: string | undefined) {
 
         // fake first address, for gas calculation
         if (process.env.REPORT_GAS) {
-            whitelist = [ethers.constants.AddressZero, whitelist[0]];
+            whitelist = [ZeroAddress, whitelist[0]];
         }
     };
     return whitelist;

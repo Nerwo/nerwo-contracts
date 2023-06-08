@@ -2,6 +2,7 @@ import { expect } from 'chai';
 import { deployments, ethers } from 'hardhat';
 
 import { getContracts, getSigners, createTransaction, randomAmount } from '../utils';
+import { ZeroAddress } from 'ethers';
 
 describe('NerwoEscrow: createTransaction', function () {
   before(async () => {
@@ -32,7 +33,7 @@ describe('NerwoEscrow: createTransaction', function () {
     const { sender } = await getSigners();
 
     const amount = await randomAmount();
-    await expect(createTransaction(sender, ethers.constants.AddressZero, usdt, amount))
+    await expect(createTransaction(sender, ZeroAddress, usdt, amount))
       .to.be.revertedWithCustomError(escrow, 'NullAddress');
   });
 
@@ -49,7 +50,7 @@ describe('NerwoEscrow: createTransaction', function () {
     const { sender, receiver } = await getSigners();
 
     const amount = await randomAmount();
-    await expect(escrow.connect(sender).createTransaction(escrow.address, amount, receiver.address, ''))
+    await expect(escrow.connect(sender).createTransaction((await escrow.getAddress()), amount, receiver.address, ''))
       .to.be.revertedWithCustomError(escrow, 'InvalidToken');
   });
 });

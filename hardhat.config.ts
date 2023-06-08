@@ -2,8 +2,7 @@ import { parseArgs } from 'node:util';
 import { HardhatUserConfig } from 'hardhat/config';
 import { HARDHAT_NETWORK_MNEMONIC } from 'hardhat/internal/core/config/default-config';
 import '@nomicfoundation/hardhat-toolbox';
-import '@nomiclabs/hardhat-etherscan';
-import '@nomiclabs/hardhat-ethers';
+import '@nomicfoundation/hardhat-ethers';
 import 'hardhat-gas-reporter';
 import 'hardhat-deploy';
 
@@ -41,8 +40,8 @@ const config: HardhatUserConfig = {
   },
   networks: {
     sepolia: {
-      url: process.env.RPC_URL,
-      accounts: [process.env.PRIVATE_KEY],
+      url: process.env.RPC_URL || 'https://rpc.sepolia.org',
+      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : undefined,
       verify: {
         etherscan: {
           apiKey: process.env.ETHERSCAN_API_KEY

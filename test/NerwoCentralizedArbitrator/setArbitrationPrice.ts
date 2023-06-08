@@ -1,8 +1,9 @@
 import { expect } from 'chai';
-import { parseEther } from 'ethers/lib/utils';
+import { parseEther } from 'ethers';
 import { deployments } from 'hardhat';
 
 import { getContracts, getSigners } from '../utils';
+
 
 describe('NerwoCentralizedArbitrator: setArbitrationPrice', function () {
   before(async () => {
@@ -20,7 +21,7 @@ describe('NerwoCentralizedArbitrator: setArbitrationPrice', function () {
     await expect(arbitrator.connect(sender).setArbitrationPrice(arbitrationPrice))
       .to.be.revertedWith('Ownable: caller is not the owner');
 
-    const previousPrice = await arbitrator.arbitrationCost([]);
+    const previousPrice = await arbitrator.arbitrationCost('0x00');
 
     await expect(arbitrator.connect(court).setArbitrationPrice(arbitrationPrice))
       .to.emit(arbitrator, 'ArbitrationPriceChanged').withArgs(previousPrice, arbitrationPrice);
