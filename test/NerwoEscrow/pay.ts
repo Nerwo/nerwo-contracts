@@ -18,10 +18,10 @@ describe('NerwoEscrow: pay', function () {
     const _transactionID = await createTransaction(sender, receiver.address, usdt, amount);
 
     await expect(escrow.connect(sender).pay(_transactionID, 0))
-      .to.be.revertedWithCustomError(escrow, 'InvalidAmount').withArgs(amount);
+      .to.be.revertedWithCustomError(escrow, 'InvalidAmount');
 
     await expect(escrow.connect(sender).pay(_transactionID, amount * 2n))
-      .to.be.revertedWithCustomError(escrow, 'InvalidAmount').withArgs(amount);
+      .to.be.revertedWithCustomError(escrow, 'InvalidAmount');
 
     const feeAmount = await escrow.calculateFeeRecipientAmount(amount);
 

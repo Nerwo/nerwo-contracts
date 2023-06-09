@@ -31,7 +31,6 @@ describe('NerwoCentralizedArbitrator: createDispute', function () {
 
     // the amount is checked before the supportInterface
     await expect(arbitrator.connect(sender).createDispute(choices, '0x00'))
-      .to.be.revertedWithCustomError(arbitrator, 'InsufficientPayment')
-      .withArgs(0, arbitrationPrice);
+      .to.be.revertedWithCustomError(arbitrator, 'InsufficientPayment');
   });
 });

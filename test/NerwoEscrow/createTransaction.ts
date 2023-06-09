@@ -42,7 +42,7 @@ describe('NerwoEscrow: createTransaction', function () {
     const { sender, receiver } = await getSigners();
 
     await expect(createTransaction(sender, receiver.address, usdt))
-      .to.be.revertedWithCustomError(escrow, 'InvalidAmount').withArgs(0);
+      .to.be.revertedWithCustomError(escrow, 'InvalidAmount');
   });
 
   it('InvalidToken', async () => {

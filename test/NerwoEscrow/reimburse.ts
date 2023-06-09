@@ -21,10 +21,10 @@ describe('NerwoEscrow: reimburse', function () {
       .to.be.revertedWithCustomError(escrow, 'InvalidCaller').withArgs(receiver.address);
 
     await expect(escrow.connect(receiver).reimburse(transactionID, 0))
-      .to.be.revertedWithCustomError(escrow, 'InvalidAmount').withArgs(amount);
+      .to.be.revertedWithCustomError(escrow, 'InvalidAmount');
 
     await expect(escrow.connect(receiver).reimburse(transactionID, amount * 2n))
-      .to.be.revertedWithCustomError(escrow, 'InvalidAmount').withArgs(amount);
+      .to.be.revertedWithCustomError(escrow, 'InvalidAmount');
 
     const partialAmount = amount / 2n;
     const feeAmount = await escrow.calculateFeeRecipientAmount(partialAmount);
@@ -47,6 +47,6 @@ describe('NerwoEscrow: reimburse', function () {
       .to.emit(escrow, 'FeeRecipientPayment').withArgs(transactionID, (await usdt.getAddress()), feeAmount);
 
     await expect(escrow.connect(receiver).reimburse(transactionID, partialAmount))
-      .to.be.revertedWithCustomError(escrow, 'InvalidAmount').withArgs(0);
+      .to.be.revertedWithCustomError(escrow, 'InvalidAmount');
   });
 });

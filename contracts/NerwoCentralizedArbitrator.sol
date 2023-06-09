@@ -18,17 +18,18 @@ import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.s
 import {IArbitrator} from "@kleros/erc-792/contracts/IArbitrator.sol";
 import {IArbitrable} from "@kleros/erc-792/contracts/IArbitrable.sol";
 
+import {SafeTransfer} from "./SafeTransfer.sol";
+
 contract NerwoCentralizedArbitrator is Ownable, Initializable, ReentrancyGuard, IArbitrator, ERC165 {
     using ERC165Checker for address;
     using SafeCast for uint256;
 
-    error InsufficientPayment(uint256 _available, uint256 _required);
+    error InsufficientPayment();
     error InvalidRuling(uint256 _ruling, uint256 _numberOfChoices);
-    error InvalidStatus(DisputeStatus _current, DisputeStatus _expected);
+    error InvalidStatus(DisputeStatus _expected);
 
-    error TransferFailed(address recipient, uint256 amount, bytes data);
     error InvalidCaller(address expected);
-    error InvalidDispute(uint256 disputeID);
+    error InvalidDispute();
 
     struct Dispute {
         IArbitrable arbitrated;
@@ -51,7 +52,7 @@ contract NerwoCentralizedArbitrator is Ownable, Initializable, ReentrancyGuard, 
 
     modifier onlyValidDispute(uint256 _disputeID) {
         if (address(disputes[_disputeID].arbitrated) == address(0)) {
-            revert InvalidDispute(_disputeID);
+            revert InvalidDispute();
         }
         _;
     }
@@ -82,17 +83,6 @@ contract NerwoCentralizedArbitrator is Ownable, Initializable, ReentrancyGuard, 
         arbitrationPrice = _arbitrationPrice;
     }
 
-    /** @dev Send to recipent, reverts on failure
-     *  @param target To address to send to
-     *  @param amount Transaction amount
-     */
-    function _transferTo(address payable target, uint256 amount) internal {
-        (bool success, bytes memory data) = target.call{value: amount}("");
-        if (!success) {
-            revert TransferFailed(target, amount, data);
-        }
-    }
-
     /** @dev Set the arbitration price. Only callable by the owner.
      *  @param _arbitrationPrice Amount to be paid for arbitration.
      */
@@ -108,7 +98,7 @@ contract NerwoCentralizedArbitrator is Ownable, Initializable, ReentrancyGuard, 
     ) external payable override returns (uint256 disputeID) {
         uint256 requiredAmount = arbitrationCost(_extraData);
         if (msg.value != requiredAmount) {
-            revert InsufficientPayment(msg.value, requiredAmount);
+            revert InsufficientPayment();
         }
 
         if (!_msgSender().supportsInterface(type(IArbitrable).interfaceId)) {
@@ -146,7 +136,7 @@ contract NerwoCentralizedArbitrator is Ownable, Initializable, ReentrancyGuard, 
      * _extraData Not used by this contract.
      */
     function appeal(uint256 /*_disputeID*/, bytes calldata /*_extraData*/) external payable override {
-        revert InsufficientPayment(msg.value, NOT_PAYABLE_VALUE);
+        revert InsufficientPayment();
     }
 
     /** @dev Cost of appeal. If appeal is not possible, it's a high value which can never be paid.
@@ -209,13 +199,13 @@ contract NerwoCentralizedArbitrator is Ownable, Initializable, ReentrancyGuard, 
         }
 
         if (dispute.status != DisputeStatus.Waiting) {
-            revert InvalidStatus(dispute.status, DisputeStatus.Waiting);
+            revert InvalidStatus(DisputeStatus.Waiting);
         }
 
         dispute.ruling = _ruling.toUint8();
         dispute.status = DisputeStatus.Solved;
 
-        _transferTo(payable(_msgSender()), arbitrationPrice);
+        SafeTransfer.transferTo(payable(_msgSender()), arbitrationPrice);
 
         dispute.arbitrated.rule(_disputeID, _ruling);
     }
