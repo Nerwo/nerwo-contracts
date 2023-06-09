@@ -39,39 +39,34 @@ const config: HardhatUserConfig = {
     excludeContracts: ['Rogue', 'TetherToken', 'ERC20']
   },
   networks: {
-    sepolia: {
-      url: process.env.RPC_URL || 'https://rpc.sepolia.org',
+    goerli: {
+      url: 'https://ethereum-goerli.publicnode.com',
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : undefined,
-      verify: {
-        etherscan: {
-          apiKey: process.env.ETHERSCAN_API_KEY
-        }
-      },
-      deploy: ['deploy-testing', 'deploy']
+      deploy: ['deploy-tokens', 'deploy']
+    },
+    sepolia: {
+      url: 'https://rpc.sepolia.org',
+      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : undefined,
+      deploy: ['deploy-tokens', 'deploy']
     },
     hardhat: {
       accounts: {
         mnemonic: process.env.HARDHAT_MNEMONIC || HARDHAT_NETWORK_MNEMONIC
       },
-      deploy: ['deploy-testing', 'deploy']
+      deploy: ['deploy-tokens', 'deploy']
     },
     buildbear: {
       url: `https://rpc.buildbear.io/${BUILDBEAR_CONTAINER_NAME}`,
       accounts: {
         mnemonic: process.env.BUILDBEAR_MNEMONIC || HARDHAT_NETWORK_MNEMONIC
-      },
-      verify: {
-        etherscan: {
-          apiKey: 'verifyContract',
-          // FIXME: 404 /api?
-          apiUrl: `https://rpc.buildbear.io/verify/etherscan/${BUILDBEAR_CONTAINER_NAME}`
-        }
       }
     }
   },
   etherscan: {
     apiKey: {
       mainnet: process.env.ETHERSCAN_API_KEY || '',
+      goerli: process.env.ETHERSCAN_API_KEY || '',
+      sepolia: process.env.ETHERSCAN_API_KEY || '',
       buildbear: 'verifyContract'
     },
     customChains: [
