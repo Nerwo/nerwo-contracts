@@ -31,7 +31,7 @@ describe('NerwoEscrow: pay', function () {
         [escrow, platform, receiver],
         [-amount, feeAmount, amount - feeAmount]
       )
-      .to.emit(escrow, 'Payment').withArgs(_transactionID, (await usdt.getAddress()), amount, sender.address)
+      .to.emit(escrow, 'Payment').withArgs(_transactionID, await usdt.getAddress(), amount, sender.address)
       .to.emit(escrow, 'FeeRecipientPayment');
   });
 });

@@ -29,13 +29,15 @@ describe('NerwoEscrow: reimburse', function () {
     const partialAmount = amount / 2n;
     const feeAmount = await escrow.calculateFeeRecipientAmount(partialAmount);
 
+    const usdtAddress = await usdt.getAddress();
+
     await expect(escrow.connect(receiver).reimburse(transactionID, partialAmount))
       .to.changeTokenBalances(
         usdt,
         [escrow, sender, receiver],
         [-partialAmount, partialAmount, 0]
       )
-      .to.emit(escrow, 'Payment').withArgs(transactionID, (await usdt.getAddress()), partialAmount, receiver.address);
+      .to.emit(escrow, 'Payment').withArgs(transactionID, usdtAddress, partialAmount, receiver.address);
 
     await expect(escrow.connect(sender).pay(transactionID, partialAmount))
       .to.changeTokenBalances(
@@ -43,8 +45,8 @@ describe('NerwoEscrow: reimburse', function () {
         [escrow, platform, receiver],
         [-partialAmount, feeAmount, partialAmount - feeAmount]
       )
-      .to.emit(escrow, 'Payment').withArgs(transactionID, (await usdt.getAddress()), partialAmount, sender.address)
-      .to.emit(escrow, 'FeeRecipientPayment').withArgs(transactionID, (await usdt.getAddress()), feeAmount);
+      .to.emit(escrow, 'Payment').withArgs(transactionID, usdtAddress, partialAmount, sender.address)
+      .to.emit(escrow, 'FeeRecipientPayment').withArgs(transactionID, usdtAddress, feeAmount);
 
     await expect(escrow.connect(receiver).reimburse(transactionID, partialAmount))
       .to.be.revertedWithCustomError(escrow, 'InvalidAmount');

@@ -39,7 +39,7 @@ export async function createTransaction(
     await token.connect(sender).approve(await escrow.getAddress(), amount);
 
     await expect(escrow.connect(sender).createTransaction(
-        (await token.getAddress()), amount, receiver_address, metaEvidence))
+        await token.getAddress(), amount, receiver_address, metaEvidence))
         .to.changeTokenBalances(
             token,
             [platform, sender],
@@ -93,8 +93,7 @@ function sfc32(a: number, b: number, c: number, d: number) {
 const rand = sfc32(0x9e3779b9, 0x243f6a88, 0xb7e15162, 42 ^ 1337);
 
 export async function randomAmount() {
-    const minimalAmount = 100000000000000n;
-    return minimalAmount * BigInt(Math.floor(100000 / rand()));
+    return 100000000000000n * BigInt(Math.floor(100000 / rand()));
 }
 
 // https://ethereum.stackexchange.com/a/123567/115740
