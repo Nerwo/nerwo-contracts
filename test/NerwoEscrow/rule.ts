@@ -14,9 +14,10 @@ describe('NerwoEscrow: rule', function () {
   let amount: bigint, feeAmount: bigint;
   let arbitrationPrice: bigint;
   let disputeID: bigint;
+  let fliplop = true;
 
   beforeEach(async () => {
-    const { arbitrator, escrow, usdt } = await getContracts();
+    const { escrow, usdt } = await getContracts();
     const { sender, receiver } = await getSigners();
     amount = await randomAmount();
     feeAmount = await escrow.calculateFeeRecipientAmount(amount);
@@ -24,13 +25,19 @@ describe('NerwoEscrow: rule', function () {
 
     const transactionID = await createTransaction(sender, receiver.address, usdt, amount);
 
-    await expect(escrow.connect(receiver).payArbitrationFeeByReceiver(
-      transactionID, { value: arbitrationPrice }))
+    const payBySender = () => escrow.connect(sender)
+      .payArbitrationFeeBySender(transactionID, { value: arbitrationPrice });
+
+    const payByReceiver = () => escrow.connect(receiver)
+      .payArbitrationFeeByReceiver(transactionID, { value: arbitrationPrice });
+
+    fliplop = !fliplop;
+    await expect(fliplop ? payBySender() : payByReceiver())
       .to.emit(escrow, 'HasToPayFee');
 
     const blockNumber = await ethers.provider.getBlockNumber();
-    await expect(escrow.connect(sender).payArbitrationFeeBySender(
-      transactionID, { value: arbitrationPrice }))
+
+    await expect(fliplop ? payByReceiver() : payBySender())
       .to.emit(escrow, 'Dispute')
       .to.not.emit(escrow, 'HasToPayFee');
 
