@@ -283,9 +283,11 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
      * @param _tokensWhitelist An array of ERC20 tokens
      */
     function _setTokensWhitelist(IERC20[] calldata _tokensWhitelist) internal {
-        delete tokensWhitelist;
-        for (uint i = 0; i < _tokensWhitelist.length; i++) {
-            tokensWhitelist.push(_tokensWhitelist[i]);
+        unchecked {
+            delete tokensWhitelist;
+            for (uint i = 0; i < _tokensWhitelist.length; i++) {
+                tokensWhitelist.push(_tokensWhitelist[i]);
+            }
         }
     }
 
@@ -349,10 +351,12 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
         }
 
         IERC20 token;
-        for (uint i = 0; i < tokensWhitelist.length; i++) {
-            if (_token == tokensWhitelist[i]) {
-                token = _token;
-                break;
+        unchecked {
+            for (uint i = 0; i < tokensWhitelist.length; i++) {
+                if (_token == tokensWhitelist[i]) {
+                    token = _token;
+                    break;
+                }
             }
         }
 
@@ -604,19 +608,21 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
         transaction.status = Status.Resolved;
 
         uint256 feeAmount;
+        address sender = transaction.sender;
+        address receiver = transaction.receiver;
 
         // Give the arbitration fee back.
         // Note that we use send to prevent a party from blocking the execution.
         if (_ruling == SENDER_WINS) {
-            transaction.sender.sendToken(transaction.token, amount);
-            transaction.sender.sendTo(senderArbitrationFee);
+            sender.sendToken(transaction.token, amount);
+            sender.sendTo(senderArbitrationFee);
         } else if (_ruling == RECEIVER_WINS) {
             feeAmount = calculateFeeRecipientAmount(amount);
             feeRecipientData.feeRecipient.transferToken(transaction.token, feeAmount);
             emit FeeRecipientPayment(_transactionID, address(transaction.token), feeAmount);
 
-            transaction.receiver.sendToken(transaction.token, amount - feeAmount);
-            transaction.receiver.sendTo(receiverArbitrationFee);
+            receiver.sendToken(transaction.token, amount - feeAmount);
+            receiver.sendTo(receiverArbitrationFee);
         } else {
             uint256 splitArbitration = senderArbitrationFee / 2;
             uint256 splitAmount = amount / 2;
@@ -626,11 +632,11 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
             emit FeeRecipientPayment(_transactionID, address(transaction.token), feeAmount);
 
             // In the case of an uneven token amount, one basic token unit can be burnt.
-            transaction.sender.sendToken(transaction.token, splitAmount);
-            transaction.receiver.sendToken(transaction.token, splitAmount - feeAmount);
+            sender.sendToken(transaction.token, splitAmount);
+            receiver.sendToken(transaction.token, splitAmount - feeAmount);
 
-            transaction.sender.sendTo(splitArbitration);
-            transaction.receiver.sendTo(splitArbitration);
+            sender.sendTo(splitArbitration);
+            receiver.sendTo(splitArbitration);
         }
     }
 
