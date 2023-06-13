@@ -20,7 +20,7 @@ const BUILDBEAR_CONTAINER_NAME = process.env.BUILDBEAR_CONTAINER_NAME || 'invali
 
 const config: HardhatUserConfig = {
   solidity: {
-    version: '0.8.18',
+    version: '0.8.20',
     settings: {
       optimizer: {
         enabled: true,
