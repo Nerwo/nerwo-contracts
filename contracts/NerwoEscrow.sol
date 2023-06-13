@@ -345,8 +345,8 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
             }
         }
 
-        address sender = _msgSender();
-        if (sender == _receiver) {
+        address _sender = _msgSender();
+        if (_sender == _receiver) {
             revert InvalidCaller(_receiver);
         }
 
@@ -366,7 +366,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
 
         // first transfer tokens to the contract
         // NOTE: user must have approved the allowance
-        if (!token.transferFrom(sender, address(this), _amount)) {
+        if (!token.transferFrom(_sender, address(this), _amount)) {
             revert InvalidAmount();
         }
 
@@ -377,7 +377,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
         transactions[transactionID] = Transaction({
             status: Status.NoDispute,
             lastInteraction: uint32(block.timestamp),
-            sender: sender,
+            sender: _sender,
             receiver: _receiver,
             token: token,
             amount: _amount,
@@ -386,7 +386,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
             receiverFee: 0
         });
 
-        emit TransactionCreated(transactionID, sender, _receiver, address(_token), _amount);
+        emit TransactionCreated(transactionID, _sender, _receiver, address(_token), _amount);
     }
 
     /** @dev Pay receiver. To be called if the good or service is provided.
