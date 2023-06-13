@@ -24,7 +24,7 @@ const config: HardhatUserConfig = {
     settings: {
       optimizer: {
         enabled: true,
-        runs: 200,
+        runs: 200
       }
     }
   },
@@ -36,7 +36,7 @@ const config: HardhatUserConfig = {
   gasReporter: {
     enabled: (process.env.REPORT_GAS) ? true : false,
     coinmarketcap: process.env.COINMARKETCAP_API_KEY,
-    excludeContracts: ['Rogue', 'TetherToken', 'ERC20']
+    excludeContracts: ['Rogue', 'TetherToken', 'ERC20', 'NerwoCentralizedArbitrator']
   },
   networks: {
     goerli: {

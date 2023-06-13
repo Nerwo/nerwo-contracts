@@ -8,8 +8,12 @@ pragma solidity ^0.8.0;
  * @author Gianluigi Tiesi <sherpya@gmail.com>
  */
 
-import {ClaimableToken} from "./ClaimableToken.sol";
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-contract NerwoTetherToken is ClaimableToken {
-    constructor() ClaimableToken("NerwoTetherToken Tether USD", "USDT") {}
+contract NerwoTetherToken is ERC20 {
+    constructor() ERC20("Tether USD", "USDT") {}
+
+    function mint(uint256 amount) external {
+        _mint(msg.sender, amount);
+    }
 }

@@ -2,7 +2,7 @@ import { expect } from 'chai';
 import { deployments, ethers } from 'hardhat';
 import { BaseContract, ContractRunner, Signer } from 'ethers';
 
-import { ClaimableToken, NerwoCentralizedArbitrator, NerwoEscrow, NerwoTetherToken } from '../typechain-types';
+import { NerwoCentralizedArbitrator, NerwoEscrow, NerwoTetherToken } from '../typechain-types';
 
 export async function getContract<T extends BaseContract>(contractName: string, signer?: Signer): Promise<T> {
     const deployment = await deployments.get(contractName);
@@ -26,7 +26,7 @@ export async function getSigners() {
 export async function createTransaction(
     sender: ContractRunner,
     receiver_address: string,
-    token: ClaimableToken,
+    token: NerwoTetherToken,
     amount: bigint = 0n) {
 
     const blockNumber = await ethers.provider.getBlockNumber();
@@ -34,7 +34,7 @@ export async function createTransaction(
     const { escrow } = await getContracts();
     const { platform } = await getSigners();
 
-    await token.connect(sender).claim(amount);
+    await token.connect(sender).mint(amount);
     await token.connect(sender).approve(await escrow.getAddress(), amount);
 
     await expect(escrow.connect(sender).createTransaction(
