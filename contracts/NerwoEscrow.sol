@@ -443,6 +443,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
         unchecked {
             transaction.amount -= _amountReimbursed;
         }
+
         transaction.sender.sendToken(transaction.token, _amountReimbursed);
         emit Payment(_transactionID, address(transaction.token), _amountReimbursed, _msgSender());
     }
