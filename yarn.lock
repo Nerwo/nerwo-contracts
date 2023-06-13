@@ -632,10 +632,12 @@
     deep-eql "^4.0.1"
     ordinal "^1.0.3"
 
-"@nomicfoundation/hardhat-ethers@3.0.1":
-  version "3.0.1"
-  resolved "https://registry.yarnpkg.com/@nomicfoundation/hardhat-ethers/-/hardhat-ethers-3.0.1.tgz#83833d6ead084b8ce61fc870ecd958efc15c5a46"
-  integrity sha512-FbT29Gv1cxbYJttmlspZXhIbvKOrVjEXdZ5jHiusx2IY5/x3J0KrfgKQxUDaLZJlVoULv1kNq7FcPc20VlVPRA==
+"@nomicfoundation/hardhat-ethers@3.0.2":
+  version "3.0.2"
+  resolved "https://registry.yarnpkg.com/@nomicfoundation/hardhat-ethers/-/hardhat-ethers-3.0.2.tgz#1ca6f79fd3250ce3e1199d02b3ae697bfe7be234"
+  integrity sha512-4Pu3OwyEvnq/gvW2IZ1Lnbcz4yCC4xqzbHze34mXkqbCwV2kHOx6jX3prFDWQ1koxtin725lAazGh9CJtTaYjg==
+  dependencies:
+    debug "^4.1.1"
 
 "@nomicfoundation/hardhat-network-helpers@^1.0.8":
   version "1.0.8"
@@ -956,7 +958,7 @@
   resolved "https://registry.yarnpkg.com/@types/ms/-/ms-0.7.31.tgz#31b7ca6407128a3d2bbc27fe2d21b345397f6197"
   integrity sha512-iiUgKzV9AuaEkZqkOLDIvlQiL6ltuZd9tGcW3gwpnX8JbuiuhFlEGmmFXEXkN50Cvq7Os88IY2v0dkDqXYWVgA==
 
-"@types/node@*", "@types/node@^20.2.5":
+"@types/node@*":
   version "20.2.5"
   resolved "https://registry.yarnpkg.com/@types/node/-/node-20.2.5.tgz#26d295f3570323b2837d322180dfbf1ba156fefb"
   integrity sha512-JJulVEQXmiY9Px5axXHeYGLSjhkZEnD+MDPDGbCbIAbMslkKwmygtZFy1X6s/075Yo94sf8GuSlFfPzysQrWZQ==
@@ -970,6 +972,11 @@
   version "10.17.60"
   resolved "https://registry.yarnpkg.com/@types/node/-/node-10.17.60.tgz#35f3d6213daed95da7f0f73e75bcc6980e90597b"
   integrity sha512-F0KIgDJfy2nA3zMLmWGKxcH2ZVEtCZXHHdOQs2gSaQ27+lNeEfGxzkIw90aXswATX7AZ33tahPbzy6KAfUreVw==
+
+"@types/node@^20.3.1":
+  version "20.3.1"
+  resolved "https://registry.yarnpkg.com/@types/node/-/node-20.3.1.tgz#e8a83f1aa8b649377bb1fb5d7bac5cb90e784dfe"
+  integrity sha512-EhcH/wvidPy1WeML3TtYFGR83UzjxeWRen9V402T8aUGYsCHOmfoisV3ZSg03gAFIbLq8TnWOJ0f4cALtnSEUg==
 
 "@types/node@^8.0.0":
   version "8.10.66"
