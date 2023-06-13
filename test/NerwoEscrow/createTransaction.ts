@@ -50,7 +50,7 @@ describe('NerwoEscrow: createTransaction', function () {
     const { sender, receiver } = await getSigners();
 
     const amount = await randomAmount();
-    await expect(escrow.connect(sender).createTransaction(await escrow.getAddress(), amount, receiver.address, ''))
+    await expect(escrow.connect(sender).createTransaction(await escrow.getAddress(), amount, receiver.address))
       .to.be.revertedWithCustomError(escrow, 'InvalidToken');
   });
 });

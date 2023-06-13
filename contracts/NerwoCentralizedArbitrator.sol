@@ -10,28 +10,36 @@
 pragma solidity ^0.8.18;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import {ERC165} from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
-import {ERC165Checker} from "@openzeppelin/contracts/utils/introspection/ERC165Checker.sol";
-import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+
 import {IArbitrator} from "@kleros/erc-792/contracts/IArbitrator.sol";
 import {IArbitrable} from "@kleros/erc-792/contracts/IArbitrable.sol";
+import {IEvidence} from "@kleros/erc-792/contracts/erc-1497/IEvidence.sol";
+
+import {IArbitrableProxy} from "./IArbitrableProxy.sol";
 
 import {SafeTransfer} from "./SafeTransfer.sol";
 
-contract NerwoCentralizedArbitrator is Ownable, Initializable, ReentrancyGuard, IArbitrator, ERC165 {
-    using ERC165Checker for address;
-    using SafeCast for uint256;
-
+contract NerwoCentralizedArbitrator is
+    Ownable,
+    Initializable,
+    ReentrancyGuard,
+    IArbitrable,
+    IArbitrator,
+    IArbitrableProxy,
+    IEvidence
+{
     error InsufficientPayment();
     error InvalidRuling(uint256 _ruling, uint256 _numberOfChoices);
     error InvalidStatus(DisputeStatus _expected);
 
     error InvalidCaller(address expected);
+    error InvalidArguments();
     error InvalidDispute();
+    error AlreadyResolved();
 
-    struct Dispute {
+    struct ArbitratorDispute {
         IArbitrable arbitrated;
         uint8 choices;
         uint8 ruling;
@@ -39,9 +47,12 @@ contract NerwoCentralizedArbitrator is Ownable, Initializable, ReentrancyGuard, 
     }
 
     uint256 public lastDispute;
-    mapping(uint256 => Dispute) private disputes;
+    mapping(uint256 => ArbitratorDispute) private arbitratorDisputes;
+    mapping(uint256 => DisputeStruct) public disputes;
+
     uint256 private arbitrationPrice; // Not public because arbitrationCost already acts as an accessor.
     uint256 private constant NOT_PAYABLE_VALUE = type(uint256).max; // High value to be sure that the appeal is too expensive.
+    uint256 public constant MAX_NUMBER_OF_CHOICES = 2;
 
     /**
      * @dev Emitted when the arbitration price is updated by the owner.
@@ -51,17 +62,10 @@ contract NerwoCentralizedArbitrator is Ownable, Initializable, ReentrancyGuard, 
     event ArbitrationPriceChanged(uint256 previousPrice, uint256 newPrice);
 
     modifier onlyValidDispute(uint256 _disputeID) {
-        if (address(disputes[_disputeID].arbitrated) == address(0)) {
+        if (address(arbitratorDisputes[_disputeID].arbitrated) == address(0)) {
             revert InvalidDispute();
         }
         _;
-    }
-
-    /**
-     * @dev See {IERC165-supportsInterface}.
-     */
-    function supportsInterface(bytes4 interfaceId) public view virtual override returns (bool) {
-        return interfaceId == type(IArbitrator).interfaceId || super.supportsInterface(interfaceId);
     }
 
     /** @dev contructor
@@ -92,34 +96,33 @@ contract NerwoCentralizedArbitrator is Ownable, Initializable, ReentrancyGuard, 
         emit ArbitrationPriceChanged(previousPrice, _arbitrationPrice);
     }
 
+    /* IArbitrator */
     function createDispute(
         uint256 _choices,
         bytes calldata _extraData
-    ) external payable override returns (uint256 disputeID) {
+    ) public payable override returns (uint256 disputeID) {
         uint256 requiredAmount = arbitrationCost(_extraData);
         if (msg.value != requiredAmount) {
             revert InsufficientPayment();
         }
 
-        if (!_msgSender().supportsInterface(type(IArbitrable).interfaceId)) {
-            revert InvalidCaller(address(0));
+        if (_choices > MAX_NUMBER_OF_CHOICES) {
+            revert InvalidArguments();
         }
-
-        IArbitrable arbitrabled = IArbitrable(_msgSender());
 
         // Create the dispute and return its number.
         unchecked {
             disputeID = ++lastDispute;
         }
 
-        disputes[disputeID] = Dispute({
-            arbitrated: arbitrabled,
-            choices: _choices.toUint8(),
+        arbitratorDisputes[disputeID] = ArbitratorDispute({
+            arbitrated: this,
+            choices: uint8(_choices),
             ruling: 0,
             status: DisputeStatus.Waiting
         });
 
-        emit DisputeCreation(disputeID, arbitrabled);
+        emit DisputeCreation(disputeID, this);
     }
 
     /** @dev Cost of arbitration. Accessor to arbitrationPrice.
@@ -169,7 +172,7 @@ contract NerwoCentralizedArbitrator is Ownable, Initializable, ReentrancyGuard, 
     function disputeStatus(
         uint256 _disputeID
     ) external view override onlyValidDispute(_disputeID) returns (DisputeStatus status) {
-        status = disputes[_disputeID].status;
+        status = arbitratorDisputes[_disputeID].status;
     }
 
     /**
@@ -177,10 +180,29 @@ contract NerwoCentralizedArbitrator is Ownable, Initializable, ReentrancyGuard, 
      * @param _disputeID ID of the dispute.
      * @return ruling The ruling which has been given or the one which will be given if there is no appeal.
      */
-    function currentRuling(
-        uint256 _disputeID
-    ) external view override onlyValidDispute(_disputeID) returns (uint256 ruling) {
-        ruling = disputes[_disputeID].ruling;
+    function currentRuling(uint256 _disputeID) external view override onlyValidDispute(_disputeID) returns (uint256) {
+        return arbitratorDisputes[_disputeID].ruling;
+    }
+
+    /** @dev To be called by the arbitrator of the dispute, to declare winning ruling.
+     *  @param _disputeID ID of the dispute in arbitrator contract.
+     *  @param _ruling The ruling choice of the arbitration.
+     */
+    function rule(uint256 _disputeID, uint256 _ruling) public override onlyValidDispute(_disputeID) {
+        DisputeStruct storage dispute = disputes[_disputeID];
+
+        if (dispute.isRuled) {
+            revert AlreadyResolved();
+        }
+
+        if (_ruling > MAX_NUMBER_OF_CHOICES) {
+            revert InvalidRuling(_ruling, MAX_NUMBER_OF_CHOICES);
+        }
+
+        dispute.isRuled = true;
+        dispute.ruling = _ruling;
+
+        emit Ruling(this, _disputeID, dispute.ruling);
     }
 
     /** @dev Give a ruling.
@@ -192,17 +214,17 @@ contract NerwoCentralizedArbitrator is Ownable, Initializable, ReentrancyGuard, 
         uint256 _disputeID,
         uint256 _ruling
     ) external onlyOwner onlyValidDispute(_disputeID) nonReentrant {
-        Dispute storage dispute = disputes[_disputeID];
+        ArbitratorDispute storage dispute = arbitratorDisputes[_disputeID];
 
-        if (_ruling > dispute.choices) {
-            revert InvalidRuling(_ruling, dispute.choices);
+        if (_ruling > MAX_NUMBER_OF_CHOICES) {
+            revert InvalidRuling(_ruling, MAX_NUMBER_OF_CHOICES);
         }
 
         if (dispute.status != DisputeStatus.Waiting) {
             revert InvalidStatus(DisputeStatus.Waiting);
         }
 
-        dispute.ruling = _ruling.toUint8();
+        dispute.ruling = uint8(_ruling);
         dispute.status = DisputeStatus.Solved;
 
         SafeTransfer.transferTo(payable(_msgSender()), arbitrationPrice);
@@ -210,7 +232,56 @@ contract NerwoCentralizedArbitrator is Ownable, Initializable, ReentrancyGuard, 
         dispute.arbitrated.rule(_disputeID, _ruling);
     }
 
-    function getDispute(uint256 _disputeID) external view onlyValidDispute(_disputeID) returns (Dispute memory) {
-        return disputes[_disputeID];
+    function getDispute(
+        uint256 _disputeID
+    ) external view onlyValidDispute(_disputeID) returns (ArbitratorDispute memory) {
+        return arbitratorDisputes[_disputeID];
+    }
+
+    /* Proxy */
+    function createDispute(
+        bytes calldata _arbitratorExtraData,
+        string calldata _metaevidenceURI,
+        uint256 _numberOfRulingOptions
+    ) external payable override returns (uint256 disputeID) {
+        if (_numberOfRulingOptions > MAX_NUMBER_OF_CHOICES) {
+            revert InvalidArguments();
+        }
+
+        if (_numberOfRulingOptions == 0) {
+            _numberOfRulingOptions = MAX_NUMBER_OF_CHOICES;
+        }
+
+        disputeID = createDispute(_numberOfRulingOptions, _arbitratorExtraData);
+        disputes[disputeID] = DisputeStruct({
+            arbitratorExtraData: _arbitratorExtraData,
+            isRuled: false,
+            ruling: 0,
+            disputeIDOnArbitratorSide: disputeID
+        });
+
+        emit MetaEvidence(disputeID, _metaevidenceURI);
+        emit Dispute(this, disputeID, disputeID, disputeID);
+    }
+
+    /** @dev Submit a reference to evidence. EVENT.
+     *  @param _localDisputeID The index of the transaction.
+     *  @param _evidenceURI Link to evidence.
+     */
+    function submitEvidence(uint256 _localDisputeID, string calldata _evidenceURI) external override {
+        DisputeStruct storage dispute = disputes[_localDisputeID];
+        if (dispute.isRuled) {
+            revert AlreadyResolved();
+        }
+
+        emit Evidence(this, _localDisputeID, msg.sender, _evidenceURI);
+    }
+
+    function arbitrator() external view returns (IArbitrator) {
+        return this;
+    }
+
+    function externalIDtoLocalID(uint256 _externalID) external pure override returns (uint256 localID) {
+        return _externalID;
     }
 }

@@ -1,6 +1,6 @@
 import { expect } from 'chai';
 import { deployments, ethers } from 'hardhat';
-import { BaseContract, ContractRunner, Interface, Signer } from 'ethers';
+import { BaseContract, ContractRunner, Signer } from 'ethers';
 
 import { ClaimableToken, NerwoCentralizedArbitrator, NerwoEscrow, NerwoTetherToken } from '../typechain-types';
 
@@ -11,11 +11,11 @@ export async function getContract<T extends BaseContract>(contractName: string, 
 }
 
 export async function getContracts() {
-    const arbitrator: NerwoCentralizedArbitrator = await getContract('NerwoCentralizedArbitrator');
+    const proxy: NerwoCentralizedArbitrator = await getContract('NerwoCentralizedArbitrator');
     const escrow: NerwoEscrow = await getContract('NerwoEscrow');
     const usdt: NerwoTetherToken = await getContract('NerwoTetherToken');
 
-    return { arbitrator, escrow, usdt };
+    return { proxy, escrow, usdt };
 }
 
 export async function getSigners() {
@@ -27,8 +27,7 @@ export async function createTransaction(
     sender: ContractRunner,
     receiver_address: string,
     token: ClaimableToken,
-    amount: bigint = 0n,
-    metaEvidence = '') {
+    amount: bigint = 0n) {
 
     const blockNumber = await ethers.provider.getBlockNumber();
 
@@ -39,7 +38,7 @@ export async function createTransaction(
     await token.connect(sender).approve(await escrow.getAddress(), amount);
 
     await expect(escrow.connect(sender).createTransaction(
-        await token.getAddress(), amount, receiver_address, metaEvidence))
+        await token.getAddress(), amount, receiver_address))
         .to.changeTokenBalances(
             token,
             [platform, sender],
@@ -55,7 +54,7 @@ export async function createTransaction(
 }
 
 export async function createDispute(sender: Signer, receiver: Signer, transactionID: bigint) {
-    const { escrow } = await getContracts();
+    const { escrow, proxy } = await getContracts();
     const arbitrationPrice = await escrow.arbitrationCost();
 
     await expect(escrow.connect(sender).payArbitrationFeeBySender(
@@ -69,7 +68,7 @@ export async function createDispute(sender: Signer, receiver: Signer, transactio
         .to.emit(escrow, 'Dispute')
         .to.not.emit(escrow, 'HasToPayFee');
 
-    const events = await escrow.queryFilter(escrow.filters.Dispute(), blockNumber);
+    const events = await escrow.queryFilter(proxy.filters.Dispute(), blockNumber);
     expect(events).to.be.an('array');
     expect(events.at(-1)?.args?._disputeID).is.not.undefined;
     return events.at(-1)!.args!._disputeID!;
@@ -94,16 +93,4 @@ const rand = sfc32(0x9e3779b9, 0x243f6a88, 0xb7e15162, 42 ^ 1337);
 
 export async function randomAmount() {
     return 100000000000000n * BigInt(Math.floor(100000 / rand()));
-}
-
-// https://ethereum.stackexchange.com/a/123567/115740
-// upgraded to v6
-export function getInterfaceID(contractInterface: Interface) {
-    let interfaceID: bigint = 0n;
-
-    contractInterface.forEachFunction((func => {
-        interfaceID = interfaceID ^ BigInt(func.selector);
-    }));
-
-    return `0x${interfaceID.toString(16).padStart(8, '0')}`;
 }
