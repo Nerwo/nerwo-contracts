@@ -5,11 +5,15 @@ import { arbitratorArgs } from '../constructors';
 const func: DeployFunction = async function ({ deployments: { deploy, execute }, getNamedAccounts }) {
   const { deployer, court } = await getNamedAccounts();
 
-  await deploy('NerwoCentralizedArbitrator', {
+  const result = await deploy('NerwoCentralizedArbitrator', {
     from: deployer,
     log: true,
     deterministicDeployment: true
   });
+
+  if (!result.newlyDeployed) {
+    return;
+  }
 
   const args = arbitratorArgs(court);
   await execute('NerwoCentralizedArbitrator', {

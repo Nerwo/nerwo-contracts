@@ -7,11 +7,15 @@ const func: DeployFunction = async function ({ deployments: { get, deploy, execu
 
   const arbitrator = await get('NerwoCentralizedArbitrator');
 
-  await deploy('NerwoEscrow', {
+  const result = await deploy('NerwoEscrow', {
     from: deployer,
     log: true,
     deterministicDeployment: true
   });
+
+  if (!result.newlyDeployed) {
+    return;
+  }
 
   let usdt;
   try {
