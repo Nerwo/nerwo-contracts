@@ -48,7 +48,6 @@ contract NerwoCentralizedArbitrator is
 
     uint256 public lastDispute;
     mapping(uint256 => ArbitratorDispute) private arbitratorDisputes;
-    mapping(uint256 => DisputeStruct) public disputes;
 
     uint256 private arbitrationPrice; // Not public because arbitrationCost already acts as an accessor.
     uint256 private constant NOT_PAYABLE_VALUE = type(uint256).max; // High value to be sure that the appeal is too expensive.
@@ -189,9 +188,13 @@ contract NerwoCentralizedArbitrator is
      *  @param _ruling The ruling choice of the arbitration.
      */
     function rule(uint256 _disputeID, uint256 _ruling) public override onlyValidDispute(_disputeID) {
-        DisputeStruct storage dispute = disputes[_disputeID];
+        if (_msgSender() != address(this)) {
+            revert InvalidCaller(address(this));
+        }
 
-        if (dispute.isRuled) {
+        ArbitratorDispute storage dispute = arbitratorDisputes[_disputeID];
+
+        if (dispute.status == DisputeStatus.Solved) {
             revert AlreadyResolved();
         }
 
@@ -199,8 +202,8 @@ contract NerwoCentralizedArbitrator is
             revert InvalidRuling(_ruling, MAX_NUMBER_OF_CHOICES);
         }
 
-        dispute.isRuled = true;
-        dispute.ruling = _ruling;
+        dispute.status = DisputeStatus.Solved;
+        dispute.ruling = uint8(_ruling);
 
         emit Ruling(this, _disputeID, dispute.ruling);
     }
@@ -224,12 +227,9 @@ contract NerwoCentralizedArbitrator is
             revert InvalidStatus(DisputeStatus.Waiting);
         }
 
-        dispute.ruling = uint8(_ruling);
-        dispute.status = DisputeStatus.Solved;
+        dispute.arbitrated.rule(_disputeID, _ruling);
 
         SafeTransfer.transferTo(payable(_msgSender()), arbitrationPrice);
-
-        dispute.arbitrated.rule(_disputeID, _ruling);
     }
 
     function getDispute(
@@ -253,12 +253,6 @@ contract NerwoCentralizedArbitrator is
         }
 
         disputeID = createDispute(_numberOfRulingOptions, _arbitratorExtraData);
-        disputes[disputeID] = DisputeStruct({
-            arbitratorExtraData: _arbitratorExtraData,
-            isRuled: false,
-            ruling: 0,
-            disputeIDOnArbitratorSide: disputeID
-        });
 
         emit MetaEvidence(disputeID, _metaevidenceURI);
         emit Dispute(this, disputeID, disputeID, disputeID);
@@ -268,9 +262,12 @@ contract NerwoCentralizedArbitrator is
      *  @param _localDisputeID The index of the transaction.
      *  @param _evidenceURI Link to evidence.
      */
-    function submitEvidence(uint256 _localDisputeID, string calldata _evidenceURI) external override {
-        DisputeStruct storage dispute = disputes[_localDisputeID];
-        if (dispute.isRuled) {
+    function submitEvidence(
+        uint256 _localDisputeID,
+        string calldata _evidenceURI
+    ) external override onlyValidDispute(_localDisputeID) {
+        ArbitratorDispute storage dispute = arbitratorDisputes[_localDisputeID];
+        if (dispute.status == DisputeStatus.Solved) {
             revert AlreadyResolved();
         }
 
@@ -283,5 +280,17 @@ contract NerwoCentralizedArbitrator is
 
     function externalIDtoLocalID(uint256 _externalID) external pure override returns (uint256 localID) {
         return _externalID;
+    }
+
+    function disputes(
+        uint256 _localID
+    )
+        external
+        view
+        onlyValidDispute(_localID)
+        returns (bytes memory extraData, bool isRuled, uint256 ruling, uint256 disputeIDOnArbitratorSide)
+    {
+        ArbitratorDispute storage dispute = arbitratorDisputes[_localID];
+        return ("", dispute.status == DisputeStatus.Solved, dispute.ruling, _localID);
     }
 }
