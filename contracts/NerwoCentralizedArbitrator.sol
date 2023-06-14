@@ -82,7 +82,9 @@ contract NerwoCentralizedArbitrator is
      *  @param _arbitrationPrice Amount to be paid for arbitration.
      */
     function initialize(address _owner, uint256 _arbitrationPrice) external onlyOwner initializer {
-        _transferOwnership(_owner);
+        if (owner() != _owner) {
+            _transferOwnership(_owner);
+        }
         arbitrationPrice = _arbitrationPrice;
     }
 
