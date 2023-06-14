@@ -1,7 +1,8 @@
 import { ZeroAddress, parseEther } from 'ethers';
 
-export const SENDER_WINS = 1;
-export const RECEIVER_WINS = 2;
+export const SPLIT_AMOUNT = 0n;
+export const SENDER_WINS = 1n;
+export const RECEIVER_WINS = 2n;
 
 export const FEE_TIMEOUT = parseInt(process.env.NERWO_FEE_TIMEOUT, 10);
 export const FEE_RECIPIENT_BASISPOINT = parseInt(process.env.NERWO_FEE_RECIPIENT_BASISPOINT);

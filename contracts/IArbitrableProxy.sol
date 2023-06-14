@@ -28,7 +28,7 @@ interface IArbitrableProxy {
 
     function disputes(
         uint256 _localID
-    ) external returns (bytes memory extraData, bool isRuled, uint256 ruling, uint256 disputeIDOnArbitratorSide);
+    ) external view returns (bytes memory extraData, bool isRuled, uint256 ruling, uint256 disputeIDOnArbitratorSide);
 
     function submitEvidence(uint256 _localDisputeID, string calldata _evidenceURI) external;
 }

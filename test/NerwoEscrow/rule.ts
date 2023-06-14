@@ -67,7 +67,11 @@ describe('NerwoEscrow: rule', function () {
     const { proxy, escrow, usdt } = await getContracts();
     const { platform, court, sender, receiver } = await getSigners();
 
+    expect((await escrow.fetchRuling(transactionID)).isRuled).to.be.equal(false);
     await proxy.connect(court).giveRuling(disputeID, constants.SENDER_WINS);
+    const {isRuled, ruling} = await escrow.fetchRuling(transactionID);
+    expect (isRuled).to.be.equal(true);
+    expect (ruling).to.be.equal(constants.SENDER_WINS);
 
     // SENDER_WINS -> no platform fee
     await expect(escrow.connect(sender).acceptRuling(transactionID))
@@ -86,7 +90,11 @@ describe('NerwoEscrow: rule', function () {
     const { proxy, escrow, usdt } = await getContracts();
     const { platform, court, sender, receiver } = await getSigners();
 
+    expect((await escrow.fetchRuling(transactionID)).isRuled).to.be.equal(false);
     await proxy.connect(court).giveRuling(disputeID, constants.RECEIVER_WINS);
+    const {isRuled, ruling} = await escrow.fetchRuling(transactionID);
+    expect (isRuled).to.be.equal(true);
+    expect (ruling).to.be.equal(constants.RECEIVER_WINS);
 
     // RECEIVER_WINS -> platform gains
     await expect(escrow.connect(receiver).acceptRuling(transactionID))
@@ -108,7 +116,11 @@ describe('NerwoEscrow: rule', function () {
     const splitAmount = amount / 2n;
     const splitFee = feeAmount / 2n;
 
-    await proxy.connect(court).giveRuling(disputeID, 0);
+    expect((await escrow.fetchRuling(transactionID)).isRuled).to.be.equal(false);
+    await proxy.connect(court).giveRuling(disputeID, constants.SPLIT_AMOUNT);
+    const {isRuled, ruling} = await escrow.fetchRuling(transactionID);
+    expect (isRuled).to.be.equal(true);
+    expect (ruling).to.be.equal(constants.SPLIT_AMOUNT);
 
     await expect(escrow.connect(sender).acceptRuling(transactionID))
       .to.changeEtherBalances(

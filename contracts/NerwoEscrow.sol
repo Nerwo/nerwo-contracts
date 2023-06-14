@@ -669,4 +669,19 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
     function arbitrationCost() external view returns (uint256) {
         return arbitratorData.arbitrator.arbitrationCost(arbitratorExtraData);
     }
+
+    /** @dev Get ruling for the disupte of given transaction
+     *  @param _transactionID the transaction the dispute was created from.
+     */
+    function fetchRuling(
+        uint256 _transactionID
+    ) external view onlyValidTransaction(_transactionID) returns (bool isRuled, uint256 ruling) {
+        Transaction storage transaction = transactions[_transactionID];
+
+        if (transaction.status != Status.DisputeCreated) {
+            revert InvalidStatus(uint256(Status.DisputeCreated));
+        }
+
+        (, isRuled, ruling, ) = arbitratorData.proxy.disputes(transaction.disputeID);
+    }
 }
