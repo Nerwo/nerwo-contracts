@@ -12,45 +12,45 @@ describe('NerwoEscrow: createTransaction', function () {
   });
 
   it('Creating a simple transaction', async () => {
-    const { escrow, usdt } = await getContracts();
-    const { sender, receiver } = await getSigners();
+    const { usdt } = await getContracts();
+    const { client, freelance } = await getSigners();
 
     const amount = await randomAmount();
-    await createTransaction(sender, receiver.address, usdt, amount);
+    await createTransaction(client, freelance.address, usdt, amount);
   });
 
   it('Creating a transaction with myself', async () => {
     const { escrow, usdt } = await getContracts();
-    const { sender } = await getSigners();
+    const { client } = await getSigners();
 
     const amount = await randomAmount();
-    await expect(createTransaction(sender, sender.address, usdt, amount))
+    await expect(createTransaction(client, client.address, usdt, amount))
       .to.be.revertedWithCustomError(escrow, 'InvalidCaller');
   });
 
-  it('Creating a transaction with null receiver', async () => {
+  it('Creating a transaction with null freelance', async () => {
     const { escrow, usdt } = await getContracts();
-    const { sender } = await getSigners();
+    const { client } = await getSigners();
 
     const amount = await randomAmount();
-    await expect(createTransaction(sender, ZeroAddress, usdt, amount))
+    await expect(createTransaction(client, ZeroAddress, usdt, amount))
       .to.be.revertedWithCustomError(escrow, 'NullAddress');
   });
 
   it('Creating a transaction with 0 amount', async () => {
     const { escrow, usdt } = await getContracts();
-    const { sender, receiver } = await getSigners();
+    const { client, freelance } = await getSigners();
 
-    await expect(createTransaction(sender, receiver.address, usdt))
+    await expect(createTransaction(client, freelance.address, usdt))
       .to.be.revertedWithCustomError(escrow, 'InvalidAmount');
   });
 
   it('InvalidToken', async () => {
     const { escrow } = await getContracts();
-    const { sender, receiver } = await getSigners();
+    const { client, freelance } = await getSigners();
 
     const amount = await randomAmount();
-    await expect(escrow.connect(sender).createTransaction(await escrow.getAddress(), amount, receiver.address))
+    await expect(escrow.connect(client).createTransaction(await escrow.getAddress(), amount, freelance.address))
       .to.be.revertedWithCustomError(escrow, 'InvalidToken');
   });
 });

@@ -11,22 +11,22 @@ describe('NerwoEscrow: changeFeeRecipient', function () {
 
   it('Changing fee recipient', async () => {
     const { escrow } = await getContracts();
-    const { platform, sender } = await getSigners();
+    const { platform, client } = await getSigners();
 
-    await expect(escrow.connect(platform).changeFeeRecipient(sender.address))
+    await expect(escrow.connect(platform).changeFeeRecipient(client.address))
       .to.emit(escrow, 'FeeRecipientChanged')
-      .withArgs(platform.address, sender.address);
+      .withArgs(platform.address, client.address);
 
-    await expect(escrow.connect(sender).changeFeeRecipient(platform.address))
+    await expect(escrow.connect(client).changeFeeRecipient(platform.address))
       .to.emit(escrow, 'FeeRecipientChanged')
-      .withArgs(sender.address, platform.address);
+      .withArgs(client.address, platform.address);
   });
 
   it('Changing fee recipient: invalid caller', async () => {
     const { escrow } = await getContracts();
-    const { platform, sender } = await getSigners();
+    const { platform, client } = await getSigners();
 
-    await expect(escrow.connect(sender).changeFeeRecipient(sender.address))
-      .to.be.revertedWithCustomError(escrow, 'InvalidCaller').withArgs(platform.address);
+    await expect(escrow.connect(client).changeFeeRecipient(client.address))
+      .to.be.revertedWithCustomError(escrow, 'InvalidCaller');
   });
 });

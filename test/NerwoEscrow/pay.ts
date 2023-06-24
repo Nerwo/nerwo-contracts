@@ -12,26 +12,26 @@ describe('NerwoEscrow: pay', function () {
 
   it('create a transaction and pay', async () => {
     const { escrow, usdt } = await getContracts();
-    const { platform, sender, receiver } = await getSigners();
+    const { platform, client, freelance } = await getSigners();
 
     let amount = await randomAmount();
-    const _transactionID = await createTransaction(sender, receiver.address, usdt, amount);
+    const _transactionID = await createTransaction(client, freelance.address, usdt, amount);
 
-    await expect(escrow.connect(sender).pay(_transactionID, 0))
+    await expect(escrow.connect(client).pay(_transactionID, 0))
       .to.be.revertedWithCustomError(escrow, 'InvalidAmount');
 
-    await expect(escrow.connect(sender).pay(_transactionID, amount * 2n))
+    await expect(escrow.connect(client).pay(_transactionID, amount * 2n))
       .to.be.revertedWithCustomError(escrow, 'InvalidAmount');
 
     const feeAmount = await escrow.calculateFeeRecipientAmount(amount);
 
-    await expect(escrow.connect(sender).pay(_transactionID, amount))
+    await expect(escrow.connect(client).pay(_transactionID, amount))
       .to.changeTokenBalances(
         usdt,
-        [escrow, platform, receiver],
+        [escrow, platform, freelance],
         [-amount, feeAmount, amount - feeAmount]
       )
-      .to.emit(escrow, 'Payment').withArgs(_transactionID, await usdt.getAddress(), amount, sender.address)
+      .to.emit(escrow, 'Payment').withArgs(_transactionID, await usdt.getAddress(), amount, client.address)
       .to.emit(escrow, 'FeeRecipientPayment');
   });
 });

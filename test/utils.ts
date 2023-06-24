@@ -19,12 +19,12 @@ export async function getContracts() {
 }
 
 export async function getSigners() {
-    const [deployer, platform, court, sender, receiver] = await ethers.getSigners();
-    return { deployer, platform, court, sender, receiver };
+    const [deployer, platform, court, client, freelance] = await ethers.getSigners();
+    return { deployer, platform, court, client, freelance };
 }
 
 export async function createTransaction(
-    sender: ContractRunner,
+    client: ContractRunner,
     receiver_address: string,
     token: NerwoTetherToken,
     amount: bigint = 0n) {
@@ -34,44 +34,23 @@ export async function createTransaction(
     const { escrow } = await getContracts();
     const { platform } = await getSigners();
 
-    await token.connect(sender).mint(amount);
-    await token.connect(sender).approve(await escrow.getAddress(), amount);
+    await token.connect(client).mint(amount);
+    await token.connect(client).approve(await escrow.getAddress(), amount);
 
-    await expect(escrow.connect(sender).createTransaction(
+    await expect(escrow.connect(client).createTransaction(
         await token.getAddress(), amount, receiver_address))
         .to.changeTokenBalances(
             token,
-            [platform, sender],
+            [platform, client],
             [0, -amount]
         )
         .to.emit(escrow, 'TransactionCreated');
 
     const events = await escrow.queryFilter(escrow.filters.TransactionCreated(), blockNumber);
     expect(events).to.be.an('array');
-    expect(events.at(-1)?.args?._transactionID).is.not.undefined;
+    expect(events.at(-1)?.args?.transactionID).is.not.undefined;
 
-    return events.at(-1)!.args!._transactionID!;
-}
-
-export async function createDispute(sender: Signer, receiver: Signer, transactionID: bigint) {
-    const { escrow, proxy } = await getContracts();
-    const arbitrationPrice = await escrow.arbitrationCost();
-
-    await expect(escrow.connect(sender).payArbitrationFeeBySender(
-        transactionID, { value: arbitrationPrice }))
-        .to.emit(escrow, 'HasToPayFee');
-
-    const blockNumber = await ethers.provider.getBlockNumber();
-
-    await expect(escrow.connect(receiver).payArbitrationFeeByReceiver(
-        transactionID, { value: arbitrationPrice }))
-        .to.emit(escrow, 'Dispute')
-        .to.not.emit(escrow, 'HasToPayFee');
-
-    const events = await escrow.queryFilter(proxy.filters.Dispute(), blockNumber);
-    expect(events).to.be.an('array');
-    expect(events.at(-1)?.args?._disputeID).is.not.undefined;
-    return events.at(-1)!.args!._disputeID!;
+    return events.at(-1)!.args!.transactionID!;
 }
 
 function sfc32(a: number, b: number, c: number, d: number) {

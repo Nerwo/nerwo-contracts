@@ -20,9 +20,9 @@ describe('NerwoEscrow: setTokensWhitelist', function () {
 
   it('errors', async () => {
     const { escrow } = await getContracts();
-    const { sender } = await getSigners();
+    const { client } = await getSigners();
 
-    await expect(escrow.connect(sender).setTokensWhitelist([]))
+    await expect(escrow.connect(client).setTokensWhitelist([]))
       .to.be.revertedWith('Ownable: caller is not the owner');
   });
 });

@@ -4,17 +4,17 @@
  *  @author: [@eburgos, @n1c01a5, @sherpya]
  *
  *  @notice This contract implements an escrow system with dispute resolution, allowing secure transactions
- * between a sender and a receiver. The contract holds funds on behalf of the sender until the transaction
+ * between a client and a freelance. The contract holds funds on behalf of the client until the transaction
  * is completed or a dispute arises. If a dispute occurs, an external arbitrator determines the outcome.
  *
  * The main features of the contract are:
- * 1. Create transactions: The sender initializes a transaction by providing details such as the receiver's
+ * 1. Create transactions: The client initializes a transaction by providing details such as the freelance's
  *    address, the transaction amount, and any associated fees.
- * 2. Make payments: The sender can pay the receiver if the goods or services are provided as expected.
- * 3. Reimbursements: The receiver can reimburse the sender if the goods or services cannot be fully provided.
- * 4. Execute transactions: If the timeout has passed, the receiver can execute the transaction and receive
+ * 2. Make payments: The client can pay the freelance if the goods or services are provided as expected.
+ * 3. Reimbursements: The freelance can reimburse the client if the goods or services cannot be fully provided.
+ * 4. Execute transactions: If the timeout has passed, the freelance can execute the transaction and receive
  *    the transaction amount.
- * 5. Timeouts: Both the sender and receiver can trigger a timeout if the counterparty fails to pay the arbitration fee.
+ * 5. Timeouts: Both the client and freelance can trigger a timeout if the counterparty fails to pay the arbitration fee.
  * 6. Raise disputes and handle arbitration fees: Both parties can raise disputes and pay arbitration fees. The
  *    contract ensures that both parties pay the fees before raising a dispute.
  * 7. Submit evidence: Both parties can submit evidence to support their case during a dispute.
@@ -38,8 +38,8 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
 
     error NullAddress();
     error NoTimeout();
-    error InvalidCaller(address expected);
-    error InvalidStatus(uint256 expected);
+    error InvalidCaller();
+    error InvalidStatus();
     error InvalidAmount();
     error InvalidTransaction();
     error InvalidToken();
@@ -50,19 +50,14 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
     // *    Contract variables    * //
     // **************************** //
     uint8 private constant AMOUNT_OF_CHOICES = 2;
-    uint8 private constant SENDER_WINS = 1;
-    uint8 private constant RECEIVER_WINS = 2;
+    uint8 private constant CLIENT_WINS = 1;
+    uint8 private constant FREELANCE_WINS = 2;
     uint256 private constant MULTIPLIER_DIVISOR = 10000; // Divisor parameter for multipliers.
-
-    enum Party {
-        Sender,
-        Receiver
-    }
 
     enum Status {
         NoDispute,
-        WaitingSender,
-        WaitingReceiver,
+        WaitingClient,
+        WaitingFreelance,
         DisputeCreated,
         Resolved
     }
@@ -70,18 +65,18 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
     struct Transaction {
         Status status;
         uint32 lastInteraction; // Last interaction for the dispute procedure.
-        address sender;
-        address receiver;
+        address client;
+        address freelance;
         IERC20 token;
         uint256 amount;
         uint256 disputeID; // If dispute exists, the ID of the dispute.
-        uint256 senderFee; // Total fees paid by the sender.
-        uint256 receiverFee; // Total fees paid by the receiver.
+        uint256 clientFee; // Total fees paid by the client.
+        uint256 freelanceFee; // Total fees paid by the freelance.
     }
 
     uint256 public lastTransaction;
 
-    IERC20[] private tokensWhitelist; // whitelisted ERC20 tokens
+    IERC20[] private tokensWhitelist_; // whitelisted ERC20 tokens
 
     struct ArbitratorData {
         IArbitrator arbitrator; // Address of the arbitrator contract.
@@ -100,63 +95,63 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
 
     mapping(uint256 => Transaction) private transactions;
 
-    bytes public arbitratorExtraData; // Extra data to set up the arbitration.
-    string public metaEvidenceURI;
+    bytes public arbitratorExtraData_; // Extra data to set up the arbitration.
+    string public metaEvidenceURI_;
 
     // **************************** //
     // *          Events          * //
     // **************************** //
 
     /** @dev To be emitted when a party pays or reimburses the other.
-     *  @param _transactionID The index of the transaction.
-     *  @param _token The token address.
-     *  @param _amount The amount paid.
-     *  @param _party The party that paid.
+     *  @param transactionID The index of the transaction.
+     *  @param token The token address.
+     *  @param amount The amount paid.
+     *  @param party The party that paid.
      */
-    event Payment(uint256 indexed _transactionID, address indexed _token, uint256 _amount, address indexed _party);
+    event Payment(uint256 indexed transactionID, IERC20 indexed token, uint256 amount, address indexed party);
 
     /** @dev Indicate that a party has to pay a fee or would otherwise be considered as losing.
-     *  @param _transactionID The index of the transaction.
-     *  @param _party The party who has to pay.
+     *  @param transactionID The index of the transaction.
+     *  @param party The party who has to pay.
      */
-    event HasToPayFee(uint256 indexed _transactionID, Party _party);
+    event HasToPayFee(uint256 indexed transactionID, address party);
 
     /** @dev Emitted when a transaction is created.
-     *  @param _transactionID The index of the transaction.
-     *  @param _sender The address of the sender.
-     *  @param _receiver The address of the receiver.
-     *  @param _token The token address
-     *  @param _amount The initial amount in the transaction.
+     *  @param transactionID The index of the transaction.
+     *  @param client The address of the client.
+     *  @param freelance The address of the freelance.
+     *  @param token The token address
+     *  @param amount The initial amount in the transaction.
      */
     event TransactionCreated(
-        uint256 _transactionID,
-        address indexed _sender,
-        address indexed _receiver,
-        address indexed _token,
-        uint256 _amount
+        uint256 transactionID,
+        address indexed client,
+        address indexed freelance,
+        IERC20 indexed token,
+        uint256 amount
     );
 
     /** @dev To be emitted when a fee is received by the feeRecipient.
-     *  @param _transactionID The index of the transaction.
-     *  @param _token The Token Address.
-     *  @param _amount The amount paid.
+     *  @param transactionID The index of the transaction.
+     *  @param token The Token Address.
+     *  @param amount The amount paid.
      */
-    event FeeRecipientPayment(uint256 indexed _transactionID, address indexed _token, uint256 _amount);
+    event FeeRecipientPayment(uint256 indexed transactionID, IERC20 indexed token, uint256 amount);
 
     /** @dev To be emitted when a feeRecipient is changed.
-     *  @param _oldFeeRecipient Previous feeRecipient.
-     *  @param _newFeeRecipient Current feeRecipient.
+     *  @param oldFeeRecipient Previous feeRecipient.
+     *  @param newFeeRecipient Current feeRecipient.
      */
-    event FeeRecipientChanged(address indexed _oldFeeRecipient, address indexed _newFeeRecipient);
+    event FeeRecipientChanged(address indexed oldFeeRecipient, address indexed newFeeRecipient);
 
-    function _requireValidTransaction(uint256 _transactionID) internal view {
-        if (transactions[_transactionID].receiver == address(0)) {
+    function _requireValidTransaction(uint256 transactionID) internal view {
+        if (transactions[transactionID].freelance == address(0)) {
             revert InvalidTransaction();
         }
     }
 
-    modifier onlyValidTransaction(uint256 _transactionID) {
-        _requireValidTransaction(_transactionID);
+    modifier onlyValidTransaction(uint256 transactionID) {
+        _requireValidTransaction(transactionID);
         _;
     }
 
@@ -171,32 +166,32 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
     }
 
     /** @dev initialize (deferred constructor)
-     *  @param _owner The initial owner
-     *  @param _arbitrator The arbitrator of the contract.
-     *  @param _arbitratorProxy The arbitrator proxy of the contract.
-     *  @param _arbitratorExtraData Extra data for the arbitrator.
-     *  @param _feeTimeout Arbitration fee timeout for the parties.
-     *  @param _feeRecipient Address which receives a share of receiver payment.
-     *  @param _feeRecipientBasisPoint The share of fee to be received by the feeRecipient,
+     *  @param owner_ The initial owner
+     *  @param arbitrator The arbitrator of the contract.
+     *  @param arbitratorProxy The arbitrator proxy of the contract.
+     *  @param arbitratorExtraData Extra data for the arbitrator.
+     *  @param feeTimeout Arbitration fee timeout for the parties.
+     *  @param feeRecipient Address which receives a share of receiver payment.
+     *  @param feeRecipientBasisPoint The share of fee to be received by the feeRecipient,
      *                                 down to 2 decimal places as 550 = 5.5%
-     *  @param _tokensWhitelist List of whitelisted ERC20 tokens
+     *  @param tokensWhitelist List of whitelisted ERC20 tokens
      */
     function initialize(
-        address _owner,
-        address _arbitrator,
-        address _arbitratorProxy,
-        bytes calldata _arbitratorExtraData,
-        uint256 _feeTimeout,
-        address _feeRecipient,
-        uint256 _feeRecipientBasisPoint,
-        IERC20[] calldata _tokensWhitelist
+        address owner_,
+        address arbitrator,
+        address arbitratorProxy,
+        bytes calldata arbitratorExtraData,
+        uint256 feeTimeout,
+        address feeRecipient,
+        uint256 feeRecipientBasisPoint,
+        IERC20[] calldata tokensWhitelist
     ) external onlyOwner initializer {
-        if (owner() != _owner) {
-            _transferOwnership(_owner);
+        if (owner() != owner_) {
+            _transferOwnership(owner_);
         }
-        _setArbitratorData(_arbitrator, _arbitratorProxy, _arbitratorExtraData, _feeTimeout);
-        _setFeeRecipientAndBasisPoint(_feeRecipient, _feeRecipientBasisPoint);
-        _setTokensWhitelist(_tokensWhitelist);
+        _setArbitratorData(arbitrator, arbitratorProxy, arbitratorExtraData, feeTimeout);
+        _setFeeRecipientAndBasisPoint(feeRecipient, feeRecipientBasisPoint);
+        _setTokensWhitelist(tokensWhitelist);
     }
 
     // **************************** //
@@ -205,170 +200,166 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
 
     /**
      *  @dev modifies Arbitrator - Internal function without access restriction
-     *  @param _arbitrator The arbitrator of the contract.
-     *  @param _arbitratorProxy The arbitrator proxy of the contract.
-     *  @param _arbitratorExtraData Extra data for the arbitrator.
-     *  @param _feeTimeout Arbitration fee timeout for the parties.
+     *  @param arbitrator The arbitrator of the contract.
+     *  @param arbitratorProxy The arbitrator proxy of the contract.
+     *  @param arbitratorExtraData Extra data for the arbitrator.
+     *  @param feeTimeout Arbitration fee timeout for the parties.
      */
     function _setArbitratorData(
-        address _arbitrator,
-        address _arbitratorProxy,
-        bytes calldata _arbitratorExtraData,
-        uint256 _feeTimeout
+        address arbitrator,
+        address arbitratorProxy,
+        bytes calldata arbitratorExtraData,
+        uint256 feeTimeout
     ) internal {
-        arbitratorData.arbitrator = IArbitrator(_arbitrator);
-        arbitratorData.proxy = IArbitrableProxy(_arbitratorProxy);
-        arbitratorExtraData = _arbitratorExtraData;
-        arbitratorData.feeTimeout = uint32(_feeTimeout);
+        arbitratorData.arbitrator = IArbitrator(arbitrator);
+        arbitratorData.proxy = IArbitrableProxy(arbitratorProxy);
+        arbitratorExtraData_ = arbitratorExtraData;
+        arbitratorData.feeTimeout = uint32(feeTimeout);
     }
 
     /**
      *  @dev modifies Arbitrator Data - External function onlyOwner
-     *  @param _arbitrator The arbitrator of the contract.
-     *  @param _arbitratorProxy The arbitrator proxy of the contract.
-     *  @param _arbitratorExtraData Extra data for the arbitrator.
-     *  @param _feeTimeout Arbitration fee timeout for the parties.
+     *  @param arbitrator The arbitrator of the contract.
+     *  @param arbitratorProxy The arbitrator proxy of the contract.
+     *  @param arbitratorExtraData Extra data for the arbitrator.
+     *  @param feeTimeout Arbitration fee timeout for the parties.
      */
     function setArbitratorData(
-        address _arbitrator,
-        address _arbitratorProxy,
-        bytes calldata _arbitratorExtraData,
-        uint256 _feeTimeout
+        address arbitrator,
+        address arbitratorProxy,
+        bytes calldata arbitratorExtraData,
+        uint256 feeTimeout
     ) external onlyOwner {
-        _setArbitratorData(_arbitrator, _arbitratorProxy, _arbitratorExtraData, _feeTimeout);
+        _setArbitratorData(arbitrator, arbitratorProxy, arbitratorExtraData, feeTimeout);
     }
 
     /**
      *  @dev modifies fee recipient and basis point - Internal function without access restriction
-     *  @param _feeRecipient Address which receives a share of receiver payment.
-     *  @param _feeRecipientBasisPoint The share of fee to be received by the feeRecipient,
+     *  @param feeRecipient Address which receives a share of receiver payment.
+     *  @param feeRecipientBasisPoint The share of fee to be received by the feeRecipient,
      *         down to 2 decimal places as 550 = 5.5%
      */
-    function _setFeeRecipientAndBasisPoint(address _feeRecipient, uint256 _feeRecipientBasisPoint) internal {
-        uint16 feeRecipientBasisPoint = uint16(_feeRecipientBasisPoint);
-        if (feeRecipientBasisPoint > MULTIPLIER_DIVISOR) {
+    function _setFeeRecipientAndBasisPoint(address feeRecipient, uint256 feeRecipientBasisPoint) internal {
+        uint16 feeRecipientBasisPoint_ = uint16(feeRecipientBasisPoint);
+        if (feeRecipientBasisPoint_ > MULTIPLIER_DIVISOR) {
             revert InvalidFeeBasisPoint();
         }
 
-        feeRecipientData.feeRecipient = payable(_feeRecipient);
-        feeRecipientData.feeRecipientBasisPoint = feeRecipientBasisPoint;
+        feeRecipientData.feeRecipient = payable(feeRecipient);
+        feeRecipientData.feeRecipientBasisPoint = feeRecipientBasisPoint_;
     }
 
     /**
      * @dev set platform metaEvedence IPFS URI
-     * @param _metaEvidenceURI The URI pointing to metaEvidence.json
+     * @param metaEvidenceURI The URI pointing to metaEvidence.json
      */
-    function setMetaEvidenceURI(string calldata _metaEvidenceURI) external onlyOwner {
-        _setMetaEvidenceURI(_metaEvidenceURI);
+    function setMetaEvidenceURI(string calldata metaEvidenceURI) external onlyOwner {
+        _setMetaEvidenceURI(metaEvidenceURI);
     }
 
-    function _setMetaEvidenceURI(string calldata _metaEvidenceURI) internal {
-        metaEvidenceURI = _metaEvidenceURI;
+    function _setMetaEvidenceURI(string calldata metaEvidenceURI) internal {
+        metaEvidenceURI_ = metaEvidenceURI;
     }
 
     /**
      *  @dev modifies fee recipient and basis point - External function onlyOwner
-     *  @param _feeRecipient Address which receives a share of receiver payment.
-     *  @param _feeRecipientBasisPoint The share of fee to be received by the feeRecipient,
+     *  @param feeRecipient Address which receives a share of receiver payment.
+     *  @param feeRecipientBasisPoint The share of fee to be received by the feeRecipient,
      *         down to 2 decimal places as 550 = 5.5%
      */
-    function setFeeRecipientAndBasisPoint(address _feeRecipient, uint256 _feeRecipientBasisPoint) external onlyOwner {
-        _setFeeRecipientAndBasisPoint(_feeRecipient, _feeRecipientBasisPoint);
+    function setFeeRecipientAndBasisPoint(address feeRecipient, uint256 feeRecipientBasisPoint) external onlyOwner {
+        _setFeeRecipientAndBasisPoint(feeRecipient, feeRecipientBasisPoint);
     }
 
-    function setTokensWhitelist(IERC20[] calldata _tokensWhitelist) external onlyOwner {
-        _setTokensWhitelist(_tokensWhitelist);
+    function setTokensWhitelist(IERC20[] calldata tokensWhitelist) external onlyOwner {
+        _setTokensWhitelist(tokensWhitelist);
     }
 
     /**
      * @dev Sets the whitelist of ERC20 tokens
-     * @param _tokensWhitelist An array of ERC20 tokens
+     * @param tokensWhitelist An array of ERC20 tokens
      */
-    function _setTokensWhitelist(IERC20[] calldata _tokensWhitelist) internal {
+    function _setTokensWhitelist(IERC20[] calldata tokensWhitelist) internal {
         unchecked {
-            delete tokensWhitelist;
-            for (uint i = 0; i < _tokensWhitelist.length; i++) {
-                tokensWhitelist.push(_tokensWhitelist[i]);
+            delete tokensWhitelist_;
+            for (uint i = 0; i < tokensWhitelist.length; i++) {
+                tokensWhitelist_.push(tokensWhitelist[i]);
             }
         }
     }
 
     /** @dev Change Fee Recipient.
-     *  @param _newFeeRecipient Address of the new Fee Recipient.
+     *  @param newFeeRecipient Address of the new Fee Recipient.
      */
-    function changeFeeRecipient(address _newFeeRecipient) external {
+    function changeFeeRecipient(address newFeeRecipient) external {
         if (_msgSender() != feeRecipientData.feeRecipient) {
-            revert InvalidCaller(feeRecipientData.feeRecipient);
+            revert InvalidCaller();
         }
 
-        if (_newFeeRecipient == address(0)) {
+        if (newFeeRecipient == address(0)) {
             revert NullAddress();
         }
 
-        feeRecipientData.feeRecipient = _newFeeRecipient;
-        emit FeeRecipientChanged(_msgSender(), _newFeeRecipient);
+        feeRecipientData.feeRecipient = newFeeRecipient;
+        emit FeeRecipientChanged(_msgSender(), newFeeRecipient);
     }
 
-    // **************************** //
-    // *   Arbitrable functions   * //
-    // **************************** //
-
     /** @dev Calculate the amount to be paid in wei according to feeRecipientBasisPoint for a particular amount.
-     *  @param _amount Amount to pay in wei.
+     *  @param amount Amount to pay in wei.
      */
-    function calculateFeeRecipientAmount(uint256 _amount) public view returns (uint256) {
-        return (_amount * feeRecipientData.feeRecipientBasisPoint) / MULTIPLIER_DIVISOR;
+    function calculateFeeRecipientAmount(uint256 amount) public view returns (uint256) {
+        return (amount * feeRecipientData.feeRecipientBasisPoint) / MULTIPLIER_DIVISOR;
     }
 
     /** @dev Create a transaction.
-     *  @param _token The ERC20 token contract.
-     *  @param _amount The amount of tokens in this transaction.
-     *  @param _receiver The recipient of the transaction.
+     *  @param token The ERC20 token contract.
+     *  @param amount The amount of tokens in this transaction.
+     *  @param freelance The recipient of the transaction.
      *  @return transactionID The index of the transaction.
      */
     function createTransaction(
-        IERC20 _token,
-        uint256 _amount,
-        address _receiver
+        IERC20 token,
+        uint256 amount,
+        address freelance
     ) external returns (uint256 transactionID) {
-        if (_receiver == address(0)) {
+        if (freelance == address(0)) {
             revert NullAddress();
         }
 
-        if (_amount == 0) {
+        if (amount == 0) {
             revert InvalidAmount();
         }
 
         // Amount too low to pay fee
         // WTF: solidity, nested if consumes less gas
         if (feeRecipientData.feeRecipientBasisPoint > 0) {
-            if ((_amount * feeRecipientData.feeRecipientBasisPoint) < MULTIPLIER_DIVISOR) {
+            if ((amount * feeRecipientData.feeRecipientBasisPoint) < MULTIPLIER_DIVISOR) {
                 revert InvalidAmount();
             }
         }
 
-        address _sender = _msgSender();
-        if (_sender == _receiver) {
-            revert InvalidCaller(_receiver);
+        address client = _msgSender();
+        if (client == freelance) {
+            revert InvalidCaller();
         }
 
-        IERC20 token;
+        IERC20 token_;
         unchecked {
-            for (uint i = 0; i < tokensWhitelist.length; i++) {
-                if (_token == tokensWhitelist[i]) {
-                    token = _token;
+            for (uint i = 0; i < tokensWhitelist_.length; i++) {
+                if (token == tokensWhitelist_[i]) {
+                    token_ = token;
                     break;
                 }
             }
         }
 
-        if (address(token) == address(0)) {
+        if (address(token_) == address(0)) {
             revert InvalidToken();
         }
 
         // first transfer tokens to the contract
         // NOTE: user must have approved the allowance
-        if (!token.transferFrom(_sender, address(this), _amount)) {
+        if (!token_.transferFrom(client, address(this), amount)) {
             revert InvalidAmount();
         }
 
@@ -379,209 +370,174 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
         transactions[transactionID] = Transaction({
             status: Status.NoDispute,
             lastInteraction: uint32(block.timestamp),
-            sender: _sender,
-            receiver: _receiver,
-            token: token,
-            amount: _amount,
+            client: client,
+            freelance: freelance,
+            token: token_,
+            amount: amount,
             disputeID: 0,
-            senderFee: 0,
-            receiverFee: 0
+            clientFee: 0,
+            freelanceFee: 0
         });
 
-        emit TransactionCreated(transactionID, _sender, _receiver, address(_token), _amount);
+        emit TransactionCreated(transactionID, client, freelance, token, amount);
     }
 
     /** @dev Pay receiver. To be called if the good or service is provided.
-     *  @param _transactionID The index of the transaction.
-     *  @param _amount Amount to pay in wei.
+     *  @param transactionID The index of the transaction.
+     *  @param amount Amount to pay in wei.
      */
-    function pay(uint256 _transactionID, uint256 _amount) external onlyValidTransaction(_transactionID) {
-        Transaction storage transaction = transactions[_transactionID];
+    function pay(uint256 transactionID, uint256 amount) external onlyValidTransaction(transactionID) {
+        Transaction storage transaction = transactions[transactionID];
 
-        if (_msgSender() != transaction.sender) {
-            revert InvalidCaller(transaction.sender);
+        if (_msgSender() != transaction.client) {
+            revert InvalidCaller();
         }
 
         if (transaction.status != Status.NoDispute) {
-            revert InvalidStatus(uint256(Status.NoDispute));
+            revert InvalidStatus();
         }
 
-        if ((_amount == 0) || (transaction.amount == 0) || (_amount > transaction.amount)) {
+        if ((amount == 0) || (transaction.amount == 0) || (amount > transaction.amount)) {
             revert InvalidAmount();
         }
 
         // _amount <= transaction.amount
         unchecked {
-            transaction.amount -= _amount;
+            transaction.amount -= amount;
         }
 
-        uint256 feeAmount = calculateFeeRecipientAmount(_amount);
+        uint256 feeAmount = calculateFeeRecipientAmount(amount);
         feeRecipientData.feeRecipient.transferToken(transaction.token, feeAmount);
-        emit FeeRecipientPayment(_transactionID, address(transaction.token), feeAmount);
+        emit FeeRecipientPayment(transactionID, transaction.token, feeAmount);
 
-        transaction.receiver.sendToken(transaction.token, _amount - feeAmount);
-        emit Payment(_transactionID, address(transaction.token), _amount, _msgSender());
+        transaction.freelance.sendToken(transaction.token, amount - feeAmount);
+        emit Payment(transactionID, transaction.token, amount, _msgSender());
     }
 
     /** @dev Reimburse sender. To be called if the good or service can't be fully provided.
-     *  @param _transactionID The index of the transaction.
-     *  @param _amountReimbursed Amount to reimburse in wei.
+     *  @param transactionID The index of the transaction.
+     *  @param amountReimbursed Amount to reimburse in wei.
      */
-    function reimburse(
-        uint256 _transactionID,
-        uint256 _amountReimbursed
-    ) external onlyValidTransaction(_transactionID) {
-        Transaction storage transaction = transactions[_transactionID];
+    function reimburse(uint256 transactionID, uint256 amountReimbursed) external onlyValidTransaction(transactionID) {
+        Transaction storage transaction = transactions[transactionID];
 
-        if (_msgSender() != transaction.receiver) {
-            revert InvalidCaller(transaction.receiver);
+        if (_msgSender() != transaction.freelance) {
+            revert InvalidCaller();
         }
 
         if (transaction.status != Status.NoDispute) {
-            revert InvalidStatus(uint256(Status.NoDispute));
+            revert InvalidStatus();
         }
 
-        if ((_amountReimbursed == 0) || (transaction.amount == 0) || (_amountReimbursed > transaction.amount)) {
+        if ((amountReimbursed == 0) || (transaction.amount == 0) || (amountReimbursed > transaction.amount)) {
             revert InvalidAmount();
         }
 
         // _amountReimbursed <= transaction.amount
         unchecked {
-            transaction.amount -= _amountReimbursed;
+            transaction.amount -= amountReimbursed;
         }
 
-        transaction.sender.sendToken(transaction.token, _amountReimbursed);
-        emit Payment(_transactionID, address(transaction.token), _amountReimbursed, _msgSender());
+        transaction.client.sendToken(transaction.token, amountReimbursed);
+        emit Payment(transactionID, transaction.token, amountReimbursed, _msgSender());
     }
 
-    /** @dev Reimburse sender if receiver fails to pay the fee.
-     *  @param _transactionID The index of the transaction.
+    /** @dev Pay the arbitration fee to raise a dispute. To be called by the client or freelance. UNTRUSTED.
+     *  Note that the arbitrator can have createDispute throw,
+     *  which will make this function throw and therefore lead to a party being timed-out.
+     *  @param transactionID The index of the transaction.
      */
-    function timeOutBySender(uint256 _transactionID) external onlyValidTransaction(_transactionID) {
-        Transaction storage transaction = transactions[_transactionID];
+    function payArbitrationFee(uint256 transactionID) external payable onlyValidTransaction(transactionID) {
+        Transaction storage transaction = transactions[transactionID];
 
-        if (transaction.status != Status.WaitingReceiver) {
-            revert InvalidStatus(uint256(Status.WaitingReceiver));
+        if (transaction.status >= Status.DisputeCreated) {
+            revert InvalidStatus();
         }
+
+        address sender = _msgSender();
+
+        if ((sender != transaction.client) && (sender != transaction.freelance)) {
+            revert InvalidCaller();
+        }
+
+        uint256 arbitrationCost_ = arbitratorData.arbitrator.arbitrationCost(arbitratorExtraData_);
+
+        if (msg.value != arbitrationCost_) {
+            revert InvalidAmount();
+        }
+
+        transaction.lastInteraction = uint32(block.timestamp);
+
+        if (sender == transaction.client) {
+            transaction.clientFee = msg.value;
+        } else {
+            transaction.freelanceFee = msg.value;
+        }
+
+        // The other party. This can also happen if he has paid,
+        // but arbitrationCost has increased.
+        if (
+            ((sender == transaction.client) && (transaction.freelanceFee != 0)) ||
+            ((sender == transaction.freelance) && (transaction.clientFee != 0))
+        ) {
+            transaction.status = Status.DisputeCreated;
+            transaction.disputeID = arbitratorData.proxy.createDispute{value: arbitrationCost_}(
+                arbitratorExtraData_,
+                metaEvidenceURI_,
+                AMOUNT_OF_CHOICES
+            );
+        } else {
+            address other = sender == transaction.client ? transaction.freelance : transaction.client;
+            transaction.status = sender == transaction.client ? Status.WaitingFreelance : Status.WaitingClient;
+            emit HasToPayFee(transactionID, other);
+        }
+    }
+
+    /** @dev Reimburse a party if the other party fails to pay the fee.
+     *  @param transactionID The index of the transaction.
+     */
+    function timeOut(uint256 transactionID) external onlyValidTransaction(transactionID) {
+        Transaction storage transaction = transactions[transactionID];
 
         if (block.timestamp - transaction.lastInteraction < arbitratorData.feeTimeout) {
             revert NoTimeout();
         }
 
-        _executeRuling(_transactionID, SENDER_WINS);
-    }
+        address sender = _msgSender();
 
-    /** @dev Pay receiver if sender fails to pay the fee.
-     *  @param _transactionID The index of the transaction.
-     */
-    function timeOutByReceiver(uint256 _transactionID) external onlyValidTransaction(_transactionID) {
-        Transaction storage transaction = transactions[_transactionID];
-
-        if (transaction.status != Status.WaitingSender) {
-            revert InvalidStatus(uint256(Status.WaitingSender));
-        }
-
-        if (block.timestamp - transaction.lastInteraction < arbitratorData.feeTimeout) {
-            revert NoTimeout();
-        }
-
-        _executeRuling(_transactionID, RECEIVER_WINS);
-    }
-
-    /** @dev Pay the arbitration fee to raise a dispute. To be called by the sender. UNTRUSTED.
-     *  Note that the arbitrator can have createDispute throw, which will make this function throw and therefore lead to a party being timed-out.
-     *  This is not a vulnerability as the arbitrator can rule in favor of one party anyway.
-     *  @param _transactionID The index of the transaction.
-     */
-    function payArbitrationFeeBySender(uint256 _transactionID) external payable onlyValidTransaction(_transactionID) {
-        Transaction storage transaction = transactions[_transactionID];
-
-        if (_msgSender() != transaction.sender) {
-            revert InvalidCaller(transaction.sender);
-        }
-
-        if (transaction.status >= Status.DisputeCreated) {
-            revert InvalidStatus(uint256(Status.DisputeCreated));
-        }
-
-        uint256 _arbitrationCost = arbitratorData.arbitrator.arbitrationCost(arbitratorExtraData);
-
-        if (msg.value != _arbitrationCost) {
-            revert InvalidAmount();
-        }
-
-        transaction.senderFee = msg.value;
-        transaction.lastInteraction = uint32(block.timestamp);
-
-        // The receiver still has to pay. This can also happen if he has paid,
-        // but arbitrationCost has increased.
-        if (transaction.receiverFee == 0) {
-            transaction.status = Status.WaitingReceiver;
-            emit HasToPayFee(_transactionID, Party.Receiver);
+        if (
+            ((sender == transaction.client) && (transaction.status == Status.WaitingFreelance)) ||
+            ((sender == transaction.freelance) && (transaction.status == Status.WaitingClient))
+        ) {
+            _executeRuling(transactionID, sender == transaction.client ? CLIENT_WINS : FREELANCE_WINS);
         } else {
-            // The receiver has also paid the fee. We create the dispute.
-            _raiseDispute(_transactionID, _arbitrationCost);
-        }
-    }
-
-    /** @dev Pay the arbitration fee to raise a dispute. To be called by the receiver. UNTRUSTED.
-     *  Note that this function mirrors payArbitrationFeeBySender.
-     *  @param _transactionID The index of the transaction.
-     */
-    function payArbitrationFeeByReceiver(uint256 _transactionID) external payable onlyValidTransaction(_transactionID) {
-        Transaction storage transaction = transactions[_transactionID];
-
-        if (_msgSender() != transaction.receiver) {
-            revert InvalidCaller(transaction.receiver);
-        }
-
-        if (transaction.status >= Status.DisputeCreated) {
-            revert InvalidStatus(uint256(Status.DisputeCreated));
-        }
-
-        uint256 _arbitrationCost = arbitratorData.arbitrator.arbitrationCost(arbitratorExtraData);
-
-        if (msg.value != _arbitrationCost) {
-            revert InvalidAmount();
-        }
-
-        transaction.receiverFee = msg.value;
-        transaction.lastInteraction = uint32(block.timestamp);
-
-        // The sender still has to pay. This can also happen if he has paid,
-        // but arbitrationCost has increased.
-        if (transaction.senderFee == 0) {
-            transaction.status = Status.WaitingSender;
-            emit HasToPayFee(_transactionID, Party.Sender);
-        } else {
-            // The sender has also paid the fee. We create the dispute.
-            _raiseDispute(_transactionID, _arbitrationCost);
+            revert InvalidStatus();
         }
     }
 
     /** @dev Create a dispute. UNTRUSTED.
-     *  @param _transactionID The index of the transaction.
-     *  @param _arbitrationCost Amount to pay the arbitrator.
+     *  @param transactionID The index of the transaction.
+     *  @param arbitrationCost Amount to pay the arbitrator.
      */
-    function _raiseDispute(uint256 _transactionID, uint256 _arbitrationCost) internal {
-        Transaction storage transaction = transactions[_transactionID];
+    function _raiseDispute(uint256 transactionID, uint256 arbitrationCost) internal {
+        Transaction storage transaction = transactions[transactionID];
         transaction.status = Status.DisputeCreated;
 
-        transaction.disputeID = arbitratorData.proxy.createDispute{value: _arbitrationCost}(
-            arbitratorExtraData,
-            metaEvidenceURI,
+        transaction.disputeID = arbitratorData.proxy.createDispute{value: arbitrationCost}(
+            arbitratorExtraData_,
+            metaEvidenceURI_,
             AMOUNT_OF_CHOICES
         );
     }
 
     /** @dev Accept ruling for a dispute.
-     *  @param _transactionID the transaction the dispute was created from.
+     *  @param transactionID the transaction the dispute was created from.
      */
-    function acceptRuling(uint256 _transactionID) external onlyValidTransaction(_transactionID) {
-        Transaction storage transaction = transactions[_transactionID];
+    function acceptRuling(uint256 transactionID) external onlyValidTransaction(transactionID) {
+        Transaction storage transaction = transactions[transactionID];
 
         if (transaction.status != Status.DisputeCreated) {
-            revert InvalidStatus(uint256(Status.DisputeCreated));
+            revert InvalidStatus();
         }
 
         (, bool isRuled, uint256 ruling, ) = arbitratorData.proxy.disputes(transaction.disputeID);
@@ -590,55 +546,55 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
             revert NotRuled();
         }
 
-        _executeRuling(_transactionID, ruling);
+        _executeRuling(transactionID, ruling);
     }
 
     /** @dev Execute a ruling of a dispute. It reimburses the fee to the winning party.
-     *  @param _transactionID The index of the transaction.
-     *  @param _ruling Ruling given by the arbitrator. 1 : Reimburse the receiver. 2 : Pay the sender.
+     *  @param transactionID The index of the transaction.
+     *  @param ruling Ruling given by the arbitrator. 1 : Reimburse the receiver. 2 : Pay the sender.
      */
-    function _executeRuling(uint256 _transactionID, uint256 _ruling) internal nonReentrant {
-        Transaction storage transaction = transactions[_transactionID];
+    function _executeRuling(uint256 transactionID, uint256 ruling) internal nonReentrant {
+        Transaction storage transaction = transactions[transactionID];
 
         uint256 amount = transaction.amount;
-        uint256 senderArbitrationFee = transaction.senderFee;
-        uint256 receiverArbitrationFee = transaction.receiverFee;
+        uint256 clientArbitrationFee = transaction.clientFee;
+        uint256 freelanceArbitrationFee = transaction.freelanceFee;
 
         transaction.amount = 0;
-        transaction.senderFee = 0;
-        transaction.receiverFee = 0;
+        transaction.clientFee = 0;
+        transaction.freelanceFee = 0;
         transaction.status = Status.Resolved;
 
         uint256 feeAmount;
-        address sender = transaction.sender;
-        address receiver = transaction.receiver;
+        address client = transaction.client;
+        address freelance = transaction.freelance;
 
         // Give the arbitration fee back.
         // Note that we use send to prevent a party from blocking the execution.
-        if (_ruling == SENDER_WINS) {
-            sender.sendToken(transaction.token, amount);
-            sender.sendTo(senderArbitrationFee);
-        } else if (_ruling == RECEIVER_WINS) {
+        if (ruling == CLIENT_WINS) {
+            client.sendToken(transaction.token, amount);
+            client.sendTo(clientArbitrationFee);
+        } else if (ruling == FREELANCE_WINS) {
             feeAmount = calculateFeeRecipientAmount(amount);
             feeRecipientData.feeRecipient.transferToken(transaction.token, feeAmount);
-            emit FeeRecipientPayment(_transactionID, address(transaction.token), feeAmount);
+            emit FeeRecipientPayment(transactionID, transaction.token, feeAmount);
 
-            receiver.sendToken(transaction.token, amount - feeAmount);
-            receiver.sendTo(receiverArbitrationFee);
+            freelance.sendToken(transaction.token, amount - feeAmount);
+            freelance.sendTo(freelanceArbitrationFee);
         } else {
-            uint256 splitArbitration = senderArbitrationFee / 2;
+            uint256 splitArbitration = clientArbitrationFee / 2;
             uint256 splitAmount = amount / 2;
 
             feeAmount = calculateFeeRecipientAmount(splitAmount);
             feeRecipientData.feeRecipient.transferToken(transaction.token, feeAmount);
-            emit FeeRecipientPayment(_transactionID, address(transaction.token), feeAmount);
+            emit FeeRecipientPayment(transactionID, transaction.token, feeAmount);
 
             // In the case of an uneven token amount, one basic token unit can be burnt.
-            sender.sendToken(transaction.token, splitAmount);
-            receiver.sendToken(transaction.token, splitAmount - feeAmount);
+            client.sendToken(transaction.token, splitAmount);
+            freelance.sendToken(transaction.token, splitAmount - feeAmount);
 
-            sender.sendTo(splitArbitration);
-            receiver.sendTo(splitArbitration);
+            client.sendTo(splitArbitration);
+            freelance.sendTo(splitArbitration);
         }
     }
 
@@ -648,12 +604,13 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
 
     /**
      * @dev Get transaction by id
+     *  @param transactionID The index of the transaction.
      * @return transaction
      */
     function getTransaction(
-        uint256 _transactionID
-    ) external view onlyValidTransaction(_transactionID) returns (Transaction memory) {
-        return transactions[_transactionID];
+        uint256 transactionID
+    ) external view onlyValidTransaction(transactionID) returns (Transaction memory) {
+        return transactions[transactionID];
     }
 
     /**
@@ -661,27 +618,27 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
      * @return tokens array of addresses of supported tokens
      */
     function getSupportedTokens() external view returns (IERC20[] memory) {
-        return tokensWhitelist;
+        return tokensWhitelist_;
     }
 
     /**
      * @dev Ask arbitrator for abitration cost
      * @return Amount to be paid.
      */
-    function arbitrationCost() external view returns (uint256) {
-        return arbitratorData.arbitrator.arbitrationCost(arbitratorExtraData);
+    function getArbitrationCost() external view returns (uint256) {
+        return arbitratorData.arbitrator.arbitrationCost(arbitratorExtraData_);
     }
 
     /** @dev Get ruling for the disupte of given transaction
-     *  @param _transactionID the transaction the dispute was created from.
+     *  @param transactionID the transaction the dispute was created from.
      */
     function fetchRuling(
-        uint256 _transactionID
-    ) external view onlyValidTransaction(_transactionID) returns (bool isRuled, uint256 ruling) {
-        Transaction storage transaction = transactions[_transactionID];
+        uint256 transactionID
+    ) external view onlyValidTransaction(transactionID) returns (bool isRuled, uint256 ruling) {
+        Transaction storage transaction = transactions[transactionID];
 
         if (transaction.status != Status.DisputeCreated) {
-            revert InvalidStatus(uint256(Status.DisputeCreated));
+            revert InvalidStatus();
         }
 
         (, isRuled, ruling, ) = arbitratorData.proxy.disputes(transaction.disputeID);

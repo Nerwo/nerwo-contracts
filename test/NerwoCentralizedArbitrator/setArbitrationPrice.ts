@@ -14,11 +14,11 @@ describe('NerwoCentralizedArbitrator: setArbitrationPrice', function () {
 
   it('Testing setArbitrationPrice', async () => {
     const { proxy } = await getContracts();
-    const { sender, court } = await getSigners();
+    const { client, court } = await getSigners();
 
     const arbitrationPrice = parseEther('0.005');
 
-    await expect(proxy.connect(sender).setArbitrationPrice(arbitrationPrice))
+    await expect(proxy.connect(client).setArbitrationPrice(arbitrationPrice))
       .to.be.revertedWith('Ownable: caller is not the owner');
 
     const previousPrice = await proxy.arbitrationCost('0x00');
