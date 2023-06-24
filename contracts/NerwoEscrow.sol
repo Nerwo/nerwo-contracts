@@ -66,12 +66,12 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
     IERC20[] private _tokensWhitelist; // whitelisted ERC20 tokens
 
     struct ArbitratorData {
-        uint32 feeTimeout;      // Time in seconds a party can take to pay arbitration
-                                // fees before being considered unresponding and lose the dispute.
+        uint32 feeTimeout; // Time in seconds a party can take to pay arbitration
+        // fees before being considered unresponding and lose the dispute.
         IArbitrator arbitrator; // Address of the arbitrator contract.
         IArbitrableProxy proxy; // Address of the arbitrator proxy contract.
         string metaEvidenceURI; // metaEvidence uri to set up the arbitration.
-        bytes extraData;        // Extra data to set up the arbitration.
+        bytes extraData; // Extra data to set up the arbitration.
     }
 
     ArbitratorData public arbitratorData;
