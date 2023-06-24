@@ -66,9 +66,12 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
     IERC20[] private _tokensWhitelist; // whitelisted ERC20 tokens
 
     struct ArbitratorData {
+        uint32 feeTimeout;      // Time in seconds a party can take to pay arbitration
+                                // fees before being considered unresponding and lose the dispute.
         IArbitrator arbitrator; // Address of the arbitrator contract.
         IArbitrableProxy proxy; // Address of the arbitrator proxy contract.
-        uint32 feeTimeout; // Time in seconds a party can take to pay arbitration fees before being considered unresponding and lose the dispute.
+        string metaEvidenceURI; // metaEvidence uri to set up the arbitration.
+        bytes extraData;        // Extra data to set up the arbitration.
     }
 
     ArbitratorData public arbitratorData;
@@ -81,9 +84,6 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
     FeeRecipientData public feeRecipientData;
 
     mapping(uint256 => Transaction) private _transactions;
-
-    bytes public arbitratorExtraData; // Extra data to set up the arbitration.
-    string public metaEvidenceURI;
 
     // **************************** //
     // *          Events          * //
@@ -153,30 +153,30 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
     }
 
     /** @dev initialize (deferred constructor)
-     *  @param owner_ The initial owner
+     *  @param newOwner The initial owner
+     *  @param feeTimeout Arbitration fee timeout for the parties.
      *  @param arbitrator The arbitrator of the contract.
      *  @param arbitratorProxy The arbitrator proxy of the contract.
-     *  @param arbitratorExtraData_ Extra data for the arbitrator.
-     *  @param feeTimeout Arbitration fee timeout for the parties.
+     *  @param arbitratorExtraData Extra data for the arbitrator.
      *  @param feeRecipient Address which receives a share of receiver payment.
      *  @param feeRecipientBasisPoint The share of fee to be received by the feeRecipient,
      *                                 down to 2 decimal places as 550 = 5.5%
      *  @param tokensWhitelist List of whitelisted ERC20 tokens
      */
     function initialize(
-        address owner_,
+        address newOwner,
+        uint256 feeTimeout,
         address arbitrator,
         address arbitratorProxy,
-        bytes calldata arbitratorExtraData_,
-        uint256 feeTimeout,
+        bytes calldata arbitratorExtraData,
         address feeRecipient,
         uint256 feeRecipientBasisPoint,
         IERC20[] calldata tokensWhitelist
     ) external onlyOwner initializer {
-        if (owner() != owner_) {
-            _transferOwnership(owner_);
+        if (owner() != newOwner) {
+            _transferOwnership(newOwner);
         }
-        _setArbitratorData(arbitrator, arbitratorProxy, arbitratorExtraData_, feeTimeout);
+        _setArbitratorData(feeTimeout, arbitrator, arbitratorProxy, arbitratorExtraData);
         _setFeeRecipientAndBasisPoint(feeRecipient, feeRecipientBasisPoint);
         _setTokensWhitelist(tokensWhitelist);
     }
@@ -187,41 +187,41 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
 
     /**
      *  @dev modifies Arbitrator - Internal function without access restriction
+     *  @param feeTimeout Arbitration fee timeout for the parties.
      *  @param arbitrator The arbitrator of the contract.
      *  @param arbitratorProxy The arbitrator proxy of the contract.
-     *  @param arbitratorExtraData_ Extra data for the arbitrator.
-     *  @param feeTimeout Arbitration fee timeout for the parties.
+     *  @param arbitratorExtraData Extra data for the arbitrator.
      */
     function _setArbitratorData(
+        uint256 feeTimeout,
         address arbitrator,
         address arbitratorProxy,
-        bytes calldata arbitratorExtraData_,
-        uint256 feeTimeout
+        bytes calldata arbitratorExtraData
     ) internal {
+        arbitratorData.feeTimeout = uint32(feeTimeout);
         arbitratorData.arbitrator = IArbitrator(arbitrator);
         arbitratorData.proxy = IArbitrableProxy(arbitratorProxy);
-        arbitratorExtraData = arbitratorExtraData_;
-        arbitratorData.feeTimeout = uint32(feeTimeout);
+        arbitratorData.extraData = arbitratorExtraData;
     }
 
     /**
      *  @dev modifies Arbitrator Data - External function onlyOwner
+     *  @param feeTimeout Arbitration fee timeout for the parties.
      *  @param arbitrator The arbitrator of the contract.
      *  @param arbitratorProxy The arbitrator proxy of the contract.
-     *  @param arbitratorExtraData_ Extra data for the arbitrator.
-     *  @param feeTimeout Arbitration fee timeout for the parties.
+     *  @param arbitratorExtraData Extra data for the arbitrator.
      */
     function setArbitratorData(
+        uint256 feeTimeout,
         address arbitrator,
         address arbitratorProxy,
-        bytes calldata arbitratorExtraData_,
-        uint256 feeTimeout
+        bytes calldata arbitratorExtraData
     ) external onlyOwner {
-        _setArbitratorData(arbitrator, arbitratorProxy, arbitratorExtraData_, feeTimeout);
+        _setArbitratorData(feeTimeout, arbitrator, arbitratorProxy, arbitratorExtraData);
     }
 
     /**
-     *  @dev modifies fee recipient and basis point - Internal function without access restriction
+     *  @dev modifies fee reciarbitratorDatapient and basis point - Internal function without access restriction
      *  @param feeRecipient Address which receives a share of receiver payment.
      *  @param feeRecipientBasisPoint The share of fee to be received by the feeRecipient,
      *         down to 2 decimal places as 550 = 5.5%
@@ -245,7 +245,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
     }
 
     function _setMetaEvidenceURI(string calldata metaEvidenceURI_) internal {
-        metaEvidenceURI = metaEvidenceURI_;
+        arbitratorData.metaEvidenceURI = metaEvidenceURI_;
     }
 
     /**
@@ -447,7 +447,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
             revert InvalidCaller();
         }
 
-        uint256 arbitrationCost_ = arbitratorData.arbitrator.arbitrationCost(arbitratorExtraData);
+        uint256 arbitrationCost_ = arbitratorData.arbitrator.arbitrationCost(arbitratorData.extraData);
 
         if (msg.value != arbitrationCost_) {
             revert InvalidAmount();
@@ -469,8 +469,8 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
         ) {
             transaction.status = Status.DisputeCreated;
             transaction.disputeID = arbitratorData.proxy.createDispute{value: arbitrationCost_}(
-                arbitratorExtraData,
-                metaEvidenceURI,
+                arbitratorData.extraData,
+                arbitratorData.metaEvidenceURI,
                 AMOUNT_OF_CHOICES
             );
         } else {
@@ -515,8 +515,8 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
         transaction.status = Status.DisputeCreated;
 
         transaction.disputeID = arbitratorData.proxy.createDispute{value: arbitrationCost}(
-            arbitratorExtraData,
-            metaEvidenceURI,
+            arbitratorData.extraData,
+            arbitratorData.metaEvidenceURI,
             AMOUNT_OF_CHOICES
         );
     }
@@ -619,7 +619,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
      * @return Amount to be paid.
      */
     function getArbitrationCost() external view returns (uint256) {
-        return arbitratorData.arbitrator.arbitrationCost(arbitratorExtraData);
+        return arbitratorData.arbitrator.arbitrationCost(arbitratorData.extraData);
     }
 
     /** @dev Get the ruling for the dispute of given transaction
