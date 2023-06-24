@@ -1,5 +1,8 @@
 import { expect } from 'chai';
 import { deployments, ethers } from 'hardhat';
+import { SignerWithAddress } from '@nomicfoundation/hardhat-ethers/signers';
+
+import { NerwoCentralizedArbitrator, NerwoEscrow, NerwoTetherToken } from '../../typechain-types';
 
 import * as constants from '../../constants';
 import { getContracts, getSigners, createTransaction, randomAmount } from '../utils';
@@ -11,6 +14,15 @@ describe('NerwoEscrow: rule', function () {
     });
   });
 
+  let escrow: NerwoEscrow;
+  let proxy: NerwoCentralizedArbitrator;
+  let usdt: NerwoTetherToken;
+
+  let platform: SignerWithAddress;
+  let court: SignerWithAddress;
+  let client: SignerWithAddress;
+  let freelance: SignerWithAddress;
+
   let amount: bigint, feeAmount: bigint;
   let arbitrationPrice: bigint;
   let transactionID: bigint;
@@ -18,17 +30,14 @@ describe('NerwoEscrow: rule', function () {
   let fliplop = true;
 
   beforeEach(async () => {
-    const { escrow, proxy, usdt } = await getContracts();
-    const { client, freelance } = await getSigners();
-
-    const clientAddress = await client.getAddress();
-    const freelanceAddress = await freelance.getAddress();
+    ({ escrow, proxy, usdt } = await getContracts());
+    ({ platform, court, client, freelance } = await getSigners());
 
     amount = await randomAmount();
     feeAmount = await escrow.calculateFeeRecipientAmount(amount);
     arbitrationPrice = await escrow.getArbitrationCost();
 
-    transactionID = await createTransaction(client, freelanceAddress, usdt, amount);
+    transactionID = await createTransaction(client, freelance.address, usdt, amount);
 
     const payByClient = () => escrow.connect(client)
       .payArbitrationFee(transactionID, { value: arbitrationPrice });
@@ -39,7 +48,7 @@ describe('NerwoEscrow: rule', function () {
     fliplop = !fliplop;
     await expect(fliplop ? payByClient() : payByFreelance())
       .to.emit(escrow, 'HasToPayFee')
-      .withArgs(transactionID, fliplop ? freelanceAddress : clientAddress);
+      .withArgs(transactionID, fliplop ? freelance.address : client.address);
 
     const blockNumber = await ethers.provider.getBlockNumber();
 
@@ -54,9 +63,6 @@ describe('NerwoEscrow: rule', function () {
   });
 
   it('testing errors', async () => {
-    const { proxy, escrow } = await getContracts();
-    const { platform, court, client } = await getSigners();
-
     await expect(proxy.connect(platform).giveRuling(disputeID, 0))
       .to.be.revertedWith('Ownable: caller is not the owner');
 
@@ -69,9 +75,6 @@ describe('NerwoEscrow: rule', function () {
   });
 
   it('SENDER_WINS -> no platform fee', async () => {
-    const { proxy, escrow, usdt } = await getContracts();
-    const { platform, court, client, freelance } = await getSigners();
-
     expect((await escrow.fetchRuling(transactionID)).isRuled).to.be.equal(false);
     await proxy.connect(court).giveRuling(disputeID, constants.Ruling.ClientWins);
     const { isRuled, ruling } = await escrow.fetchRuling(transactionID);
@@ -92,9 +95,6 @@ describe('NerwoEscrow: rule', function () {
   });
 
   it('RECEIVER_WINS -> platform gains', async () => {
-    const { proxy, escrow, usdt } = await getContracts();
-    const { platform, court, client, freelance } = await getSigners();
-
     expect((await escrow.fetchRuling(transactionID)).isRuled).to.be.equal(false);
     await proxy.connect(court).giveRuling(disputeID, constants.Ruling.FreelanceWins);
     const { isRuled, ruling } = await escrow.fetchRuling(transactionID);
@@ -115,9 +115,6 @@ describe('NerwoEscrow: rule', function () {
   });
 
   it('Split amount', async () => {
-    const { proxy, escrow, usdt } = await getContracts();
-    const { platform, court, client, freelance } = await getSigners();
-
     const splitAmount = amount / 2n;
     const splitFee = feeAmount / 2n;
 

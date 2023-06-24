@@ -1,9 +1,8 @@
 import { expect } from 'chai';
-import { parseEther } from 'ethers';
 import { deployments } from 'hardhat';
+import { parseEther } from 'ethers';
 
 import { getContracts, getSigners } from '../utils';
-
 
 describe('NerwoCentralizedArbitrator: setArbitrationPrice', function () {
   before(async () => {

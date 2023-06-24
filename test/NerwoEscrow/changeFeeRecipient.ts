@@ -1,5 +1,8 @@
 import { expect } from 'chai';
 import { deployments } from 'hardhat';
+import { SignerWithAddress } from '@nomicfoundation/hardhat-ethers/signers';
+
+import { NerwoEscrow } from '../../typechain-types';
 import { getContracts, getSigners } from '../utils';
 
 describe('NerwoEscrow: changeFeeRecipient', function () {
@@ -9,10 +12,17 @@ describe('NerwoEscrow: changeFeeRecipient', function () {
     });
   });
 
-  it('Changing fee recipient', async () => {
-    const { escrow } = await getContracts();
-    const { platform, client } = await getSigners();
+  let escrow: NerwoEscrow;
 
+  let platform: SignerWithAddress;
+  let client: SignerWithAddress;
+
+  beforeEach(async () => {
+    ({ escrow } = await getContracts());
+    ({ platform, client } = await getSigners());
+  });
+
+  it('Changing fee recipient', async () => {
     await expect(escrow.connect(platform).changeFeeRecipient(client.address))
       .to.emit(escrow, 'FeeRecipientChanged')
       .withArgs(platform.address, client.address);
@@ -23,9 +33,6 @@ describe('NerwoEscrow: changeFeeRecipient', function () {
   });
 
   it('Changing fee recipient: invalid caller', async () => {
-    const { escrow } = await getContracts();
-    const { platform, client } = await getSigners();
-
     await expect(escrow.connect(client).changeFeeRecipient(client.address))
       .to.be.revertedWithCustomError(escrow, 'InvalidCaller');
   });

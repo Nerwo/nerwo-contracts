@@ -1,6 +1,9 @@
 import { time } from '@nomicfoundation/hardhat-network-helpers';
 import { expect } from 'chai';
 import { deployments } from 'hardhat';
+import { SignerWithAddress } from '@nomicfoundation/hardhat-ethers/signers';
+
+import { NerwoEscrow, NerwoTetherToken } from '../../typechain-types';
 
 import * as constants from '../../constants';
 import { getContracts, getSigners, createTransaction, randomAmount } from '../utils';
@@ -12,30 +15,36 @@ describe('NerwoEscrow: timeOutByClient', function () {
     });
   });
 
-  it('NoTimeout', async () => {
-    const { escrow, usdt } = await getContracts();
-    const { client, freelance } = await getSigners();
-    const freelanceAddress = await freelance.getAddress();
+  let escrow: NerwoEscrow;
+  let usdt: NerwoTetherToken;
 
+  let client: SignerWithAddress;
+  let freelance: SignerWithAddress;
+
+  let arbitrationPrice: bigint;
+
+  beforeEach(async () => {
+    ({ escrow, usdt } = await getContracts());
+    ({ client, freelance } = await getSigners());
+    arbitrationPrice = await escrow.getArbitrationCost();
+  });
+
+  it('NoTimeout', async () => {
     const amount = await randomAmount();
-    const arbitrationPrice = await escrow.getArbitrationCost();
-    const transactionID = await createTransaction(client, freelanceAddress, usdt, amount);
+    const transactionID = await createTransaction(client, freelance.address, usdt, amount);
 
     await expect(escrow.connect(client).payArbitrationFee(
       transactionID, { value: arbitrationPrice }))
       .to.emit(escrow, 'HasToPayFee')
-      .withArgs(transactionID, freelanceAddress);
+      .withArgs(transactionID, freelance.address);
 
     await expect(escrow.connect(client).timeOut(transactionID))
       .to.be.revertedWithCustomError(escrow, 'NoTimeout');
   });
 
   it('InvalidStatus', async () => {
-    const { escrow, usdt } = await getContracts();
-    const { client, freelance } = await getSigners();
-
     const amount = await randomAmount();
-    const transactionID = await createTransaction(client, await freelance.getAddress(), usdt, amount);
+    const transactionID = await createTransaction(client, freelance.address, usdt, amount);
 
     await time.increase(constants.FEE_TIMEOUT);
 
@@ -44,13 +53,8 @@ describe('NerwoEscrow: timeOutByClient', function () {
   });
 
   it('Timeout', async () => {
-    const { escrow, usdt } = await getContracts();
-    const { client, freelance } = await getSigners();
-    const freelanceAddress = await freelance.getAddress();
-
     const amount = await randomAmount();
-    const arbitrationPrice = await escrow.getArbitrationCost();
-    const transactionID = await createTransaction(client, freelanceAddress, usdt, amount);
+    const transactionID = await createTransaction(client, freelance.address, usdt, amount);
 
     await expect(escrow.connect(client).payArbitrationFee(
       transactionID, { value: arbitrationPrice }))
@@ -59,7 +63,7 @@ describe('NerwoEscrow: timeOutByClient', function () {
         [arbitrationPrice, -arbitrationPrice]
       )
       .to.emit(escrow, 'HasToPayFee')
-      .withArgs(transactionID, freelanceAddress);
+      .withArgs(transactionID, freelance.address);
 
     await time.increase(constants.FEE_TIMEOUT);
 

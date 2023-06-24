@@ -14,11 +14,7 @@ describe('NerwoCentralizedproxy: createDispute', function () {
     const { proxy } = await getContracts();
     const { client } = await getSigners();
 
-    const arbitrationPrice = await proxy.arbitrationCost('0x00');
-    const choices = 2n;
-
-    // the amount is checked before the supportInterface
-    await expect(proxy.connect(client)['createDispute(bytes,string,uint256)']('0x00', '', choices))
+    await expect(proxy.connect(client)['createDispute(bytes,string,uint256)']('0x00', '', 2n))
       .to.be.revertedWithCustomError(proxy, 'InsufficientPayment');
   });
 });
