@@ -1,25 +1,12 @@
 // SPDX-License-Identifier: MIT
 /**
  *  @title NerwoEscrow
- *  @author: [@eburgos, @n1c01a5, @sherpya]
+ *  @author Gianluigi Tiesi <sherpya@gmail.com>
+ *  @notice Original authors of the Kleros escrow example: @eburgos, @n1c01a5
  *
  *  @notice This contract implements an escrow system with dispute resolution, allowing secure transactions
  * between a client and a freelance. The contract holds funds on behalf of the client until the transaction
  * is completed or a dispute arises. If a dispute occurs, an external arbitrator determines the outcome.
- *
- * The main features of the contract are:
- * 1. Create transactions: The client initializes a transaction by providing details such as the freelance's
- *    address, the transaction amount, and any associated fees.
- * 2. Make payments: The client can pay the freelance if the goods or services are provided as expected.
- * 3. Reimbursements: The freelance can reimburse the client if the goods or services cannot be fully provided.
- * 4. Execute transactions: If the timeout has passed, the freelance can execute the transaction and receive
- *    the transaction amount.
- * 5. Timeouts: Both the client and freelance can trigger a timeout if the counterparty fails to pay the arbitration fee.
- * 6. Raise disputes and handle arbitration fees: Both parties can raise disputes and pay arbitration fees. The
- *    contract ensures that both parties pay the fees before raising a dispute.
- * 7. Submit evidence: Both parties can submit evidence to support their case during a dispute.
- * 8. Arbitrator ruling: The external arbitrator can provide a ruling to resolve the dispute. The ruling is
- *    executed by the contract, which redistributes the funds accordingly.
  */
 
 pragma solidity ^0.8.20;
@@ -493,8 +480,10 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
         }
     }
 
-    /** @dev Reimburse a party if the other party fails to pay the fee.
-     *  @param transactionID The index of the transaction.
+    /** @dev A function to handle a scenario where a party fails to pay the fee within the defined time limit.
+     *  It allows for a timeout period and then reimburses the other party.
+     *  Only a valid transaction can call this function.
+     *  @param transactionID The ID of the transaction where a party failed to pay the fee.
      */
     function timeOut(uint256 transactionID) external onlyValidTransaction(transactionID) {
         Transaction storage transaction = _transactions[transactionID];
@@ -515,9 +504,11 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
         }
     }
 
-    /** @dev Create a dispute. UNTRUSTED.
-     *  @param transactionID The index of the transaction.
-     *  @param arbitrationCost Amount to pay the arbitrator.
+    /** @dev A function to create a dispute in case of a disagreement between parties involved in a transaction.
+     *  This function is called internally and changes the status of the transaction to DisputeCreated.
+     *  It pays the arbitration cost to the arbitrator and stores the returned dispute ID.
+     *  @param transactionID The ID of the transaction where a dispute needs to be raised.
+     *  @param arbitrationCost The amount to pay to the arbitrator for their service.
      */
     function _raiseDispute(uint256 transactionID, uint256 arbitrationCost) internal {
         Transaction storage transaction = _transactions[transactionID];
@@ -549,9 +540,11 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
         _executeRuling(transactionID, ruling);
     }
 
-    /** @dev Execute a ruling of a dispute. It reimburses the fee to the winning party.
-     *  @param transactionID The index of the transaction.
-     *  @param ruling Ruling given by the arbitrator. 1 : Reimburse the receiver. 2 : Pay the sender.
+    /** @dev A function to execute the ruling provided by the arbitrator. It distributes the funds based on the ruling.
+     *  The ruling is executed in a way that it prevents reentrancy attacks.
+     *  After executing the ruling, the status of the transaction is set to Resolved.
+     *  @param transactionID The ID of the transaction where a ruling needs to be executed.
+     *  @param ruling The ruling provided by the arbitrator. 1 means the client wins, 2 means the freelancer wins.
      */
     function _executeRuling(uint256 transactionID, uint256 ruling) internal nonReentrant {
         Transaction storage transaction = _transactions[transactionID];
@@ -629,7 +622,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
         return arbitratorData.arbitrator.arbitrationCost(arbitratorExtraData);
     }
 
-    /** @dev Get ruling for the disupte of given transaction
+    /** @dev Get the ruling for the dispute of given transaction
      *  @param transactionID the transaction the dispute was created from.
      */
     function fetchRuling(

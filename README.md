@@ -2,265 +2,230 @@
 
 ## Overview
 
-The `NerwoEscrow` contract facilitates secure transactions between a sender and a receiver.
-The contract holds funds on behalf of the sender until the transaction is completed or a dispute arises.
+The `NerwoEscrow` contract facilitates secure transactions between a client and a freelancer.
+The contract holds funds on behalf of the client until the transaction is completed or a dispute arises.
 In case of disputes, an external arbitrator resolves the issue and determines the outcome.
 
 The main features of the contract include:
 
-- Creating transactions
+- Creating escrow
 - Making payments
 - Reimbursements
-- Executing transactions
-- Timeouts
-- Raising disputes and handling arbitration fees
-- Submitting evidence
-- Arbitrator ruling
+- Raising disputes
+- Ruling
 
 ## Functions
 
 ### createTransaction
 
-`createTransaction(IERC20 _token, uint256 _amount, address _receiver, string calldata _metaEvidence)`
+`createTransaction(IERC20 token, uint256 amount, address freelance, string calldata _metaEvidence)`
 
-Allows the sender to create a new transaction by providing the ERC20 token,
-receiver's address, the transaction amount, and meta evidence uri.
-The sender must have approved the amount the ERC20 token transfer.
+Allows the client to create a new transaction by providing the ERC20 token,
+freelance's address, the transaction amount.
+The client must have approved the amount the ERC20 token transfer.
 
 ### pay
 
-`pay(uint256 _transactionID, uint256 _amount)`
+`pay(uint256 transactionID, uint256 amount)`
 
-Allows the sender to pay the receiver for the provided goods or services.
-The function checks whether the caller is the transaction sender,
+Allows the client to pay the freelance for the provided goods or services.
+The function checks whether the caller is the transaction client,
 whether the transaction has a valid status,
 and whether the amount is within the valid range before proceeding.
 
 ### reimburse
 
-`reimburse(uint256 _transactionID, uint256 _amountReimbursed)`
+`reimburse(uint256 transactionID, uint256 amountReimbursed)`
 
-Allows the receiver to reimburse the sender if the goods or services cannot be fully provided.
-The function checks whether the caller is the transaction receiver,
+Allows the freelance to reimburse the client if the goods or services cannot be fully provided.
+The function checks whether the caller is the transaction freelance,
 whether the transaction has a valid status,
 and whether the amount to be reimbursed is within the valid range before proceeding.
 
-### timeOutBySender
+`payArbitrationFee(uint256 transactionID)`
 
-`timeOutBySender(uint256 _transactionID)`
-
-Allows the sender to request a ruling in their favor if the receiver fails
-to pay the arbitration fee within the specified timeout.
-The function checks whether the transaction has a valid status and whether
-the timeout has been reached before proceeding.
-
-### timeOutByReceiver
-
-`timeOutByReceiver(uint256 _transactionID)`
-
-Allows the receiver to request a ruling in their favor if the sender fails
-to pay the arbitration fee within the specified timeout.
-The function checks whether the transaction has a valid status and whether
-the timeout has been reached before proceeding.
-
-### payArbitrationFeeBySender
-
-`payArbitrationFeeBySender(uint256 _transactionID)`
-
-Allows the sender to pay the arbitration fee to raise a dispute.
-The function verifies whether the caller is the transaction sender,
+Allows the client or the freelance to pay the arbitration fee to raise a dispute.
+The function verifies whether the caller is the transaction client or freelance,
 whether the transaction has a valid status, and whether
 the correct arbitration fee has been paid before proceeding.
 
-### payArbitrationFeeByReceiver
+### timeOut
 
-`payArbitrationFeeByReceiver(uint256 _transactionID)`
+`timeOut(uint256 transactionID)`
 
-Allows the receiver to pay the arbitration fee to raise a dispute.
-The function verifies whether the caller is the transaction receiver,
-whether the transaction has a valid status, and whether
-the correct arbitration fee has been paid before proceeding.
+Allows the client or the freelance to request a ruling in their favor if the other party fails
+to pay the arbitration fee within the specified timeout.
+The function checks whether the transaction has a valid status and whether
+the timeout has been reached before proceeding.
 
 ### _raiseDispute
 
-`_raiseDispute(uint256 _transactionID, uint256 _arbitrationCost)`
+`_raiseDispute(uint256 transactionID, uint256 arbitrationCost)`
 
 Internal function to create a dispute and associate it with a transaction.
-This function is called when both sender and receiver have paid their arbitration fees.
+This function is called when both client and freelance have paid their arbitration fees.
 
-### submitEvidence
+### acceptRuling
 
-`submitEvidence(uint256 _transactionID, string calldata _evidence)`
+`function acceptRuling(uint256 transactionID) external`
 
-Allows the sender or receiver to submit evidence for a dispute
-by providing a link to the evidence using its URI.
-The function checks whether the caller is either
-the transaction sender or receiver and whether
-the transaction has a valid status before proceeding.
-
-### rule
-
-`rule(uint256 _disputeID, uint256 _ruling)`
-
-Allows the arbitrator to give a ruling for a dispute.
-The function verifies whether the caller is the arbitrator,
-whether the transaction has a valid status,
-and whether the ruling is valid before proceeding.
+Accept ruling for a dispute.
 
 ### _executeRuling
 
-`_executeRuling(uint256 _transactionID, uint256 _ruling)`
+`_executeRuling(uint256 transactionID, uint256 ruling)`
 
 Internal function to execute a ruling of a dispute.
 It reimburses the arbitration fee to the winning party and updates the transaction status accordingly.
 
 ### getTransaction
 
-`getTransaction(uint256 _transactionID)`
+`getTransaction(uint256 transactionID)`
 
 External function helper for frontend calls, it returns the transaction
 or raises an error if the transaction does not exist.
+
+### getSupportedTokens
+
+`function getSupportedTokens() external view returns (IERC20[] memory)`
+
+Get supported ERC20 tokens.
+
+### getArbitrationCost
+
+`function getArbitrationCost() external view returns (uint256)`
+
+Ask arbitrator for abitration cost.
+
+### fetchRuling
+
+`function fetchRuling(uint256 transactionID) external view`
+
+Get the ruling for the dispute of given transaction.
 
 ## Events
 
 ### Payment
 
-`event Payment(uint256 indexed _transactionID, address indexed _token, uint256 _amount, address indexed _sender);`
+`event Payment(uint256 indexed transactionID, IERC20 indexed token, uint256 amount, address indexed client)`
 
 Emitted when a payment is made.
-It provides the transaction ID, the ERC20 token address, the amount paid, and the address of the sender.
+It provides the transaction ID, the ERC20 token address, the amount paid, and the address of the client.
 
 ### HasToPayFee
 
-`event HasToPayFee(uint256 indexed _transactionID, Party _party);`
+`event HasToPayFee(uint256 indexed transactionID, address party)`
 
 Emitted when a party has to pay an arbitration fee.
 It provides the transaction ID and the party that has to pay the fee.
 
 ### TransactionCreated
 
-`event TransactionCreated(uint256 _transactionID, address indexed _sender, address indexed _receiver, address indexed _token, uint256 _amount);`
+`event TransactionCreated(uint256 transactionID, address indexed client, address indexed freelance, IERC20 indexed token, uint256 amount)`
 
-Emitted when a new transacction is created (the Escrow).
+Emitted when a new transaction is created (the Escrow).
 It provides all needed informations.
 
 ### FeeRecipientPayment
 
-`event FeeRecipientPayment(uint256 indexed _transactionID, address indexed _token, uint256 _feeAmount);`
+`event FeeRecipientPayment(uint256 indexed transactionID, IERC20 indexed token, uint256 feeAmount)`
 
 Emitted when a fee payment is made to the fee recipient.
 It provides the transaction ID, the ERC20 token address and the fee amount.
 
 ### FeeRecipientChanged
 
-`event FeeRecipientChanged(address indexed _oldFeeRecipient, address indexed _newFeeRecipient);`
+`event FeeRecipientChanged(address indexed oldFeeRecipient, address indexed newFeeRecipient)`
 
 Emitted when fee recipent is changed (admin function).
 It provides the old and new fee recipient.
 
-### MetaEvidence
-
-`event MetaEvidence(uint256 indexed _metaEvidenceID, string _evidence);`
-
-Emitted when a meta-evidence is submitted.
-It provides the uri of meta-evidence.
-
-### Dispute
-
-`event Dispute(IArbitrator indexed _arbitrator, uint256 indexed _disputeID, uint256 _metaEvidenceID, uint256 _transactionID);`
-
-Emitted when a dispute is created. It provides the arbitrator, the dispute ID,
-the meta-evidence ID, and the transaction ID.
-
-### Evidence
-
-`event Evidence(IArbitrator indexed _arbitrator, uint256 indexed _transactionID, address indexed _party, string _evidence);`
-
-Emitted when evidence is submitted for a dispute.
-It provides the arbitrator, the transaction ID, the address of the party submitting the evidence,
-and the link to the evidence.
-
 ### SendFailed
 
-`event SendFailed(address indexed recipient, address indexed token, uint256 amount, bytes data);`
+`event SendFailed(address indexed recipient, address indexed token, uint256 amount, bytes data)`
 
 Emitted when sending funds fails. It the address of the ERC20 is 0
 it refers to the native token (used for arbitration).
-
-### Ruling
-
-`event Ruling(IArbitrator indexed _arbitrator, uint256 indexed _disputeID, uint256 _ruling);`
-
-Emitted when a ruling is given for a dispute.
-It provides the arbitrator, the dispute ID, and the ruling.
 
 ## Custom Errors
 
 ### NullAddress
 
-`error NullAddress();`
+`error NullAddress()`
 
-Thrown when a required address is instead null.
+Emitted when a required address is instead null.
 
 ### NoTimeout
 
-`error NoTimeout();`
+`error NoTimeout()`
 
-Thrown when the function is called before the required timeout period has passed.
-
-### InvalidRuling
-
-`error InvalidRuling();`
-
-Thrown when the arbitrator gives an invalid ruling.
+Emitted when a timeOut operation is attempted before the feeTimeout period has elapsed.
 
 ### InvalidCaller
 
-`error InvalidCaller(address expected);`
+`error InvalidCaller()`
 
-Thrown when the function caller is not the expected address.
+Emitted when the function caller is not the expected one.
 
 ### InvalidStatus
 
-`error InvalidStatus(uint256 expected);`
+`error InvalidStatus()`
 
-Thrown when the function is called with an invalid transaction status.
+Emitted when the status of a transaction does not allow a certain operation to be performed.
 
 ### InvalidAmount
 
-`error InvalidAmount(uint256 expected);`
+`error InvalidAmount()`
 
-Thrown when the function is called with an invalid amount.
+Emitted when the function is called with an invalid amount.
+
+### InvalidTransaction
+
+`error InvalidTransaction()`
+
+Emitted when the requested transactionID does not refer to a valid transaction.
+
+### InvalidToken
+
+`error InvalidToken()`
+
+### InvalidFeeBasisPoint
+
+`error InvalidFeeBasisPoint()`
+
+### NotRuled
+
+`error NotRuled()`
+
+Emitted when a ruling is queried or attempted to be executed for a dispute that has not yet been ruled
 
 ## Enumerations
 
 ### Status
 
-`enum Status {NoDispute, WaitingSender, WaitingReceiver, DisputeCreated, Resolved}`
+`enum Status {NoDispute, Waitingclient, Waitingfreelance, DisputeCreated, Resolved}`
 
 Represents the current status of a transaction:
 
 - `NoDispute`: The transaction has no dispute.
-- `WaitingSender`: The transaction is waiting for the sender to pay the arbitration fee.
-- `WaitingReceiver`: The transaction is waiting for the receiver to pay the arbitration fee.
+- `WaitingClient`: The transaction is waiting for the client to pay the arbitration fee.
+- `WaitingFreelance`: The transaction is waiting for the freelance to pay the arbitration fee.
 - `DisputeCreated`: A dispute has been created for the transaction.
 - `Resolved`: The transaction has been resolved, either by a ruling or by the parties coming to an agreement.
 
-### Party
+### Parties
 
-`enum Party {Sender, Receiver}`
+The arties involved in a transaction are:
 
-Represents the parties involved in a transaction:
+- `client`: The party sending the payment.
+- `freelance`: The party receiving the payment.
 
-- `Sender`: The party sending the payment.
-- `Receiver`: The party receiving the payment.
-
-This contract allows two parties, a sender and a receiver,
+This contract allows two parties, a client and a freelance,
 to engage in transactions with the possibility of
 raising disputes and having them resolved by an arbitrator.
 The contract handles payments, fee calculations, dispute creation, and evidence submission.
 In the case of a dispute, the arbitrator is responsible for providing a ruling,
-which will result in either the sender being reimbursed or the receiver being paid.
+which will result in either the client being reimbursed or the freelance being paid.
 The contract also enforces timeouts for various actions,
 such as paying arbitration fees and executing transactions.
 
@@ -269,15 +234,15 @@ such as paying arbitration fees and executing transactions.
 ```mermaid
 flowchart LR
     A(createTransaction) -->B{NoDispute}
-    B -->|pay| C[Receiver]
-    B -->|reimburse| D[Sender]
-    B -->|payArbitrationFeeByReceiver| E{WaitingSender}
-    B -->|payArbitrationFeeBySender| F{WaitingReceiver}
-    E -->|payArbitrationFeeBySender| G{DisputeCreated}
-    F -->|payArbitrationFeeByReceiver| G{DisputeCreated}
-    E -->|timeOutByReceiver| C[Receiver]
-    F -->|timeOutBySender| D[Sender]
-    G -->|rule = 1| D[Sender]
-    G -->|rule = 2| C[Receiver]
-    G -->|rule = 0| H[Split Payment]
+    B -->|pay| C[Freelance]
+    B -->|reimburse| D[Client]
+    B -->|payArbitrationFee| E{WaitingClient}
+    B -->|payArbitrationFee| F{WaitingFreelance}
+    E -->|payArbitrationFee| G{DisputeCreated}
+    F -->|payArbitrationFee| G{DisputeCreated}
+    E -->|timeOut| C[Freelance]
+    F -->|timeOut| D[Client]
+    G -->|acceptRuling = 1| D[Client]
+    G -->|acceptRuling = 2| C[Freelance]
+    G -->|acceptRuling = 0| H[Split Payment]
 ```
