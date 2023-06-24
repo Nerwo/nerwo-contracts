@@ -21,7 +21,7 @@ describe('NerwoEscrow: rule', function () {
   let platform: SignerWithAddress;
   let court: SignerWithAddress;
   let client: SignerWithAddress;
-  let freelance: SignerWithAddress;
+  let freelancer: SignerWithAddress;
 
   let amount: bigint, feeAmount: bigint;
   let arbitrationPrice: bigint;
@@ -31,28 +31,28 @@ describe('NerwoEscrow: rule', function () {
 
   beforeEach(async () => {
     ({ escrow, proxy, usdt } = await getContracts());
-    ({ platform, court, client, freelance } = await getSigners());
+    ({ platform, court, client, freelancer } = await getSigners());
 
     amount = await randomAmount();
     feeAmount = await escrow.calculateFeeRecipientAmount(amount);
     arbitrationPrice = await escrow.getArbitrationCost();
 
-    transactionID = await createTransaction(client, freelance.address, usdt, amount);
+    transactionID = await createTransaction(client, freelancer.address, usdt, amount);
 
     const payByClient = () => escrow.connect(client)
       .payArbitrationFee(transactionID, { value: arbitrationPrice });
 
-    const payByFreelance = () => escrow.connect(freelance)
+    const payByFreelancer = () => escrow.connect(freelancer)
       .payArbitrationFee(transactionID, { value: arbitrationPrice });
 
     fliplop = !fliplop;
-    await expect(fliplop ? payByClient() : payByFreelance())
+    await expect(fliplop ? payByClient() : payByFreelancer())
       .to.emit(escrow, 'HasToPayFee')
-      .withArgs(transactionID, fliplop ? freelance.address : client.address);
+      .withArgs(transactionID, fliplop ? freelancer.address : client.address);
 
     const blockNumber = await ethers.provider.getBlockNumber();
 
-    await expect(fliplop ? payByFreelance() : payByClient())
+    await expect(fliplop ? payByFreelancer() : payByClient())
       .to.emit(proxy, 'Dispute')
       .to.not.emit(escrow, 'HasToPayFee');
 
@@ -84,32 +84,32 @@ describe('NerwoEscrow: rule', function () {
     // SENDER_WINS -> no platform fee
     await expect(escrow.connect(client).acceptRuling(transactionID))
       .to.changeEtherBalances(
-        [platform, client, freelance],
+        [platform, client, freelancer],
         [0, arbitrationPrice, 0]
       )
       .to.changeTokenBalances(
         usdt,
-        [platform, client, freelance],
+        [platform, client, freelancer],
         [0, amount, 0]
       );
   });
 
   it('RECEIVER_WINS -> platform gains', async () => {
     expect((await escrow.fetchRuling(transactionID)).isRuled).to.be.equal(false);
-    await proxy.connect(court).giveRuling(disputeID, constants.Ruling.FreelanceWins);
+    await proxy.connect(court).giveRuling(disputeID, constants.Ruling.FreelancerWins);
     const { isRuled, ruling } = await escrow.fetchRuling(transactionID);
     expect(isRuled).to.be.equal(true);
-    expect(ruling).to.be.equal(constants.Ruling.FreelanceWins);
+    expect(ruling).to.be.equal(constants.Ruling.FreelancerWins);
 
     // RECEIVER_WINS -> platform gains
-    await expect(escrow.connect(freelance).acceptRuling(transactionID))
+    await expect(escrow.connect(freelancer).acceptRuling(transactionID))
       .to.changeEtherBalances(
-        [escrow, client, freelance],
+        [escrow, client, freelancer],
         [-arbitrationPrice, 0, arbitrationPrice]
       )
       .to.changeTokenBalances(
         usdt,
-        [escrow, platform, client, freelance],
+        [escrow, platform, client, freelancer],
         [-amount, feeAmount, 0, amount - feeAmount]
       );
   });
@@ -126,12 +126,12 @@ describe('NerwoEscrow: rule', function () {
 
     await expect(escrow.connect(client).acceptRuling(transactionID))
       .to.changeEtherBalances(
-        [escrow, client, freelance],
+        [escrow, client, freelancer],
         [-arbitrationPrice, 0, arbitrationPrice]
       )
       .to.changeTokenBalances(
         usdt,
-        [escrow, platform, client, freelance],
+        [escrow, platform, client, freelancer],
         [-amount, splitFee, splitAmount, splitAmount - splitFee]
       );
   });

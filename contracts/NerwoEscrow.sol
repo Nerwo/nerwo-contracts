@@ -5,7 +5,7 @@
  *  @notice Original authors of the Kleros escrow example: @eburgos, @n1c01a5
  *
  *  @notice This contract implements an escrow system with dispute resolution, allowing secure transactions
- * between a client and a freelance. The contract holds funds on behalf of the client until the transaction
+ * between a client and a freelancer. The contract holds funds on behalf of the client until the transaction
  * is completed or a dispute arises. If a dispute occurs, an external arbitrator determines the outcome.
  */
 
@@ -38,13 +38,13 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
     // **************************** //
     uint8 private constant AMOUNT_OF_CHOICES = 2;
     uint8 private constant CLIENT_WINS = 1;
-    uint8 private constant FREELANCE_WINS = 2;
+    uint8 private constant Freelancer_WINS = 2;
     uint256 private constant MULTIPLIER_DIVISOR = 10000; // Divisor parameter for multipliers.
 
     enum Status {
         NoDispute,
         WaitingClient,
-        WaitingFreelance,
+        WaitingFreelancer,
         DisputeCreated,
         Resolved
     }
@@ -53,12 +53,12 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
         Status status;
         uint32 lastInteraction; // Last interaction for the dispute procedure.
         address client;
-        address freelance;
+        address freelancer;
         IERC20 token;
         uint256 amount;
         uint256 disputeID; // If dispute exists, the ID of the dispute.
         uint256 clientFee; // Total fees paid by the client.
-        uint256 freelanceFee; // Total fees paid by the freelance.
+        uint256 freelancerFee; // Total fees paid by the freelancer.
     }
 
     uint256 public lastTransaction;
@@ -106,14 +106,14 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
     /** @dev Emitted when a transaction is created.
      *  @param transactionID The index of the transaction.
      *  @param client The address of the client.
-     *  @param freelance The address of the freelance.
+     *  @param freelancer The address of the freelancer.
      *  @param token The token address
      *  @param amount The initial amount in the transaction.
      */
     event TransactionCreated(
         uint256 transactionID,
         address indexed client,
-        address indexed freelance,
+        address indexed freelancer,
         IERC20 indexed token,
         uint256 amount
     );
@@ -132,7 +132,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
     event FeeRecipientChanged(address indexed oldFeeRecipient, address indexed newFeeRecipient);
 
     function _requireValidTransaction(uint256 transactionID) internal view {
-        if (_transactions[transactionID].freelance == address(0)) {
+        if (_transactions[transactionID].freelancer == address(0)) {
             revert InvalidTransaction();
         }
     }
@@ -301,15 +301,15 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
     /** @dev Create a transaction.
      *  @param token The ERC20 token contract.
      *  @param amount The amount of tokens in this transaction.
-     *  @param freelance The recipient of the transaction.
+     *  @param freelancer The recipient of the transaction.
      *  @return transactionID The index of the transaction.
      */
     function createTransaction(
         IERC20 token,
         uint256 amount,
-        address freelance
+        address freelancer
     ) external returns (uint256 transactionID) {
-        if (freelance == address(0)) {
+        if (freelancer == address(0)) {
             revert NullAddress();
         }
 
@@ -326,7 +326,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
         }
 
         address client = _msgSender();
-        if (client == freelance) {
+        if (client == freelancer) {
             revert InvalidCaller();
         }
 
@@ -358,15 +358,15 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
             status: Status.NoDispute,
             lastInteraction: uint32(block.timestamp),
             client: client,
-            freelance: freelance,
+            freelancer: freelancer,
             token: token_,
             amount: amount,
             disputeID: 0,
             clientFee: 0,
-            freelanceFee: 0
+            freelancerFee: 0
         });
 
-        emit TransactionCreated(transactionID, client, freelance, token, amount);
+        emit TransactionCreated(transactionID, client, freelancer, token, amount);
     }
 
     /** @dev Pay receiver. To be called if the good or service is provided.
@@ -397,7 +397,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
         feeRecipientData.feeRecipient.transferToken(transaction.token, feeAmount);
         emit FeeRecipientPayment(transactionID, transaction.token, feeAmount);
 
-        transaction.freelance.sendToken(transaction.token, amount - feeAmount);
+        transaction.freelancer.sendToken(transaction.token, amount - feeAmount);
         emit Payment(transactionID, transaction.token, amount, _msgSender());
     }
 
@@ -408,7 +408,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
     function reimburse(uint256 transactionID, uint256 amountReimbursed) external onlyValidTransaction(transactionID) {
         Transaction storage transaction = _transactions[transactionID];
 
-        if (_msgSender() != transaction.freelance) {
+        if (_msgSender() != transaction.freelancer) {
             revert InvalidCaller();
         }
 
@@ -429,7 +429,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
         emit Payment(transactionID, transaction.token, amountReimbursed, _msgSender());
     }
 
-    /** @dev Pay the arbitration fee to raise a dispute. To be called by the client or freelance. UNTRUSTED.
+    /** @dev Pay the arbitration fee to raise a dispute. To be called by the client or freelancer. UNTRUSTED.
      *  Note that the arbitrator can have createDispute throw,
      *  which will make this function throw and therefore lead to a party being timed-out.
      *  @param transactionID The index of the transaction.
@@ -443,7 +443,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
 
         address sender = _msgSender();
 
-        if ((sender != transaction.client) && (sender != transaction.freelance)) {
+        if ((sender != transaction.client) && (sender != transaction.freelancer)) {
             revert InvalidCaller();
         }
 
@@ -458,14 +458,14 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
         if (sender == transaction.client) {
             transaction.clientFee = msg.value;
         } else {
-            transaction.freelanceFee = msg.value;
+            transaction.freelancerFee = msg.value;
         }
 
         // The other party. This can also happen if he has paid,
         // but arbitrationCost has increased.
         if (
-            ((sender == transaction.client) && (transaction.freelanceFee != 0)) ||
-            ((sender == transaction.freelance) && (transaction.clientFee != 0))
+            ((sender == transaction.client) && (transaction.freelancerFee != 0)) ||
+            ((sender == transaction.freelancer) && (transaction.clientFee != 0))
         ) {
             transaction.status = Status.DisputeCreated;
             transaction.disputeID = arbitratorData.proxy.createDispute{value: arbitrationCost_}(
@@ -474,8 +474,8 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
                 AMOUNT_OF_CHOICES
             );
         } else {
-            address other = sender == transaction.client ? transaction.freelance : transaction.client;
-            transaction.status = sender == transaction.client ? Status.WaitingFreelance : Status.WaitingClient;
+            address other = sender == transaction.client ? transaction.freelancer : transaction.client;
+            transaction.status = sender == transaction.client ? Status.WaitingFreelancer : Status.WaitingClient;
             emit HasToPayFee(transactionID, other);
         }
     }
@@ -495,10 +495,10 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
         address sender = _msgSender();
 
         if (
-            ((sender == transaction.client) && (transaction.status == Status.WaitingFreelance)) ||
-            ((sender == transaction.freelance) && (transaction.status == Status.WaitingClient))
+            ((sender == transaction.client) && (transaction.status == Status.WaitingFreelancer)) ||
+            ((sender == transaction.freelancer) && (transaction.status == Status.WaitingClient))
         ) {
-            _executeRuling(transactionID, sender == transaction.client ? CLIENT_WINS : FREELANCE_WINS);
+            _executeRuling(transactionID, sender == transaction.client ? CLIENT_WINS : Freelancer_WINS);
         } else {
             revert InvalidStatus();
         }
@@ -544,36 +544,36 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
      *  The ruling is executed in a way that it prevents reentrancy attacks.
      *  After executing the ruling, the status of the transaction is set to Resolved.
      *  @param transactionID The ID of the transaction where a ruling needs to be executed.
-     *  @param ruling The ruling provided by the arbitrator. 1 means the client wins, 2 means the freelancer wins.
+     *  @param ruling The ruling provided by the arbitrator. 1 means the client wins, 2 means the freelancerr wins.
      */
     function _executeRuling(uint256 transactionID, uint256 ruling) internal nonReentrant {
         Transaction storage transaction = _transactions[transactionID];
 
         uint256 amount = transaction.amount;
         uint256 clientArbitrationFee = transaction.clientFee;
-        uint256 freelanceArbitrationFee = transaction.freelanceFee;
+        uint256 freelancerArbitrationFee = transaction.freelancerFee;
 
         transaction.amount = 0;
         transaction.clientFee = 0;
-        transaction.freelanceFee = 0;
+        transaction.freelancerFee = 0;
         transaction.status = Status.Resolved;
 
         uint256 feeAmount;
         address client = transaction.client;
-        address freelance = transaction.freelance;
+        address freelancer = transaction.freelancer;
 
         // Give the arbitration fee back.
         // Note that we use send to prevent a party from blocking the execution.
         if (ruling == CLIENT_WINS) {
             client.sendToken(transaction.token, amount);
             client.sendTo(clientArbitrationFee);
-        } else if (ruling == FREELANCE_WINS) {
+        } else if (ruling == Freelancer_WINS) {
             feeAmount = calculateFeeRecipientAmount(amount);
             feeRecipientData.feeRecipient.transferToken(transaction.token, feeAmount);
             emit FeeRecipientPayment(transactionID, transaction.token, feeAmount);
 
-            freelance.sendToken(transaction.token, amount - feeAmount);
-            freelance.sendTo(freelanceArbitrationFee);
+            freelancer.sendToken(transaction.token, amount - feeAmount);
+            freelancer.sendTo(freelancerArbitrationFee);
         } else {
             uint256 splitArbitration = clientArbitrationFee / 2;
             uint256 splitAmount = amount / 2;
@@ -584,10 +584,10 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
 
             // In the case of an uneven token amount, one basic token unit can be burnt.
             client.sendToken(transaction.token, splitAmount);
-            freelance.sendToken(transaction.token, splitAmount - feeAmount);
+            freelancer.sendToken(transaction.token, splitAmount - feeAmount);
 
             client.sendTo(splitArbitration);
-            freelance.sendTo(splitArbitration);
+            freelancer.sendTo(splitArbitration);
         }
     }
 

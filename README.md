@@ -2,7 +2,7 @@
 
 ## Overview
 
-The `NerwoEscrow` contract facilitates secure transactions between a client and a freelancer.
+The `NerwoEscrow` contract facilitates secure transactions between a client and a freelancerr.
 The contract holds funds on behalf of the client until the transaction is completed or a dispute arises.
 In case of disputes, an external arbitrator resolves the issue and determines the outcome.
 
@@ -18,17 +18,17 @@ The main features of the contract include:
 
 ### createTransaction
 
-`createTransaction(IERC20 token, uint256 amount, address freelance, string calldata _metaEvidence)`
+`createTransaction(IERC20 token, uint256 amount, address freelancer, string calldata _metaEvidence)`
 
 Allows the client to create a new transaction by providing the ERC20 token,
-freelance's address, the transaction amount.
+freelancer's address, the transaction amount.
 The client must have approved the amount the ERC20 token transfer.
 
 ### pay
 
 `pay(uint256 transactionID, uint256 amount)`
 
-Allows the client to pay the freelance for the provided goods or services.
+Allows the client to pay the freelancer for the provided goods or services.
 The function checks whether the caller is the transaction client,
 whether the transaction has a valid status,
 and whether the amount is within the valid range before proceeding.
@@ -37,15 +37,15 @@ and whether the amount is within the valid range before proceeding.
 
 `reimburse(uint256 transactionID, uint256 amountReimbursed)`
 
-Allows the freelance to reimburse the client if the goods or services cannot be fully provided.
-The function checks whether the caller is the transaction freelance,
+Allows the freelancer to reimburse the client if the goods or services cannot be fully provided.
+The function checks whether the caller is the transaction freelancer,
 whether the transaction has a valid status,
 and whether the amount to be reimbursed is within the valid range before proceeding.
 
 `payArbitrationFee(uint256 transactionID)`
 
-Allows the client or the freelance to pay the arbitration fee to raise a dispute.
-The function verifies whether the caller is the transaction client or freelance,
+Allows the client or the freelancer to pay the arbitration fee to raise a dispute.
+The function verifies whether the caller is the transaction client or freelancer,
 whether the transaction has a valid status, and whether
 the correct arbitration fee has been paid before proceeding.
 
@@ -53,7 +53,7 @@ the correct arbitration fee has been paid before proceeding.
 
 `timeOut(uint256 transactionID)`
 
-Allows the client or the freelance to request a ruling in their favor if the other party fails
+Allows the client or the freelancer to request a ruling in their favor if the other party fails
 to pay the arbitration fee within the specified timeout.
 The function checks whether the transaction has a valid status and whether
 the timeout has been reached before proceeding.
@@ -63,7 +63,7 @@ the timeout has been reached before proceeding.
 `_raiseDispute(uint256 transactionID, uint256 arbitrationCost)`
 
 Internal function to create a dispute and associate it with a transaction.
-This function is called when both client and freelance have paid their arbitration fees.
+This function is called when both client and freelancer have paid their arbitration fees.
 
 ### acceptRuling
 
@@ -121,7 +121,7 @@ It provides the transaction ID and the party that has to pay the fee.
 
 ### TransactionCreated
 
-`event TransactionCreated(uint256 transactionID, address indexed client, address indexed freelance, IERC20 indexed token, uint256 amount)`
+`event TransactionCreated(uint256 transactionID, address indexed client, address indexed freelancer, IERC20 indexed token, uint256 amount)`
 
 Emitted when a new transaction is created (the Escrow).
 It provides all needed informations.
@@ -203,13 +203,13 @@ Emitted when a ruling is queried or attempted to be executed for a dispute that 
 
 ### Status
 
-`enum Status {NoDispute, Waitingclient, Waitingfreelance, DisputeCreated, Resolved}`
+`enum Status {NoDispute, Waitingclient, Waitingfreelancer, DisputeCreated, Resolved}`
 
 Represents the current status of a transaction:
 
 - `NoDispute`: The transaction has no dispute.
 - `WaitingClient`: The transaction is waiting for the client to pay the arbitration fee.
-- `WaitingFreelance`: The transaction is waiting for the freelance to pay the arbitration fee.
+- `WaitingFreelancer`: The transaction is waiting for the freelancer to pay the arbitration fee.
 - `DisputeCreated`: A dispute has been created for the transaction.
 - `Resolved`: The transaction has been resolved, either by a ruling or by the parties coming to an agreement.
 
@@ -218,14 +218,14 @@ Represents the current status of a transaction:
 The arties involved in a transaction are:
 
 - `client`: The party sending the payment.
-- `freelance`: The party receiving the payment.
+- `freelancer`: The party receiving the payment.
 
-This contract allows two parties, a client and a freelance,
+This contract allows two parties, a client and a freelancer,
 to engage in transactions with the possibility of
 raising disputes and having them resolved by an arbitrator.
 The contract handles payments, fee calculations, dispute creation, and evidence submission.
 In the case of a dispute, the arbitrator is responsible for providing a ruling,
-which will result in either the client being reimbursed or the freelance being paid.
+which will result in either the client being reimbursed or the freelancer being paid.
 The contract also enforces timeouts for various actions,
 such as paying arbitration fees and executing transactions.
 
@@ -234,15 +234,15 @@ such as paying arbitration fees and executing transactions.
 ```mermaid
 flowchart LR
     A(createTransaction) -->B{NoDispute}
-    B -->|pay| C[Freelance]
+    B -->|pay| C[Freelancer]
     B -->|reimburse| D[Client]
     B -->|payArbitrationFee| E{WaitingClient}
-    B -->|payArbitrationFee| F{WaitingFreelance}
+    B -->|payArbitrationFee| F{WaitingFreelancer}
     E -->|payArbitrationFee| G{DisputeCreated}
     F -->|payArbitrationFee| G{DisputeCreated}
-    E -->|timeOut| C[Freelance]
+    E -->|timeOut| C[Freelancer]
     F -->|timeOut| D[Client]
     G -->|acceptRuling = 1| D[Client]
-    G -->|acceptRuling = 2| C[Freelance]
+    G -->|acceptRuling = 2| C[Freelancer]
     G -->|acceptRuling = 0| H[Split Payment]
 ```

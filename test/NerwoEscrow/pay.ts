@@ -17,16 +17,16 @@ describe('NerwoEscrow: pay', function () {
 
   let platform: SignerWithAddress;
   let client: SignerWithAddress;
-  let freelance: SignerWithAddress;
+  let freelancer: SignerWithAddress;
 
   beforeEach(async () => {
     ({ escrow, usdt } = await getContracts());
-    ({ platform, client, freelance } = await getSigners());
+    ({ platform, client, freelancer } = await getSigners());
   });
 
   it('create a transaction and pay', async () => {
     let amount = await randomAmount();
-    const transactionID = await createTransaction(client, freelance.address, usdt, amount);
+    const transactionID = await createTransaction(client, freelancer.address, usdt, amount);
 
     await expect(escrow.connect(client).pay(transactionID, 0))
       .to.be.revertedWithCustomError(escrow, 'InvalidAmount');
@@ -39,7 +39,7 @@ describe('NerwoEscrow: pay', function () {
     await expect(escrow.connect(client).pay(transactionID, amount))
       .to.changeTokenBalances(
         usdt,
-        [escrow, platform, freelance],
+        [escrow, platform, freelancer],
         [-amount, feeAmount, amount - feeAmount]
       )
       .to.emit(escrow, 'Payment').withArgs(transactionID, await usdt.getAddress(), amount, client.address)

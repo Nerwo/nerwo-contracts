@@ -19,8 +19,8 @@ export async function getContracts() {
 }
 
 export async function getSigners() {
-    const [deployer, platform, court, client, freelance] = await ethers.getSigners();
-    return { deployer, platform, court, client, freelance };
+    const [deployer, platform, court, client, freelancer] = await ethers.getSigners();
+    return { deployer, platform, court, client, freelancer };
 }
 
 export async function createTransaction(

@@ -3,7 +3,7 @@ import { ZeroAddress, parseEther } from 'ethers';
 export const enum Ruling {
     SplitAmount = 0,
     ClientWins = 1,
-    FreelanceWins = 2
+    FreelancerWins = 2
 }
 
 export const FEE_TIMEOUT = parseInt(process.env.NERWO_FEE_TIMEOUT, 10);
