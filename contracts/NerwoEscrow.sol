@@ -504,23 +504,6 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
         }
     }
 
-    /** @dev A function to create a dispute in case of a disagreement between parties involved in a transaction.
-     *  This function is called internally and changes the status of the transaction to DisputeCreated.
-     *  It pays the arbitration cost to the arbitrator and stores the returned dispute ID.
-     *  @param transactionID The ID of the transaction where a dispute needs to be raised.
-     *  @param arbitrationCost The amount to pay to the arbitrator for their service.
-     */
-    function _raiseDispute(uint256 transactionID, uint256 arbitrationCost) internal {
-        Transaction storage transaction = _transactions[transactionID];
-        transaction.status = Status.DisputeCreated;
-
-        transaction.disputeID = arbitratorData.proxy.createDispute{value: arbitrationCost}(
-            arbitratorData.extraData,
-            arbitratorData.metaEvidenceURI,
-            AMOUNT_OF_CHOICES
-        );
-    }
-
     /** @dev Accept ruling for a dispute.
      *  @param transactionID the transaction the dispute was created from.
      */

@@ -58,13 +58,6 @@ to pay the arbitration fee within the specified timeout.
 The function checks whether the transaction has a valid status and whether
 the timeout has been reached before proceeding.
 
-### _raiseDispute
-
-`_raiseDispute(uint256 transactionID, uint256 arbitrationCost)`
-
-Internal function to create a dispute and associate it with a transaction.
-This function is called when both client and freelancer have paid their arbitration fees.
-
 ### acceptRuling
 
 `function acceptRuling(uint256 transactionID) external`
