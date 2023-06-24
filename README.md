@@ -18,7 +18,7 @@ The main features of the contract include:
 
 ### createTransaction
 
-`createTransaction(IERC20 token, uint256 amount, address freelancer, string calldata _metaEvidence)`
+`createTransaction(IERC20 token, uint256 amount, address freelancer)`
 
 Allows the client to create a new transaction by providing the ERC20 token,
 freelancer's address, the transaction amount.
