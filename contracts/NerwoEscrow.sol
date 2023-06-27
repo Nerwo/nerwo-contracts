@@ -461,8 +461,6 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
             transaction.freelancerFee = msg.value;
         }
 
-        // The other party. This can also happen if he has paid,
-        // but arbitrationCost has increased.
         if (
             ((sender == transaction.client) && (transaction.freelancerFee != 0)) ||
             ((sender == transaction.freelancer) && (transaction.clientFee != 0))
