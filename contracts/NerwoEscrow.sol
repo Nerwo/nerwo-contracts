@@ -39,7 +39,7 @@ contract NerwoEscrow is Ownable, Initializable, Multicall, ReentrancyGuard {
     // **************************** //
     uint8 private constant AMOUNT_OF_CHOICES = 2;
     uint8 private constant CLIENT_WINS = 1;
-    uint8 private constant Freelancer_WINS = 2;
+    uint8 private constant FREELANCER_WINS = 2;
     uint256 private constant MULTIPLIER_DIVISOR = 10000; // Divisor parameter for multipliers.
 
     enum Status {
@@ -497,7 +497,7 @@ contract NerwoEscrow is Ownable, Initializable, Multicall, ReentrancyGuard {
             ((sender == transaction.client) && (transaction.status == Status.WaitingFreelancer)) ||
             ((sender == transaction.freelancer) && (transaction.status == Status.WaitingClient))
         ) {
-            _executeRuling(transactionID, sender == transaction.client ? CLIENT_WINS : Freelancer_WINS);
+            _executeRuling(transactionID, sender == transaction.client ? CLIENT_WINS : FREELANCER_WINS);
         } else {
             revert InvalidStatus();
         }
@@ -549,7 +549,7 @@ contract NerwoEscrow is Ownable, Initializable, Multicall, ReentrancyGuard {
         if (ruling == CLIENT_WINS) {
             client.sendToken(transaction.token, amount);
             client.sendTo(clientArbitrationFee);
-        } else if (ruling == Freelancer_WINS) {
+        } else if (ruling == FREELANCER_WINS) {
             feeAmount = calculateFeeRecipientAmount(amount);
             feeRecipientData.feeRecipient.transferToken(transaction.token, feeAmount);
             emit FeeRecipientPayment(transactionID, transaction.token, feeAmount);
