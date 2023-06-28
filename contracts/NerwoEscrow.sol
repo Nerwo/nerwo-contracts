@@ -605,7 +605,7 @@ contract NerwoEscrow is Ownable, Initializable, Multicall, ReentrancyGuard {
     ) external view onlyValidTransaction(transactionID) returns (bool isRuled, uint256 ruling) {
         Transaction storage transaction = _transactions[transactionID];
 
-        if (transaction.status != Status.DisputeCreated) {
+        if (transaction.status < Status.DisputeCreated) {
             revert InvalidStatus();
         }
 
