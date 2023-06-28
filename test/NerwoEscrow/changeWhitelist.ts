@@ -7,7 +7,7 @@ import { NerwoEscrow, NerwoTetherToken } from '../../typechain-types';
 import { getContracts, getSigners } from '../utils';
 import * as constants from '../../constants';
 
-describe('NerwoEscrow: setTokensWhitelist', function () {
+describe('NerwoEscrow: changeWhitelist', function () {
   before(async () => {
     await deployments.fixture(['NerwoEscrow', 'NerwoTetherToken'], {
       keepExistingDeployments: true
@@ -25,12 +25,12 @@ describe('NerwoEscrow: setTokensWhitelist', function () {
     ({ deployer, client } = await getSigners());
   });
 
-  it('set whitelist', async () => {
-    await escrow.connect(deployer).setTokensWhitelist(constants.getTokenWhitelist(await usdt.getAddress()));
+  it('change whitelist', async () => {
+    await escrow.connect(deployer).changeWhitelist(constants.getTokenWhitelist(await usdt.getAddress()));
   });
 
   it('errors', async () => {
-    await expect(escrow.connect(client).setTokensWhitelist([]))
+    await expect(escrow.connect(client).changeWhitelist([]))
       .to.be.revertedWith('Ownable: caller is not the owner');
   });
 });

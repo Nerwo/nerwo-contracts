@@ -78,12 +78,6 @@ It reimburses the arbitration fee to the winning party and updates the transacti
 External function helper for frontend calls, it returns the transaction
 or raises an error if the transaction does not exist.
 
-### getSupportedTokens
-
-`function getSupportedTokens() external view returns (IERC20[] memory)`
-
-Get supported ERC20 tokens.
-
 ### getArbitrationCost
 
 `function getArbitrationCost() external view returns (uint256)`
@@ -132,6 +126,12 @@ It provides the transaction ID, the ERC20 token address and the fee amount.
 
 Emitted when fee recipent is changed (admin function).
 It provides the old and new fee recipient.
+
+### WhitelistChanged
+
+`event WhitelistChanged(IERC20 token, bool allow)`
+
+Emitted when a token whitelist is changed (admin function).
 
 ### SendFailed
 

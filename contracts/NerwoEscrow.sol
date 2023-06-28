@@ -64,7 +64,12 @@ contract NerwoEscrow is Ownable, Initializable, Multicall, ReentrancyGuard {
 
     uint256 public lastTransaction;
 
-    IERC20[] private _tokensWhitelist; // whitelisted ERC20 tokens
+    struct TokenAllow {
+        IERC20 token;
+        bool allow;
+    }
+
+    mapping(IERC20 => bool) tokens; // whitelisted ERC20 tokens
 
     struct ArbitratorData {
         uint32 feeTimeout; // Time in seconds a party can take to pay arbitration
@@ -132,6 +137,12 @@ contract NerwoEscrow is Ownable, Initializable, Multicall, ReentrancyGuard {
      */
     event FeeRecipientChanged(address indexed oldFeeRecipient, address indexed newFeeRecipient);
 
+    /** @dev To be emitted when the whitelist was changed.
+     *  @param token The token that was either added or removed from whitelist.
+     *  @param allow Whether added or removed.
+     */
+    event WhitelistChanged(IERC20 token, bool allow);
+
     function _requireValidTransaction(uint256 transactionID) internal view {
         if (_transactions[transactionID].freelancer == address(0)) {
             revert InvalidTransaction();
@@ -162,7 +173,7 @@ contract NerwoEscrow is Ownable, Initializable, Multicall, ReentrancyGuard {
      *  @param feeRecipient Address which receives a share of receiver payment.
      *  @param feeRecipientBasisPoint The share of fee to be received by the feeRecipient,
      *                                 down to 2 decimal places as 550 = 5.5%
-     *  @param tokensWhitelist List of whitelisted ERC20 tokens
+     *  @param supportedTokens List of whitelisted ERC20 tokens
      */
     function initialize(
         address newOwner,
@@ -172,14 +183,14 @@ contract NerwoEscrow is Ownable, Initializable, Multicall, ReentrancyGuard {
         bytes calldata arbitratorExtraData,
         address feeRecipient,
         uint256 feeRecipientBasisPoint,
-        IERC20[] calldata tokensWhitelist
+        TokenAllow[] calldata supportedTokens
     ) external onlyOwner initializer {
         if (owner() != newOwner) {
             _transferOwnership(newOwner);
         }
         _setArbitratorData(feeTimeout, arbitrator, arbitratorProxy, arbitratorExtraData);
         _setFeeRecipientAndBasisPoint(feeRecipient, feeRecipientBasisPoint);
-        _setTokensWhitelist(tokensWhitelist);
+        _changeWhiteList(supportedTokens);
     }
 
     // **************************** //
@@ -259,19 +270,19 @@ contract NerwoEscrow is Ownable, Initializable, Multicall, ReentrancyGuard {
         _setFeeRecipientAndBasisPoint(feeRecipient, feeRecipientBasisPoint);
     }
 
-    function setTokensWhitelist(IERC20[] calldata tokensWhitelist) external onlyOwner {
-        _setTokensWhitelist(tokensWhitelist);
+    function changeWhitelist(TokenAllow[] calldata tokensWhitelist) external onlyOwner {
+        _changeWhiteList(tokensWhitelist);
     }
 
     /**
-     * @dev Sets the whitelist of ERC20 tokens
-     * @param tokensWhitelist An array of ERC20 tokens
+     * @dev Sets whitelisted ERC20 tokens
+     * @param supportedTokens An array of TokenAllow
      */
-    function _setTokensWhitelist(IERC20[] calldata tokensWhitelist) internal {
+    function _changeWhiteList(TokenAllow[] calldata supportedTokens) internal {
         unchecked {
-            delete _tokensWhitelist;
-            for (uint i = 0; i < tokensWhitelist.length; i++) {
-                _tokensWhitelist.push(tokensWhitelist[i]);
+            for (uint i = 0; i < supportedTokens.length; i++) {
+                tokens[supportedTokens[i].token] = supportedTokens[i].allow;
+                emit WhitelistChanged(supportedTokens[i].token, supportedTokens[i].allow);
             }
         }
     }
@@ -331,23 +342,13 @@ contract NerwoEscrow is Ownable, Initializable, Multicall, ReentrancyGuard {
             revert InvalidCaller();
         }
 
-        IERC20 token_;
-        unchecked {
-            for (uint i = 0; i < _tokensWhitelist.length; i++) {
-                if (token == _tokensWhitelist[i]) {
-                    token_ = token;
-                    break;
-                }
-            }
-        }
-
-        if (address(token_) == address(0)) {
+        if (!tokens[token]) {
             revert InvalidToken();
         }
 
         // first transfer tokens to the contract
         // NOTE: user must have approved the allowance
-        if (!token_.transferFrom(client, address(this), amount)) {
+        if (!token.transferFrom(client, address(this), amount)) {
             revert InvalidAmount();
         }
 
@@ -360,7 +361,7 @@ contract NerwoEscrow is Ownable, Initializable, Multicall, ReentrancyGuard {
             lastInteraction: uint32(block.timestamp),
             client: client,
             freelancer: freelancer,
-            token: token_,
+            token: token,
             amount: amount,
             disputeID: 0,
             clientFee: 0,
@@ -586,14 +587,6 @@ contract NerwoEscrow is Ownable, Initializable, Multicall, ReentrancyGuard {
         uint256 transactionID
     ) external view onlyValidTransaction(transactionID) returns (Transaction memory) {
         return _transactions[transactionID];
-    }
-
-    /**
-     * @dev Get supported ERC20 tokens
-     * @return tokens array of addresses of supported tokens
-     */
-    function getSupportedTokens() external view returns (IERC20[] memory) {
-        return _tokensWhitelist;
     }
 
     /**
