@@ -9,7 +9,7 @@ import { NerwoCentralizedArbitrator, NerwoEscrow } from '../typechain-types';
         const NerwoCentralizedArbitrator = await ethers.getContractFactory('NerwoCentralizedArbitrator');
         const arbitrator: NerwoCentralizedArbitrator = await NerwoCentralizedArbitrator.deploy() as NerwoCentralizedArbitrator;
         await arbitrator.waitForDeployment();
-        const args = arbitratorArgs(deployer.address) as [string, string];
+        const args = arbitratorArgs(deployer.address, deployer.address) as [string, string[], string];
         await arbitrator.initialize(...args);
     });
 

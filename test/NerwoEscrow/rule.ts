@@ -64,7 +64,7 @@ describe('NerwoEscrow: rule', function () {
 
   it('testing errors', async () => {
     await expect(proxy.connect(platform).giveRuling(disputeID, 0))
-      .to.be.revertedWith('Ownable: caller is not the owner');
+      .to.be.reverted;
 
     await expect(proxy.connect(court).giveRuling(0, 0))
       .to.be.revertedWithCustomError(proxy, 'InvalidDispute');

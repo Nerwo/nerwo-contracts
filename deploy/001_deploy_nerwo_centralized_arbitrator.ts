@@ -15,7 +15,7 @@ const func: DeployFunction = async function ({ deployments: { deploy, execute },
     return;
   }
 
-  const args = arbitratorArgs(court);
+  const args = arbitratorArgs(deployer, court);
   await execute('NerwoCentralizedArbitrator', {
     from: deployer,
     log: true

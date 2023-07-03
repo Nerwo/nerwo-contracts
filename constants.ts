@@ -17,6 +17,8 @@ export const FEE_TIMEOUT = parseInt(process.env.NERWO_FEE_TIMEOUT, 10);
 export const FEE_RECIPIENT_BASISPOINT = parseInt(process.env.NERWO_FEE_RECIPIENT_BASISPOINT);
 
 export const ARBITRATOR_PRICE = parseEther(process.env.NERWO_ARBITRATION_PRICE);
+export const COURT = process.env.NERWO_COURT_ADDRESS ?
+    process.env.NERWO_COURT_ADDRESS.split(',').map((address: string) => address.trim()) : undefined;
 
 export const TOKENS_WHITELIST = process.env.NERWO_TOKENS_WHITELIST ?
     process.env.NERWO_TOKENS_WHITELIST.split(',').map((address: string) => new TokenAllow(address.trim(), true))

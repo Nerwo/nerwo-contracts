@@ -1,7 +1,11 @@
 import * as constants from './constants';
 
-export function arbitratorArgs(court: string | undefined) {
-    return [process.env.NERWO_COURT_ADDRESS || court, constants.ARBITRATOR_PRICE];
+export function arbitratorArgs(owner: string | undefined, court: string | undefined) {
+    return [
+        process.env.NERWO_OWNER_ADDRESS || owner,
+        constants.COURT || [court],
+        constants.ARBITRATOR_PRICE
+    ];
 }
 
 export function escrowArgs(
