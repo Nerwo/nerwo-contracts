@@ -1,5 +1,6 @@
 import { expect } from 'chai';
 import { deployments, ethers } from 'hardhat';
+import { anyUint } from '@nomicfoundation/hardhat-chai-matchers/withArgs';
 import { SignerWithAddress } from '@nomicfoundation/hardhat-ethers/signers';
 
 import { NerwoCentralizedArbitrator, NerwoEscrow, NerwoTetherToken } from '../../typechain-types';
@@ -54,6 +55,8 @@ describe('NerwoEscrow: rule', function () {
 
     await expect(fliplop ? payByFreelancer() : payByClient())
       .to.emit(proxy, 'Dispute')
+      .to.emit(escrow, 'DisputeCreation')
+      .withArgs(transactionID, anyUint, fliplop ? client.address : freelancer.address)
       .to.not.emit(escrow, 'HasToPayFee');
 
     const events = await proxy.queryFilter(proxy.filters.Dispute(), blockNumber);
