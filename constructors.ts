@@ -21,7 +21,8 @@ export function escrowArgs(
         constants.FEE_TIMEOUT,                              /* feeTimeout */
         process.env.NERWO_ARBITRATOR_ADDRESS || proxy,      /* arbitrator */
         process.env.NERWO_ARBITRATORPROXY_ADDRESS || proxy, /* arbitratorProxy */
-        '0x00',                                             /* arbitratorExtraData */
+        process.env.NERWO_ARBITRATOR_EXTRADATA || '0x00',   /* arbitratorExtraData */
+        process.env.NERWO_ARBITRATOR_METAEVIDENCEURI || '', /* metaEvidenceURI */
         process.env.NERWO_PLATFORM_ADDRESS || feeRecipient, /* feeRecipient */
         constants.FEE_RECIPIENT_BASISPOINT,                 /* feeRecipientBasisPoint */
         whitelist                                           /* tokensWhitelist */

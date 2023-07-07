@@ -177,6 +177,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
      *  @param arbitrator The arbitrator of the contract.
      *  @param arbitratorProxy The arbitrator proxy of the contract.
      *  @param arbitratorExtraData Extra data for the arbitrator.
+     *  @param metaEvidenceURI Meta Evidence json IPFS URI
      *  @param feeRecipient Address which receives a share of receiver payment.
      *  @param feeRecipientBasisPoint The share of fee to be received by the feeRecipient,
      *                                 down to 2 decimal places as 550 = 5.5%
@@ -188,6 +189,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
         address arbitrator,
         address arbitratorProxy,
         bytes calldata arbitratorExtraData,
+        string calldata metaEvidenceURI,
         address feeRecipient,
         uint256 feeRecipientBasisPoint,
         TokenAllow[] calldata supportedTokens
@@ -197,6 +199,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
         }
         _setArbitratorData(feeTimeout, arbitrator, arbitratorProxy, arbitratorExtraData);
         _setFeeRecipientAndBasisPoint(feeRecipient, feeRecipientBasisPoint);
+        _setMetaEvidenceURI(metaEvidenceURI);
         _changeWhiteList(supportedTokens);
     }
 

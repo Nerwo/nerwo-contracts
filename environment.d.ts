@@ -9,6 +9,8 @@ declare global {
             NERWO_PLATFORM_ADDRESS?: string;
             NERWO_ARBITRATOR_ADDRESS?: string;
             NERWO_ARBITRATORPROXY_ADDRESS?: string;
+            NERWO_ARBITRATOR_EXTRADATA?: string;
+            NERWO_ARBITRATOR_METAEVIDENCEURI?: string;
             NERWO_ARBITRATION_PRICE: string;
             NERWO_FEE_TIMEOUT: string;
             NERWO_FEE_RECIPIENT_BASISPOINT: string;
