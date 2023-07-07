@@ -24,7 +24,7 @@ interface IArbitrableProxy {
         uint256 disputeIDOnArbitratorSide;
     }
 
-    function externalIDtoLocalID(uint256 _externalID) external returns (uint256 localID);
+    function externalIDtoLocalID(uint256 _externalID) external view returns (uint256 localID);
 
     function disputes(
         uint256 _localID

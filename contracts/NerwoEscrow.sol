@@ -526,7 +526,8 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
             revert InvalidStatus();
         }
 
-        (, bool isRuled, uint256 ruling, ) = arbitratorData.proxy.disputes(transaction.disputeID);
+        uint256 localID = arbitratorData.proxy.externalIDtoLocalID(transaction.disputeID);
+        (, bool isRuled, uint256 ruling, ) = arbitratorData.proxy.disputes(localID);
 
         if (!isRuled) {
             revert NotRuled();
@@ -621,6 +622,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
             revert InvalidStatus();
         }
 
-        (, isRuled, ruling, ) = arbitratorData.proxy.disputes(transaction.disputeID);
+        uint256 localID = arbitratorData.proxy.externalIDtoLocalID(transaction.disputeID);
+        (, isRuled, ruling, ) = arbitratorData.proxy.disputes(localID);
     }
 }
