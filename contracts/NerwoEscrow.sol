@@ -497,7 +497,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
      *  Only a valid transaction can call this function.
      *  @param transactionID The ID of the transaction where a party failed to pay the fee.
      */
-    function timeOut(uint256 transactionID) external onlyValidTransaction(transactionID) {
+    function timeOut(uint256 transactionID) external nonReentrant onlyValidTransaction(transactionID) {
         Transaction storage transaction = _transactions[transactionID];
 
         if (block.timestamp - transaction.lastInteraction < arbitratorData.feeTimeout) {
@@ -519,7 +519,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
     /** @dev Accept ruling for a dispute.
      *  @param transactionID the transaction the dispute was created from.
      */
-    function acceptRuling(uint256 transactionID) external onlyValidTransaction(transactionID) {
+    function acceptRuling(uint256 transactionID) external nonReentrant onlyValidTransaction(transactionID) {
         Transaction storage transaction = _transactions[transactionID];
 
         if (transaction.status != Status.DisputeCreated) {
@@ -542,7 +542,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
      *  @param transactionID The ID of the transaction where a ruling needs to be executed.
      *  @param ruling The ruling provided by the arbitrator. 1 means the client wins, 2 means the freelancerr wins.
      */
-    function _executeRuling(uint256 transactionID, uint256 ruling) internal nonReentrant {
+    function _executeRuling(uint256 transactionID, uint256 ruling) internal {
         Transaction storage transaction = _transactions[transactionID];
 
         uint256 amount = transaction.amount;
