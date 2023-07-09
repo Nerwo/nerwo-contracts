@@ -39,7 +39,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
     uint8 private constant AMOUNT_OF_CHOICES = 2;
     uint8 private constant CLIENT_WINS = 1;
     uint8 private constant FREELANCER_WINS = 2;
-    uint256 private constant MULTIPLIER_DIVISOR = 10000; // Divisor parameter for multipliers.
+    uint256 private constant MULTIPLIER_DIVISOR = 10_000; // Divisor parameter for multipliers.
 
     enum Status {
         NoDispute,
