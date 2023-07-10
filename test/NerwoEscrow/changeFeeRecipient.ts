@@ -14,26 +14,23 @@ describe('NerwoEscrow: changeFeeRecipient', function () {
 
   let escrow: NerwoEscrow;
 
+  let deployer: SignerWithAddress;
   let platform: SignerWithAddress;
   let client: SignerWithAddress;
 
   beforeEach(async () => {
     ({ escrow } = await getContracts());
-    ({ platform, client } = await getSigners());
+    ({ deployer, platform, client } = await getSigners());
   });
 
   it('Changing fee recipient', async () => {
-    await expect(escrow.connect(platform).changeFeeRecipient(client.address))
+    await expect(escrow.connect(deployer).changeFeeRecipient(platform.address))
       .to.emit(escrow, 'FeeRecipientChanged')
-      .withArgs(platform.address, client.address);
-
-    await expect(escrow.connect(client).changeFeeRecipient(platform.address))
-      .to.emit(escrow, 'FeeRecipientChanged')
-      .withArgs(client.address, platform.address);
+      .withArgs(deployer.address, platform.address);
   });
 
-  it('Changing fee recipient: invalid caller', async () => {
-    await expect(escrow.connect(client).changeFeeRecipient(client.address))
-      .to.be.revertedWithCustomError(escrow, 'InvalidCaller');
+  it('Changing fee recipient: Ownable: caller is not the owner', async () => {
+    await expect(escrow.connect(platform).changeFeeRecipient(client.address))
+      .to.be.reverted;
   });
 });

@@ -300,11 +300,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
     /** @dev Change Fee Recipient.
      *  @param newFeeRecipient Address of the new Fee Recipient.
      */
-    function changeFeeRecipient(address newFeeRecipient) external {
-        if (_msgSender() != feeRecipientData.feeRecipient) {
-            revert InvalidCaller();
-        }
-
+    function changeFeeRecipient(address newFeeRecipient) external onlyOwner {
         if (newFeeRecipient == address(0)) {
             revert NullAddress();
         }
