@@ -114,7 +114,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
      * @param disputeID ID of the dispute.
      * @param plaintiff The address started the dispute creation.
      */
-    event DisputeCreation(uint256 indexed transactionID, uint256 indexed disputeID, address indexed plaintiff);
+    event DisputeCreated(uint256 indexed transactionID, uint256 indexed disputeID, address indexed plaintiff);
 
     /** @dev Emitted when a transaction is created.
      *  @param transactionID The index of the transaction.
@@ -481,7 +481,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
                 arbitratorData.metaEvidenceURI,
                 AMOUNT_OF_CHOICES
             );
-            emit DisputeCreation(transactionID, transaction.disputeID, other);
+            emit DisputeCreated(transactionID, transaction.disputeID, other);
         } else {
             transaction.status = sender == transaction.client ? Status.WaitingFreelancer : Status.WaitingClient;
             emit HasToPayFee(transactionID, other);

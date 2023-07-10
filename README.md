@@ -106,11 +106,11 @@ It provides the transaction ID, the ERC20 token address, the amount paid, and th
 Emitted when a party has to pay an arbitration fee.
 It provides the transaction ID and the party that has to pay the fee.
 
-### DisputeCreation
+### DisputeCreated
 
-`event DisputeCreation(uint256 indexed transactionID, uint256 indexed disputeID, address indexed plaintiff)`
+`event DisputeCreated(uint256 indexed transactionID, uint256 indexed disputeID, address indexed plaintiff)`
 
-Emitted when a dispute i created. It provides the transaction ID, the dispute ID
+Emitted when a dispute is created. It provides the transaction ID, the dispute ID
 and the first party opened the dispute.
 
 ### TransactionCreated

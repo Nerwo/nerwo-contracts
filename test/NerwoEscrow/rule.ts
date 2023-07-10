@@ -55,7 +55,7 @@ describe('NerwoEscrow: rule', function () {
 
     await expect(fliplop ? payByFreelancer() : payByClient())
       .to.emit(proxy, 'Dispute')
-      .to.emit(escrow, 'DisputeCreation')
+      .to.emit(escrow, 'DisputeCreated')
       .withArgs(transactionID, anyUint, fliplop ? client.address : freelancer.address)
       .to.not.emit(escrow, 'HasToPayFee');
 
