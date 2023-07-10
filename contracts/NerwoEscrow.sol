@@ -68,7 +68,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
         bool allow;
     }
 
-    mapping(IERC20 => bool) tokens; // whitelisted ERC20 tokens
+    mapping(IERC20 => bool) public tokens; // whitelisted ERC20 tokens
 
     struct ArbitratorData {
         uint32 feeTimeout; // Time in seconds a party can take to pay arbitration
