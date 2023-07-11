@@ -28,6 +28,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
     error InvalidCaller();
     error InvalidStatus();
     error InvalidAmount();
+    error AlreadyPaid();
     error InvalidTransaction();
     error InvalidToken();
     error InvalidFeeBasisPoint();
@@ -464,8 +465,14 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
         transaction.lastInteraction = uint32(block.timestamp);
 
         if (sender == transaction.client) {
+            if (transaction.clientFee != 0) {
+                revert AlreadyPaid();
+            }
             transaction.clientFee = msg.value;
         } else {
+            if (transaction.freelancerFee != 0) {
+                revert AlreadyPaid();
+            }
             transaction.freelancerFee = msg.value;
         }
 

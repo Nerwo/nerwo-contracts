@@ -51,6 +51,9 @@ describe('NerwoEscrow: rule', function () {
       .to.emit(escrow, 'HasToPayFee')
       .withArgs(transactionID, fliplop ? freelancer.address : client.address);
 
+    await expect(fliplop ? payByClient() : payByFreelancer())
+      .to.be.revertedWithCustomError(escrow, 'AlreadyPaid');
+
     const blockNumber = await ethers.provider.getBlockNumber();
 
     await expect(fliplop ? payByFreelancer() : payByClient())
@@ -72,7 +75,6 @@ describe('NerwoEscrow: rule', function () {
     await expect(proxy.connect(court).giveRuling(0, 0))
       .to.be.revertedWithCustomError(proxy, 'InvalidDispute');
 
-    const transactionID = await escrow.lastTransaction();
     await expect(escrow.connect(client).pay(transactionID, amount))
       .to.revertedWithCustomError(escrow, 'InvalidStatus');
   });
