@@ -52,6 +52,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
 
     struct Transaction {
         Status status;
+        uint8 ruling;
         uint64 lastInteraction; // Last interaction for the dispute procedure.
         address client;
         address freelancer;
@@ -365,6 +366,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
 
         _transactions[transactionID] = Transaction({
             status: Status.NoDispute,
+            ruling: 0,
             lastInteraction: uint64(block.timestamp),
             client: client,
             freelancer: freelancer,
@@ -555,6 +557,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
         transaction.amount = 0;
         transaction.clientFee = 0;
         transaction.freelancerFee = 0;
+        transaction.ruling = uint8(ruling);
         transaction.status = Status.Resolved;
 
         uint256 feeAmount;
