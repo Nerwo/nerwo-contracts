@@ -48,6 +48,8 @@ contract NerwoCentralizedArbitrator is
         DisputeStatus status;
     }
 
+    IArbitrator public arbitrator = IArbitrator(this);
+
     uint256 public lastDispute;
     mapping(uint256 => ArbitratorDispute) private arbitratorDisputes;
 
@@ -287,10 +289,6 @@ contract NerwoCentralizedArbitrator is
         }
 
         emit Evidence(this, _localDisputeID, msg.sender, _evidenceURI);
-    }
-
-    function arbitrator() external view returns (IArbitrator) {
-        return this;
     }
 
     function externalIDtoLocalID(uint256 _externalID) external pure override returns (uint256 localID) {
