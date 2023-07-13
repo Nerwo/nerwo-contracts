@@ -149,7 +149,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
      *  @param newFeeRecipient new fee Recipient.
      *  @param newBasisPoint new fee BasisPoint.
      */
-    event FeeRecipientChanged(address indexed newFeeRecipient, uint16 newBasisPoint);
+    event FeeRecipientChanged(address indexed newFeeRecipient, uint256 newBasisPoint);
 
     /** @dev To be emitted when the whitelist was changed.
      *  @param token The token that was either added or removed from whitelist.
