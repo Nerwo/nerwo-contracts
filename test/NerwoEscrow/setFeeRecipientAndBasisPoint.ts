@@ -5,7 +5,7 @@ import { SignerWithAddress } from '@nomicfoundation/hardhat-ethers/signers';
 import { NerwoEscrow } from '../../typechain-types';
 import { getContracts, getSigners } from '../utils';
 
-describe('NerwoEscrow: changeFeeRecipient', function () {
+describe('NerwoEscrow: setFeeRecipientAndBasisPoint', function () {
   before(async () => {
     await deployments.fixture(['NerwoEscrow', 'NerwoTetherToken'], {
       keepExistingDeployments: true
@@ -24,9 +24,14 @@ describe('NerwoEscrow: changeFeeRecipient', function () {
   });
 
   it('Changing fee recipient', async () => {
-    await expect(escrow.connect(deployer).changeFeeRecipient(platform.address))
+    await expect(escrow.connect(deployer).setFeeRecipientAndBasisPoint(platform.address, 550)) // 5.5%
       .to.emit(escrow, 'FeeRecipientChanged')
-      .withArgs(deployer.address, platform.address);
+      .withArgs(platform.address, 550);
+  });
+
+  it('Changing fee recipient: Invalid fee basis point', async () => {
+    await expect(escrow.connect(deployer).setFeeRecipientAndBasisPoint(platform.address, 5100)) // 51%
+      .to.be.revertedWithCustomError(escrow, 'InvalidFeeBasisPoint');
   });
 
   it('Changing fee recipient: Ownable: caller is not the owner', async () => {

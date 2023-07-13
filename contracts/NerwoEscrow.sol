@@ -40,6 +40,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
     uint8 private constant AMOUNT_OF_CHOICES = 2;
     uint8 private constant CLIENT_WINS = 1;
     uint8 private constant FREELANCER_WINS = 2;
+    uint256 private constant MAX_FEEBASISPOINT = 5_000; // 50%
     uint256 private constant MULTIPLIER_DIVISOR = 10_000; // Divisor parameter for multipliers.
 
     enum Status {
@@ -141,10 +142,10 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
     event FeeRecipientPayment(uint256 indexed transactionID, IERC20 indexed token, uint256 amount);
 
     /** @dev To be emitted when a feeRecipient is changed.
-     *  @param oldFeeRecipient Previous feeRecipient.
-     *  @param newFeeRecipient Current feeRecipient.
+     *  @param newFeeRecipient new fee Recipient.
+     *  @param newBasisPoint new fee BasisPoint.
      */
-    event FeeRecipientChanged(address indexed oldFeeRecipient, address indexed newFeeRecipient);
+    event FeeRecipientChanged(address indexed newFeeRecipient, uint16 newBasisPoint);
 
     /** @dev To be emitted when the whitelist was changed.
      *  @param token The token that was either added or removed from whitelist.
@@ -230,18 +231,24 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
 
     /**
      *  @dev modifies fee reciarbitratorDatapient and basis point - Internal function without access restriction
-     *  @param feeRecipient Address which receives a share of receiver payment.
+     *  @param newFeeRecipient Address which receives a share of receiver payment.
      *  @param feeRecipientBasisPoint The share of fee to be received by the feeRecipient,
      *         down to 2 decimal places as 550 = 5.5%
      */
-    function setFeeRecipientAndBasisPoint(address feeRecipient, uint256 feeRecipientBasisPoint) public onlyOwner {
+    function setFeeRecipientAndBasisPoint(address newFeeRecipient, uint256 feeRecipientBasisPoint) public onlyOwner {
+        if (newFeeRecipient == address(0)) {
+            revert NullAddress();
+        }
+
         uint16 feeRecipientBasisPoint_ = uint16(feeRecipientBasisPoint);
-        if (feeRecipientBasisPoint_ > MULTIPLIER_DIVISOR) {
+        if (feeRecipientBasisPoint_ > MAX_FEEBASISPOINT) {
             revert InvalidFeeBasisPoint();
         }
 
-        feeRecipientData.feeRecipient = payable(feeRecipient);
+        feeRecipientData.feeRecipient = payable(newFeeRecipient);
         feeRecipientData.feeRecipientBasisPoint = feeRecipientBasisPoint_;
+
+        emit FeeRecipientChanged(newFeeRecipient, feeRecipientBasisPoint_);
     }
 
     function setMetaEvidenceURI(string calldata metaEvidenceURI_) public onlyOwner {
@@ -264,14 +271,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
     /** @dev Change Fee Recipient.
      *  @param newFeeRecipient Address of the new Fee Recipient.
      */
-    function changeFeeRecipient(address newFeeRecipient) external onlyOwner {
-        if (newFeeRecipient == address(0)) {
-            revert NullAddress();
-        }
-
-        feeRecipientData.feeRecipient = newFeeRecipient;
-        emit FeeRecipientChanged(_msgSender(), newFeeRecipient);
-    }
+    function changeFeeRecipient(address newFeeRecipient) external onlyOwner {}
 
     /** @dev Calculate the amount to be paid in wei according to feeRecipientBasisPoint for a particular amount.
      *  @param amount Amount to pay in wei.
