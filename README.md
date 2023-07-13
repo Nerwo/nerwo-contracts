@@ -129,7 +129,7 @@ It provides the transaction ID, the ERC20 token address and the fee amount.
 
 ### FeeRecipientChanged
 
-`event FeeRecipientChanged(address indexed oldFeeRecipient, address indexed newFeeRecipient)`
+`event FeeRecipientChanged(address indexed newFeeRecipient, uint16 newBasisPoint)`
 
 Emitted when fee recipent is changed (admin function).
 It provides the old and new fee recipient.
