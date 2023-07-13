@@ -41,8 +41,8 @@ describe('NerwoEscrow: createTransaction', function () {
       .to.be.revertedWithCustomError(escrow, 'NullAddress');
   });
 
-  it('Creating a transaction with 0 amount', async () => {
-    await expect(createTransaction(client, freelancer.address, usdt))
+  it('Creating a transaction with invalid amount', async () => {
+    await expect(createTransaction(client, freelancer.address, usdt, 9999n))
       .to.be.revertedWithCustomError(escrow, 'InvalidAmount');
   });
 

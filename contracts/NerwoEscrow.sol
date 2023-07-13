@@ -42,6 +42,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
     uint8 private constant FREELANCER_WINS = 2;
     uint256 private constant MAX_FEEBASISPOINT = 5_000; // 50%
     uint256 private constant MULTIPLIER_DIVISOR = 10_000; // Divisor parameter for multipliers.
+    uint256 private constant MIN_AMOUNT = 10_000;
 
     enum Status {
         NoDispute,
@@ -300,11 +301,8 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
         }
 
         // Amount too low to pay fee
-        // WTF: solidity, nested if consumes less gas
-        if (feeRecipientData.feeRecipientBasisPoint > 0) {
-            if ((amount * feeRecipientData.feeRecipientBasisPoint) < MULTIPLIER_DIVISOR) {
-                revert InvalidAmount();
-            }
+        if (amount < MIN_AMOUNT) {
+            revert InvalidAmount();
         }
 
         address client = _msgSender();
