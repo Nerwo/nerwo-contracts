@@ -199,10 +199,10 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
         if (owner() != newOwner) {
             _transferOwnership(newOwner);
         }
-        _setArbitratorData(feeTimeout, arbitrator, arbitratorProxy, arbitratorExtraData);
-        _setFeeRecipientAndBasisPoint(feeRecipient, feeRecipientBasisPoint);
-        _setMetaEvidenceURI(metaEvidenceURI);
-        _changeWhiteList(supportedTokens);
+        setArbitratorData(feeTimeout, arbitrator, arbitratorProxy, arbitratorExtraData);
+        setFeeRecipientAndBasisPoint(feeRecipient, feeRecipientBasisPoint);
+        setMetaEvidenceURI(metaEvidenceURI);
+        changeWhitelist(supportedTokens);
     }
 
     // **************************** //
@@ -216,32 +216,16 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
      *  @param arbitratorProxy The arbitrator proxy of the contract.
      *  @param arbitratorExtraData Extra data for the arbitrator.
      */
-    function _setArbitratorData(
-        uint256 feeTimeout,
-        address arbitrator,
-        address arbitratorProxy,
-        bytes calldata arbitratorExtraData
-    ) internal {
-        arbitratorData.feeTimeout = uint64(feeTimeout);
-        arbitratorData.arbitrator = IArbitrator(arbitrator);
-        arbitratorData.proxy = IArbitrableProxy(arbitratorProxy);
-        arbitratorData.extraData = arbitratorExtraData;
-    }
-
-    /**
-     *  @dev modifies Arbitrator Data - External function onlyOwner
-     *  @param feeTimeout Arbitration fee timeout for the parties.
-     *  @param arbitrator The arbitrator of the contract.
-     *  @param arbitratorProxy The arbitrator proxy of the contract.
-     *  @param arbitratorExtraData Extra data for the arbitrator.
-     */
     function setArbitratorData(
         uint256 feeTimeout,
         address arbitrator,
         address arbitratorProxy,
         bytes calldata arbitratorExtraData
-    ) external onlyOwner {
-        _setArbitratorData(feeTimeout, arbitrator, arbitratorProxy, arbitratorExtraData);
+    ) public onlyOwner {
+        arbitratorData.feeTimeout = uint64(feeTimeout);
+        arbitratorData.arbitrator = IArbitrator(arbitrator);
+        arbitratorData.proxy = IArbitrableProxy(arbitratorProxy);
+        arbitratorData.extraData = arbitratorExtraData;
     }
 
     /**
@@ -250,7 +234,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
      *  @param feeRecipientBasisPoint The share of fee to be received by the feeRecipient,
      *         down to 2 decimal places as 550 = 5.5%
      */
-    function _setFeeRecipientAndBasisPoint(address feeRecipient, uint256 feeRecipientBasisPoint) internal {
+    function setFeeRecipientAndBasisPoint(address feeRecipient, uint256 feeRecipientBasisPoint) public onlyOwner {
         uint16 feeRecipientBasisPoint_ = uint16(feeRecipientBasisPoint);
         if (feeRecipientBasisPoint_ > MULTIPLIER_DIVISOR) {
             revert InvalidFeeBasisPoint();
@@ -260,37 +244,15 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
         feeRecipientData.feeRecipientBasisPoint = feeRecipientBasisPoint_;
     }
 
-    /**
-     * @dev set platform metaEvedence IPFS URI
-     * @param metaEvidenceURI_ The URI pointing to metaEvidence.json
-     */
-    function setMetaEvidenceURI(string calldata metaEvidenceURI_) external onlyOwner {
-        _setMetaEvidenceURI(metaEvidenceURI_);
-    }
-
-    function _setMetaEvidenceURI(string calldata metaEvidenceURI_) internal {
+    function setMetaEvidenceURI(string calldata metaEvidenceURI_) public onlyOwner {
         arbitratorData.metaEvidenceURI = metaEvidenceURI_;
-    }
-
-    /**
-     *  @dev modifies fee recipient and basis point - External function onlyOwner
-     *  @param feeRecipient Address which receives a share of receiver payment.
-     *  @param feeRecipientBasisPoint The share of fee to be received by the feeRecipient,
-     *         down to 2 decimal places as 550 = 5.5%
-     */
-    function setFeeRecipientAndBasisPoint(address feeRecipient, uint256 feeRecipientBasisPoint) external onlyOwner {
-        _setFeeRecipientAndBasisPoint(feeRecipient, feeRecipientBasisPoint);
-    }
-
-    function changeWhitelist(TokenAllow[] calldata tokensWhitelist) external onlyOwner {
-        _changeWhiteList(tokensWhitelist);
     }
 
     /**
      * @dev Sets whitelisted ERC20 tokens
      * @param supportedTokens An array of TokenAllow
      */
-    function _changeWhiteList(TokenAllow[] calldata supportedTokens) internal {
+    function changeWhitelist(TokenAllow[] calldata supportedTokens) public onlyOwner {
         unchecked {
             for (uint i = 0; i < supportedTokens.length; i++) {
                 tokens[supportedTokens[i].token] = supportedTokens[i].allow;
