@@ -299,10 +299,6 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
             revert NullAddress();
         }
 
-        if (amount == 0) {
-            revert InvalidAmount();
-        }
-
         // Amount too low to pay fee
         if (amount < MIN_AMOUNT) {
             revert InvalidAmount();
