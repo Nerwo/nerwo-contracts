@@ -304,8 +304,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
             revert InvalidAmount();
         }
 
-        address client = _msgSender();
-        if (client == freelancer) {
+        if (msg.sender == freelancer) {
             revert InvalidCaller();
         }
 
@@ -315,7 +314,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
 
         // first transfer tokens to the contract
         // NOTE: user must have approved the allowance
-        if (!token.transferFrom(client, address(this), amount)) {
+        if (!token.transferFrom(msg.sender, address(this), amount)) {
             revert InvalidAmount();
         }
 
@@ -327,7 +326,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
             status: Status.NoDispute,
             ruling: 0,
             lastInteraction: uint64(block.timestamp),
-            client: client,
+            client: msg.sender,
             freelancer: freelancer,
             token: token,
             amount: amount,
@@ -336,7 +335,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
             freelancerFee: 0
         });
 
-        emit TransactionCreated(transactionID, client, freelancer, token, amount);
+        emit TransactionCreated(transactionID, msg.sender, freelancer, token, amount);
     }
 
     /** @dev Pay receiver. To be called if the good or service is provided.
@@ -346,7 +345,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
     function pay(uint256 transactionID, uint256 amount) external onlyValidTransaction(transactionID) {
         Transaction storage transaction = _transactions[transactionID];
 
-        if (_msgSender() != transaction.client) {
+        if (msg.sender != transaction.client) {
             revert InvalidCaller();
         }
 
@@ -368,7 +367,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
         emit FeeRecipientPayment(transactionID, transaction.token, feeAmount);
 
         transaction.freelancer.sendToken(transaction.token, amount - feeAmount);
-        emit Payment(transactionID, transaction.token, amount, _msgSender());
+        emit Payment(transactionID, transaction.token, amount, msg.sender);
     }
 
     /** @dev Reimburse sender. To be called if the good or service can't be fully provided.
@@ -378,7 +377,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
     function reimburse(uint256 transactionID, uint256 amountReimbursed) external onlyValidTransaction(transactionID) {
         Transaction storage transaction = _transactions[transactionID];
 
-        if (_msgSender() != transaction.freelancer) {
+        if (msg.sender != transaction.freelancer) {
             revert InvalidCaller();
         }
 
@@ -396,7 +395,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
         }
 
         transaction.client.sendToken(transaction.token, amountReimbursed);
-        emit Payment(transactionID, transaction.token, amountReimbursed, _msgSender());
+        emit Payment(transactionID, transaction.token, amountReimbursed, msg.sender);
     }
 
     /** @dev Pay the arbitration fee to raise a dispute. To be called by the client or freelancer. UNTRUSTED.
@@ -411,9 +410,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
             revert InvalidStatus();
         }
 
-        address sender = _msgSender();
-
-        if ((sender != transaction.client) && (sender != transaction.freelancer)) {
+        if ((msg.sender != transaction.client) && (msg.sender != transaction.freelancer)) {
             revert InvalidCaller();
         }
 
@@ -425,7 +422,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
 
         transaction.lastInteraction = uint64(block.timestamp);
 
-        if (sender == transaction.client) {
+        if (msg.sender == transaction.client) {
             if (transaction.clientFee != 0) {
                 revert AlreadyPaid();
             }
@@ -437,11 +434,11 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
             transaction.freelancerFee = msg.value;
         }
 
-        address other = sender == transaction.client ? transaction.freelancer : transaction.client;
+        address other = msg.sender == transaction.client ? transaction.freelancer : transaction.client;
 
         if (
-            ((sender == transaction.client) && (transaction.freelancerFee != 0)) ||
-            ((sender == transaction.freelancer) && (transaction.clientFee != 0))
+            ((msg.sender == transaction.client) && (transaction.freelancerFee != 0)) ||
+            ((msg.sender == transaction.freelancer) && (transaction.clientFee != 0))
         ) {
             transaction.status = Status.DisputeCreated;
             transaction.disputeID = arbitratorData.proxy.createDispute{value: arbitrationCost_}(
@@ -451,7 +448,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
             );
             emit DisputeCreated(transactionID, transaction.disputeID, other);
         } else {
-            transaction.status = sender == transaction.client ? Status.WaitingFreelancer : Status.WaitingClient;
+            transaction.status = msg.sender == transaction.client ? Status.WaitingFreelancer : Status.WaitingClient;
             emit HasToPayFee(transactionID, other);
         }
     }
@@ -468,13 +465,11 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
             revert NoTimeout();
         }
 
-        address sender = _msgSender();
-
         if (
-            ((sender == transaction.client) && (transaction.status == Status.WaitingFreelancer)) ||
-            ((sender == transaction.freelancer) && (transaction.status == Status.WaitingClient))
+            ((msg.sender == transaction.client) && (transaction.status == Status.WaitingFreelancer)) ||
+            ((msg.sender == transaction.freelancer) && (transaction.status == Status.WaitingClient))
         ) {
-            _executeRuling(transactionID, sender == transaction.client ? CLIENT_WINS : FREELANCER_WINS);
+            _executeRuling(transactionID, msg.sender == transaction.client ? CLIENT_WINS : FREELANCER_WINS);
         } else {
             revert InvalidStatus();
         }

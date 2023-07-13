@@ -205,7 +205,7 @@ contract NerwoCentralizedArbitrator is
      *  @param _ruling The ruling choice of the arbitration.
      */
     function rule(uint256 _disputeID, uint256 _ruling) public override onlyValidDispute(_disputeID) {
-        if (_msgSender() != address(this)) {
+        if (msg.sender != address(this)) {
             revert InvalidCaller(address(this));
         }
 
@@ -246,7 +246,7 @@ contract NerwoCentralizedArbitrator is
 
         dispute.arbitrated.rule(_disputeID, _ruling);
 
-        SafeTransfer.transferTo(payable(_msgSender()), arbitrationPrice);
+        SafeTransfer.transferTo(payable(msg.sender), arbitrationPrice);
     }
 
     function getDispute(
