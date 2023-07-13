@@ -42,7 +42,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
     uint8 private constant FREELANCER_WINS = 2;
     uint256 private constant MAX_FEEBASISPOINT = 5_000; // 50%
     uint256 private constant MULTIPLIER_DIVISOR = 10_000; // Divisor parameter for multipliers.
-    uint256 private constant MIN_AMOUNT = 10_000;
+    uint256 private constant MIN_AMOUNT = 10_000; // Minimal amount with non zero fee basis point for non zero fee
 
     enum Status {
         NoDispute,
@@ -75,8 +75,9 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
     mapping(IERC20 => bool) public tokens; // whitelisted ERC20 tokens
 
     struct ArbitratorData {
-        uint64 feeTimeout; // Time in seconds a party can take to pay arbitration
+        // Time in seconds a party can take to pay arbitration
         // fees before being considered unresponding and lose the dispute.
+        uint64 feeTimeout;
         IArbitrator arbitrator; // Address of the arbitrator contract.
         IArbitrableProxy proxy; // Address of the arbitrator proxy contract.
         string metaEvidenceURI; // metaEvidence uri to set up the arbitration.
@@ -87,7 +88,9 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
 
     struct FeeRecipientData {
         address feeRecipient; // Address which receives a share of receiver payment.
-        uint16 feeRecipientBasisPoint; // The share of fee to be received by the feeRecipient, in basis points. Note that this value shouldn't exceed Divisor.
+        // The share of fee to be received by the feeRecipient,
+        // in basis points. Note that this value shouldn't exceed Divisor.
+        uint16 feeRecipientBasisPoint;
     }
 
     FeeRecipientData public feeRecipientData;
