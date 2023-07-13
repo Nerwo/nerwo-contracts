@@ -36,7 +36,7 @@ const config: HardhatUserConfig = {
   gasReporter: {
     enabled: (process.env.REPORT_GAS) ? true : false,
     coinmarketcap: process.env.COINMARKETCAP_API_KEY,
-    excludeContracts: ['NerwoTetherToken', 'ERC20']
+    excludeContracts: ['NerwoTetherToken']
   },
   networks: {
     goerli: {
