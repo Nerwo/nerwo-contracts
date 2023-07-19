@@ -272,11 +272,6 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
         }
     }
 
-    /** @dev Change Fee Recipient.
-     *  @param newFeeRecipient Address of the new Fee Recipient.
-     */
-    function changeFeeRecipient(address newFeeRecipient) external onlyOwner {}
-
     /** @dev Calculate the amount to be paid in wei according to feeRecipientBasisPoint for a particular amount.
      *  @param amount Amount to pay in wei.
      */
