@@ -201,13 +201,14 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
         uint256 feeRecipientBasisPoint,
         TokenAllow[] calldata supportedTokens
     ) external onlyOwner initializer {
-        if (owner() != newOwner) {
-            _transferOwnership(newOwner);
-        }
         setArbitratorData(feeTimeout, arbitrator, arbitratorProxy, arbitratorExtraData);
         setFeeRecipientAndBasisPoint(feeRecipient, feeRecipientBasisPoint);
         setMetaEvidenceURI(metaEvidenceURI);
         changeWhitelist(supportedTokens);
+
+        if (owner() != newOwner) {
+            _transferOwnership(newOwner);
+        }
     }
 
     // **************************** //
