@@ -16,11 +16,10 @@ describe('NerwoEscrow: setFeeRecipientAndBasisPoint', function () {
 
   let deployer: SignerWithAddress;
   let platform: SignerWithAddress;
-  let client: SignerWithAddress;
 
   beforeEach(async () => {
     ({ escrow } = await getContracts());
-    ({ deployer, platform, client } = await getSigners());
+    ({ deployer, platform } = await getSigners());
   });
 
   it('Changing fee recipient', async () => {
