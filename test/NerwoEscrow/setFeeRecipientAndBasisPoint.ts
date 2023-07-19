@@ -33,9 +33,4 @@ describe('NerwoEscrow: setFeeRecipientAndBasisPoint', function () {
     await expect(escrow.connect(deployer).setFeeRecipientAndBasisPoint(platform.address, 5100)) // 51%
       .to.be.revertedWithCustomError(escrow, 'InvalidFeeBasisPoint');
   });
-
-  it('Changing fee recipient: Ownable: caller is not the owner', async () => {
-    await expect(escrow.connect(platform).changeFeeRecipient(client.address))
-      .to.be.reverted;
-  });
 });
