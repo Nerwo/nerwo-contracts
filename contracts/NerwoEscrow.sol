@@ -187,7 +187,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
      *  @param metaEvidenceURI Meta Evidence json IPFS URI
      *  @param feeRecipient Address which receives a share of receiver payment.
      *  @param feeRecipientBasisPoint The share of fee to be received by the feeRecipient,
-     *                                 down to 2 decimal places as 550 = 5.5%
+     *                                down to 2 decimal places as 550 = 5.5%
      *  @param supportedTokens List of whitelisted ERC20 tokens
      */
     function initialize(
