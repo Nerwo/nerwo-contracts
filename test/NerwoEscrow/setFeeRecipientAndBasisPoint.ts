@@ -23,13 +23,13 @@ describe('NerwoEscrow: setFeeRecipientAndBasisPoint', function () {
   });
 
   it('Changing fee recipient', async () => {
-    await expect(escrow.connect(deployer).setFeeRecipientAndBasisPoint(platform.address, 550)) // 5.5%
+    await expect(escrow.connect(deployer).setFeeRecipientAndBasisPoint(platform.address, 3000)) // < MAX
       .to.emit(escrow, 'FeeRecipientChanged')
-      .withArgs(platform.address, 550);
+      .withArgs(platform.address, 3000);
   });
 
   it('Changing fee recipient: Invalid fee basis point', async () => {
-    await expect(escrow.connect(deployer).setFeeRecipientAndBasisPoint(platform.address, 5100)) // 51%
+    await expect(escrow.connect(deployer).setFeeRecipientAndBasisPoint(platform.address, 3001)) // > MAX
       .to.be.revertedWithCustomError(escrow, 'InvalidFeeBasisPoint');
   });
 });
