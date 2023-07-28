@@ -45,7 +45,7 @@ const config: HardhatUserConfig = {
       deploy: ['deploy-tokens', 'deploy']
     },
     sepolia: {
-      url: 'https://rpc.sepolia.org',
+      url: `https://eth-sepolia.g.alchemy.com/v2/${process.env.ALCHEMY_SEPOLIA_KEY || ''}`,
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : undefined,
       deploy: ['deploy-tokens', 'deploy']
     },
