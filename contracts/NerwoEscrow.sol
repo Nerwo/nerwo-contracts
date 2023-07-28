@@ -28,6 +28,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
     error InvalidCaller();
     error InvalidStatus();
     error InvalidAmount();
+    error TokenTransferFailed();
     error AlreadyPaid();
     error InvalidTransaction();
     error InvalidToken();
@@ -267,6 +268,9 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
     function changeWhitelist(TokenAllow[] calldata supportedTokens) public onlyOwner {
         unchecked {
             for (uint i = 0; i < supportedTokens.length; i++) {
+                if (address(supportedTokens[i].token) == address(0)) {
+                    revert InvalidToken();
+                }
                 tokens[supportedTokens[i].token] = supportedTokens[i].allow;
                 emit WhitelistChanged(supportedTokens[i].token, supportedTokens[i].allow);
             }
@@ -290,7 +294,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
         IERC20 token,
         uint256 amount,
         address freelancer
-    ) external returns (uint256 transactionID) {
+    ) external payable returns (uint256 transactionID) {
         if (freelancer == address(0)) {
             revert NullAddress();
         }
@@ -304,14 +308,21 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
             revert InvalidCaller();
         }
 
-        if (!tokens[token]) {
-            revert InvalidToken();
-        }
-
-        // first transfer tokens to the contract
-        // NOTE: user must have approved the allowance
-        if (!token.transferFrom(msg.sender, address(this), amount)) {
-            revert InvalidAmount();
+        // Native Token
+        if (address(token) == address(0)) {
+            if (msg.value != amount) {
+                revert InvalidAmount();
+            }
+            // ERC20
+        } else {
+            if (!tokens[token] || (msg.value != 0)) {
+                revert InvalidToken();
+            }
+            // first transfer tokens to the contract
+            // NOTE: user must have approved the allowance
+            if (!token.transferFrom(msg.sender, address(this), amount)) {
+                revert TokenTransferFailed();
+            }
         }
 
         unchecked {

@@ -1,7 +1,8 @@
 import { expect } from 'chai';
 import { deployments } from 'hardhat';
 
-import { getContracts, getSigners, createTransaction, randomAmount } from '../utils';
+import { getContracts, getSigners, createTransaction, randomAmount, createNativeTransaction } from '../utils';
+import { ZeroAddress } from 'ethers';
 
 describe('NerwoEscrow: reimburse', function () {
   before(async () => {
@@ -10,7 +11,7 @@ describe('NerwoEscrow: reimburse', function () {
     });
   });
 
-  it('reimbursing a transaction', async () => {
+  it('reimbursing a transaction (ERC20)', async () => {
     const { escrow, usdt } = await getContracts();
     const { platform, client, freelancer } = await getSigners();
 
@@ -47,6 +48,44 @@ describe('NerwoEscrow: reimburse', function () {
       )
       .to.emit(escrow, 'Payment').withArgs(transactionID, usdtAddress, partialAmount, client.address)
       .to.emit(escrow, 'FeeRecipientPayment').withArgs(transactionID, usdtAddress, feeAmount);
+
+    await expect(escrow.connect(freelancer).reimburse(transactionID, partialAmount))
+      .to.be.revertedWithCustomError(escrow, 'InvalidAmount');
+  });
+
+  it('reimbursing a transaction (Native)', async () => {
+    const { escrow, usdt } = await getContracts();
+    const { platform, client, freelancer } = await getSigners();
+
+    const amount = await randomAmount();
+    const transactionID = await createNativeTransaction(client, freelancer.address, amount);
+
+    await expect(escrow.connect(client).reimburse(transactionID, amount))
+      .to.be.revertedWithCustomError(escrow, 'InvalidCaller');
+
+    await expect(escrow.connect(freelancer).reimburse(transactionID, 0))
+      .to.be.revertedWithCustomError(escrow, 'InvalidAmount');
+
+    await expect(escrow.connect(freelancer).reimburse(transactionID, amount * 2n))
+      .to.be.revertedWithCustomError(escrow, 'InvalidAmount');
+
+    const partialAmount = amount / 2n;
+    const feeAmount = await escrow.calculateFeeRecipientAmount(partialAmount);
+
+    await expect(escrow.connect(freelancer).reimburse(transactionID, partialAmount))
+      .to.changeEtherBalances(
+        [escrow, client, freelancer],
+        [-partialAmount, partialAmount, 0]
+      )
+      .to.emit(escrow, 'Payment').withArgs(transactionID, ZeroAddress, partialAmount, freelancer.address);
+
+    await expect(escrow.connect(client).pay(transactionID, partialAmount))
+      .to.changeEtherBalances(
+        [escrow, platform, freelancer],
+        [-partialAmount, feeAmount, partialAmount - feeAmount]
+      )
+      .to.emit(escrow, 'Payment').withArgs(transactionID, ZeroAddress, partialAmount, client.address)
+      .to.emit(escrow, 'FeeRecipientPayment').withArgs(transactionID, ZeroAddress, feeAmount);
 
     await expect(escrow.connect(freelancer).reimburse(transactionID, partialAmount))
       .to.be.revertedWithCustomError(escrow, 'InvalidAmount');

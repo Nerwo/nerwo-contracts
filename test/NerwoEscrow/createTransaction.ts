@@ -1,10 +1,10 @@
 import { expect } from 'chai';
 import { ZeroAddress } from 'ethers';
-import { deployments } from 'hardhat';
+import { deployments, ethers } from 'hardhat';
 import { SignerWithAddress } from '@nomicfoundation/hardhat-ethers/signers';
 
 import { NerwoEscrow, NerwoTetherToken } from '../../typechain-types';
-import { getContracts, getSigners, createTransaction, randomAmount } from '../utils';
+import { getContracts, getSigners, createTransaction, randomAmount, createNativeTransaction } from '../utils';
 
 describe('NerwoEscrow: createTransaction', function () {
   before(async () => {
@@ -29,8 +29,21 @@ describe('NerwoEscrow: createTransaction', function () {
     await createTransaction(client, freelancer.address, usdt, amount);
   });
 
+  it('Creating a transaction with native token', async () => {
+    const amount = await randomAmount();
+    await createNativeTransaction(client, freelancer.address, amount);
+  });
+
+  it('Creating a transaction with badly mixed arguments', async () => {
+    const amount = await randomAmount();
+
+    await expect(escrow.connect(client).createTransaction(usdt, amount, freelancer.address,
+      { value: amount }))
+      .to.revertedWithCustomError(escrow, 'InvalidToken');
+  });
+
   it('Creating a transaction with myself', async () => {
-     const amount = await randomAmount();
+    const amount = await randomAmount();
     await expect(createTransaction(client, client.address, usdt, amount))
       .to.be.revertedWithCustomError(escrow, 'InvalidCaller');
   });
@@ -44,6 +57,12 @@ describe('NerwoEscrow: createTransaction', function () {
   it('Creating a transaction with invalid amount', async () => {
     await expect(createTransaction(client, freelancer.address, usdt, 9999n))
       .to.be.revertedWithCustomError(escrow, 'InvalidAmount');
+  });
+
+  it('Creating a transaction with insufficient allowance', async () => {
+    const amount = await randomAmount();
+    await expect(createTransaction(client, freelancer.address, usdt, amount, false))
+      .to.be.revertedWith('ERC20: insufficient allowance');
   });
 
   it('InvalidToken', async () => {

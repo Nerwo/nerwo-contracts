@@ -1,4 +1,4 @@
-import { ZeroAddress, parseEther } from 'ethers';
+import { Wallet, parseEther } from 'ethers';
 
 class TokenAllow {
     constructor(public token: string, public allow: boolean) {
@@ -31,9 +31,11 @@ export function getTokenWhitelist(usdt?: string | undefined) {
         // whitelist our test token if deployed
         whitelist = [new TokenAllow(usdt, true)];
 
-        // fake first address, for gas calculation
+        // add some for gas calculation
         if (process.env.REPORT_GAS) {
-            whitelist = [new TokenAllow(ZeroAddress, true), whitelist[0]];
+            for (let i = 0; i < 2; i++) {
+                whitelist.push(new TokenAllow(Wallet.createRandom().address, true));
+            }
         }
     };
     return whitelist;

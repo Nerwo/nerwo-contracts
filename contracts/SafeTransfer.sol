@@ -66,6 +66,10 @@ library SafeTransfer {
      *  @param amount The amount to be transferred.
      */
     function sendToken(address to, IERC20 token, uint256 amount) internal {
+        if (address(token) == address(0)) {
+            return sendTo(to, amount);
+        }
+
         (bool success, bytes memory data) = _safeTransferToken(to, token, amount);
         if (!success) {
             emit SendFailed(to, address(token), amount, data);
@@ -80,6 +84,10 @@ library SafeTransfer {
     function transferToken(address to, IERC20 token, uint256 amount) internal {
         if (amount == 0) {
             return;
+        }
+
+        if (address(token) == address(0)) {
+            return transferTo(to, amount);
         }
 
         (bool success, bytes memory data) = _safeTransferToken(to, token, amount);
