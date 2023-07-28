@@ -158,6 +158,12 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
      */
     event WhitelistChanged(IERC20 token, bool allow);
 
+    /** @dev To be emitted when the contract if funded with ether by admin.
+     *  @param funder The address that funded.
+     *  @param amount The amount funded.
+     */
+    event ContractFunded(address indexed funder, uint256 amount);
+
     function _requireValidTransaction(uint256 transactionID) internal view {
         if (_transactions[transactionID].freelancer == address(0)) {
             revert InvalidTransaction();
@@ -275,6 +281,16 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
                 emit WhitelistChanged(supportedTokens[i].token, supportedTokens[i].allow);
             }
         }
+    }
+
+    /** @dev Admin function to fund the contract with ether, e.g. to unblock if
+     *       the arbitrator cost changes in between (possible?)
+     *  @notice It's harmless and there is no withdraw function.
+     */
+    receive() external payable {
+        // using onlyOwner modifier trips hardhat
+        require(owner() == msg.sender, "Ownable: caller is not the owner");
+        emit ContractFunded(msg.sender, msg.value);
     }
 
     /** @dev Calculate the amount to be paid in wei according to feeRecipientBasisPoint for a particular amount.
