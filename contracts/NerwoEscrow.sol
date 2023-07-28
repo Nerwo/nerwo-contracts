@@ -202,7 +202,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
         uint256 feeRecipientBasisPoint,
         TokenAllow[] calldata supportedTokens
     ) external onlyOwner initializer {
-        setArbitratorData(feeTimeout, arbitrator, arbitratorProxy, arbitratorExtraData);
+        _setArbitratorData(feeTimeout, arbitrator, arbitratorProxy, arbitratorExtraData);
         setFeeRecipientAndBasisPoint(feeRecipient, feeRecipientBasisPoint);
         setMetaEvidenceURI(metaEvidenceURI);
         changeWhitelist(supportedTokens);
@@ -223,12 +223,12 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
      *  @param arbitratorProxy The arbitrator proxy of the contract.
      *  @param arbitratorExtraData Extra data for the arbitrator.
      */
-    function setArbitratorData(
+    function _setArbitratorData(
         uint256 feeTimeout,
         address arbitrator,
         address arbitratorProxy,
         bytes calldata arbitratorExtraData
-    ) public onlyOwner {
+    ) internal {
         arbitratorData.feeTimeout = uint64(feeTimeout);
         arbitratorData.arbitrator = IArbitrator(arbitrator);
         arbitratorData.proxy = IArbitrableProxy(arbitratorProxy);
