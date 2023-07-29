@@ -9,24 +9,23 @@ pragma solidity ^0.8.20;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 library SafeTransfer {
-    error TransferFailed(address recipient, IERC20 token, uint256 amount, bytes data);
+    error TransferFailed(address recipient, IERC20 token, uint256 amount);
 
     /** @dev To be emitted if a transfer to a party fails.
      *  @param recipient The target of the failed operation.
      *  @param token The token address.
      *  @param amount The amount.
-     *  @param data Failed call data.
      */
-    event SendFailed(address indexed recipient, address indexed token, uint256 amount, bytes data);
+    event SendFailed(address indexed recipient, address indexed token, uint256 amount);
 
     /** @dev Send amount to recipent, emit a log when fails.
      *  @param target To address to send to.
      *  @param amount Transaction amount.
      */
     function sendTo(address target, uint256 amount) internal {
-        (bool success, bytes memory data) = target.call{value: amount}("");
+        (bool success, ) = target.call{value: amount}("");
         if (!success) {
-            emit SendFailed(target, address(0), amount, data);
+            emit SendFailed(target, address(0), amount);
         }
     }
 
@@ -35,9 +34,9 @@ library SafeTransfer {
      *  @param amount Transaction amount.
      */
     function transferTo(address target, uint256 amount) internal {
-        (bool success, bytes memory data) = target.call{value: amount}("");
+        (bool success, ) = target.call{value: amount}("");
         if (!success) {
-            revert TransferFailed(target, IERC20(address(0)), amount, data);
+            revert TransferFailed(target, IERC20(address(0)), amount);
         }
     }
 
@@ -70,9 +69,9 @@ library SafeTransfer {
             return sendTo(to, amount);
         }
 
-        (bool success, bytes memory data) = _safeTransferToken(to, token, amount);
+        (bool success, ) = _safeTransferToken(to, token, amount);
         if (!success) {
-            emit SendFailed(to, address(token), amount, data);
+            emit SendFailed(to, address(token), amount);
         }
     }
 
@@ -90,9 +89,9 @@ library SafeTransfer {
             return transferTo(to, amount);
         }
 
-        (bool success, bytes memory data) = _safeTransferToken(to, token, amount);
+        (bool success, ) = _safeTransferToken(to, token, amount);
         if (!success) {
-            revert TransferFailed(to, token, amount, data);
+            revert TransferFailed(to, token, amount);
         }
     }
 }

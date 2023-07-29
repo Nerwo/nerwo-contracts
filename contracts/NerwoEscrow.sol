@@ -104,17 +104,17 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
 
     /** @dev To be emitted when a party pays or reimburses the other.
      *  @param transactionID The index of the transaction.
+     *  @param party The party that paid.
      *  @param token The token address.
      *  @param amount The amount paid.
-     *  @param party The party that paid.
      */
-    event Payment(uint256 indexed transactionID, IERC20 indexed token, uint256 amount, address indexed party);
+    event Payment(uint256 indexed transactionID, address indexed party, IERC20 indexed token, uint256 amount);
 
     /** @dev Indicate that a party has to pay a fee or would otherwise be considered as losing.
      *  @param transactionID The index of the transaction.
      *  @param party The party who has to pay.
      */
-    event HasToPayFee(uint256 indexed transactionID, address party);
+    event HasToPayFee(uint256 indexed transactionID, address indexed party);
 
     /**
      * @dev To be emitted when a dispute is created.
@@ -132,10 +132,10 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
      *  @param amount The initial amount in the transaction.
      */
     event TransactionCreated(
-        uint256 transactionID,
+        uint256 indexed transactionID,
         address indexed client,
         address indexed freelancer,
-        IERC20 indexed token,
+        IERC20 token,
         uint256 amount
     );
 
@@ -156,7 +156,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
      *  @param token The token that was either added or removed from whitelist.
      *  @param allow Whether added or removed.
      */
-    event WhitelistChanged(IERC20 token, bool allow);
+    event WhitelistChanged(IERC20 indexed token, bool allow);
 
     /** @dev To be emitted when the contract if funded with ether by admin.
      *  @param funder The address that funded.
@@ -390,7 +390,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
         emit FeeRecipientPayment(transactionID, transaction.token, feeAmount);
 
         transaction.freelancer.sendToken(transaction.token, amount - feeAmount);
-        emit Payment(transactionID, transaction.token, amount, msg.sender);
+        emit Payment(transactionID, msg.sender, transaction.token, amount);
     }
 
     /** @dev Reimburse sender. To be called if the good or service can't be fully provided.
@@ -418,7 +418,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
         }
 
         transaction.client.sendToken(transaction.token, amountReimbursed);
-        emit Payment(transactionID, transaction.token, amountReimbursed, msg.sender);
+        emit Payment(transactionID, msg.sender, transaction.token, amountReimbursed);
     }
 
     /** @dev Pay the arbitration fee to raise a dispute. To be called by the client or freelancer. UNTRUSTED.

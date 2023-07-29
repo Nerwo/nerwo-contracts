@@ -94,14 +94,14 @@ Get the ruling for the dispute of given transaction.
 
 ### Payment
 
-`event Payment(uint256 indexed transactionID, IERC20 indexed token, uint256 amount, address indexed client)`
+`event Payment(uint256 indexed transactionID, address indexed client, IERC20 indexed token, uint256 amount)`
 
 Emitted when a payment is made.
 It provides the transaction ID, the ERC20 token address, the amount paid, and the address of the client.
 
 ### HasToPayFee
 
-`event HasToPayFee(uint256 indexed transactionID, address party)`
+`event HasToPayFee(uint256 indexed transactionID, address indexed party)`
 
 Emitted when a party has to pay an arbitration fee.
 It provides the transaction ID and the party that has to pay the fee.
@@ -115,7 +115,7 @@ and the first party opened the dispute.
 
 ### TransactionCreated
 
-`event TransactionCreated(uint256 transactionID, address indexed client, address indexed freelancer, IERC20 indexed token, uint256 amount)`
+`event TransactionCreated(uint256 indexed transactionID, address indexed client, address indexed freelancer, IERC20 token, uint256 amount)`
 
 Emitted when a new transaction is created (the Escrow).
 It provides all needed informations.
@@ -136,13 +136,13 @@ It provides the old and new fee recipient.
 
 ### WhitelistChanged
 
-`event WhitelistChanged(IERC20 token, bool allow)`
+`event WhitelistChanged(IERC20 indexed token, bool allow)`
 
 Emitted when a token whitelist is changed (admin function).
 
-### SendFailed
+### SendFailed (SafeTransfer)
 
-`event SendFailed(address indexed recipient, address indexed token, uint256 amount, bytes data)`
+`event SendFailed(address indexed recipient, address indexed token, uint256 amount)`
 
 Emitted when sending funds fails. It the address of the ERC20 is 0
 it refers to the native token (used for arbitration).

@@ -3,8 +3,7 @@ import { deployments } from 'hardhat';
 import { SignerWithAddress } from '@nomicfoundation/hardhat-ethers/signers';
 
 import { NerwoEscrow, NerwoTetherToken } from '../../typechain-types';
-import { getContracts, getSigners, createTransaction, randomAmount, createNativeTransaction } from '../utils';
-import { ZeroAddress } from 'ethers';
+import { getContracts, getSigners, createTransaction, randomAmount, createNativeTransaction, NativeToken } from '../utils';
 
 describe('NerwoEscrow: pay', function () {
   before(async () => {
@@ -43,7 +42,7 @@ describe('NerwoEscrow: pay', function () {
         [escrow, platform, freelancer],
         [-amount, feeAmount, amount - feeAmount]
       )
-      .to.emit(escrow, 'Payment').withArgs(transactionID, await usdt.getAddress(), amount, client.address)
+      .to.emit(escrow, 'Payment').withArgs(transactionID, client.address, await usdt.getAddress(), amount)
       .to.emit(escrow, 'FeeRecipientPayment');
   });
 
@@ -64,7 +63,7 @@ describe('NerwoEscrow: pay', function () {
         [escrow, platform, freelancer],
         [-amount, feeAmount, amount - feeAmount]
       )
-      .to.emit(escrow, 'Payment').withArgs(transactionID, ZeroAddress, amount, client.address)
+      .to.emit(escrow, 'Payment').withArgs(transactionID, client.address, NativeToken, amount)
       .to.emit(escrow, 'FeeRecipientPayment');
   });
 });

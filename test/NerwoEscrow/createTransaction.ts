@@ -1,10 +1,9 @@
 import { expect } from 'chai';
-import { ZeroAddress } from 'ethers';
-import { deployments, ethers } from 'hardhat';
+import { deployments } from 'hardhat';
 import { SignerWithAddress } from '@nomicfoundation/hardhat-ethers/signers';
 
 import { NerwoEscrow, NerwoTetherToken } from '../../typechain-types';
-import { getContracts, getSigners, createTransaction, randomAmount, createNativeTransaction } from '../utils';
+import { getContracts, getSigners, createTransaction, randomAmount, createNativeTransaction, NativeToken } from '../utils';
 
 describe('NerwoEscrow: createTransaction', function () {
   before(async () => {
@@ -50,7 +49,7 @@ describe('NerwoEscrow: createTransaction', function () {
 
   it('Creating a transaction with null freelancer', async () => {
     const amount = await randomAmount();
-    await expect(createTransaction(client, ZeroAddress, usdt, amount))
+    await expect(createTransaction(client, NativeToken, usdt, amount))
       .to.be.revertedWithCustomError(escrow, 'NullAddress');
   });
 

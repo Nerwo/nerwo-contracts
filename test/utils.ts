@@ -17,6 +17,8 @@ export class Actor {
     }
 }
 
+export const NativeToken = ZeroAddress;
+
 export async function getContract<T extends BaseContract>(contractName: string, signer?: Signer): Promise<T> {
     const deployment = await deployments.get(contractName);
     const contract = await ethers.getContractAt(contractName, deployment.address, signer);
