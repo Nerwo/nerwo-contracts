@@ -104,11 +104,18 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
 
     /** @dev To be emitted when a party pays or reimburses the other.
      *  @param transactionID The index of the transaction.
-     *  @param party The party that paid.
+     *  @param from The address that paid.
+     *  @param to The address that received the payment.
      *  @param token The token address.
      *  @param amount The amount paid.
      */
-    event Payment(uint256 indexed transactionID, address indexed party, IERC20 indexed token, uint256 amount);
+    event Payment(
+        uint256 indexed transactionID,
+        address indexed from,
+        address indexed to,
+        IERC20 token,
+        uint256 amount
+    );
 
     /** @dev Indicate that a party has to pay a fee or would otherwise be considered as losing.
      *  @param transactionID The index of the transaction.
@@ -141,10 +148,16 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
 
     /** @dev To be emitted when a fee is received by the feeRecipient.
      *  @param transactionID The index of the transaction.
+     *  @param recipient The fee recipient.
      *  @param token The Token Address.
      *  @param amount The amount paid.
      */
-    event FeeRecipientPayment(uint256 indexed transactionID, IERC20 indexed token, uint256 amount);
+    event FeeRecipientPayment(
+        uint256 indexed transactionID,
+        address indexed recipient,
+        IERC20 indexed token,
+        uint256 amount
+    );
 
     /** @dev To be emitted when a feeRecipient is changed.
      *  @param newFeeRecipient new fee Recipient.
@@ -386,11 +399,13 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
         }
 
         uint256 feeAmount = calculateFeeRecipientAmount(amount);
-        feeRecipientData.feeRecipient.transferToken(transaction.token, feeAmount);
-        emit FeeRecipientPayment(transactionID, transaction.token, feeAmount);
+        if (feeAmount != 0) {
+            feeRecipientData.feeRecipient.transferToken(transaction.token, feeAmount);
+            emit FeeRecipientPayment(transactionID, feeRecipientData.feeRecipient, transaction.token, feeAmount);
+        }
 
         transaction.freelancer.sendToken(transaction.token, amount - feeAmount);
-        emit Payment(transactionID, msg.sender, transaction.token, amount);
+        emit Payment(transactionID, msg.sender, transaction.freelancer, transaction.token, amount);
     }
 
     /** @dev Reimburse sender. To be called if the good or service can't be fully provided.
@@ -418,7 +433,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
         }
 
         transaction.client.sendToken(transaction.token, amountReimbursed);
-        emit Payment(transactionID, msg.sender, transaction.token, amountReimbursed);
+        emit Payment(transactionID, msg.sender, transaction.client, transaction.token, amountReimbursed);
     }
 
     /** @dev Pay the arbitration fee to raise a dispute. To be called by the client or freelancer. UNTRUSTED.
@@ -548,8 +563,10 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
             client.sendTo(clientArbitrationFee);
         } else if (ruling == FREELANCER_WINS) {
             feeAmount = calculateFeeRecipientAmount(amount);
-            feeRecipientData.feeRecipient.transferToken(transaction.token, feeAmount);
-            emit FeeRecipientPayment(transactionID, transaction.token, feeAmount);
+            if (feeAmount != 0) {
+                feeRecipientData.feeRecipient.transferToken(transaction.token, feeAmount);
+                emit FeeRecipientPayment(transactionID, feeRecipientData.feeRecipient, transaction.token, feeAmount);
+            }
 
             freelancer.sendToken(transaction.token, amount - feeAmount);
             freelancer.sendTo(freelancerArbitrationFee);
@@ -558,8 +575,10 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
             uint256 splitAmount = amount / 2;
 
             feeAmount = calculateFeeRecipientAmount(splitAmount);
-            feeRecipientData.feeRecipient.transferToken(transaction.token, feeAmount);
-            emit FeeRecipientPayment(transactionID, transaction.token, feeAmount);
+            if (feeAmount != 0) {
+                feeRecipientData.feeRecipient.transferToken(transaction.token, feeAmount);
+                emit FeeRecipientPayment(transactionID, feeRecipientData.feeRecipient, transaction.token, feeAmount);
+            }
 
             // In the case of an uneven token amount, one basic token unit can be burnt.
             client.sendToken(transaction.token, splitAmount);

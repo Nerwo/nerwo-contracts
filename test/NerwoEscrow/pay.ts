@@ -42,7 +42,7 @@ describe('NerwoEscrow: pay', function () {
         [escrow, platform, freelancer],
         [-amount, feeAmount, amount - feeAmount]
       )
-      .to.emit(escrow, 'Payment').withArgs(transactionID, client.address, await usdt.getAddress(), amount)
+      .to.emit(escrow, 'Payment').withArgs(transactionID, client.address, freelancer.address, await usdt.getAddress(), amount)
       .to.emit(escrow, 'FeeRecipientPayment');
   });
 
@@ -63,7 +63,7 @@ describe('NerwoEscrow: pay', function () {
         [escrow, platform, freelancer],
         [-amount, feeAmount, amount - feeAmount]
       )
-      .to.emit(escrow, 'Payment').withArgs(transactionID, client.address, NativeToken, amount)
+      .to.emit(escrow, 'Payment').withArgs(transactionID, client.address, freelancer.address, NativeToken, amount)
       .to.emit(escrow, 'FeeRecipientPayment');
   });
 });

@@ -81,10 +81,6 @@ library SafeTransfer {
      *  @param amount The amount to be transferred.
      */
     function transferToken(address to, IERC20 token, uint256 amount) internal {
-        if (amount == 0) {
-            return;
-        }
-
         if (address(token) == address(0)) {
             return transferTo(to, amount);
         }
