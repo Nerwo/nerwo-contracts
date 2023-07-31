@@ -93,6 +93,7 @@ describe('NerwoEscrow: rule (ERC20)', function () {
   it('Split amount', async () => {
     const splitAmount = amount / 2n;
     const splitArbitration = arbitrationCost / 2n;
+    const splitFeeAmount = feeAmount / 2n;
 
     expect((await escrow.fetchRuling(transactionID)).isRuled).to.be.equal(false);
     await proxy.connect(court).giveRuling(disputeID, constants.Ruling.SplitAmount);
@@ -108,7 +109,7 @@ describe('NerwoEscrow: rule (ERC20)', function () {
       .to.changeTokenBalances(
         usdt,
         [escrow, platform, client, freelancer],
-        [-amount, feeAmount, splitAmount, splitAmount - feeAmount]
+        [-amount, splitFeeAmount, splitAmount, splitAmount - splitFeeAmount]
       );
   });
 });
@@ -187,6 +188,7 @@ describe('NerwoEscrow: rule (Native)', function () {
   it('Split amount', async () => {
     const splitAmount = amount / 2n;
     const splitArbitration = arbitrationCost / 2n;
+    const splitFeeAmount = feeAmount / 2n;
 
     expect((await escrow.fetchRuling(transactionID)).isRuled).to.be.equal(false);
     await proxy.connect(court).giveRuling(disputeID, constants.Ruling.SplitAmount);
@@ -197,7 +199,7 @@ describe('NerwoEscrow: rule (Native)', function () {
     await expect(escrow.connect(client).acceptRuling(transactionID))
       .to.changeEtherBalances(
         [escrow, platform, client, freelancer],
-        [-arbitrationCost - amount, feeAmount, splitAmount + splitArbitration, splitAmount + splitArbitration - feeAmount]
+        [-arbitrationCost - amount, splitFeeAmount, splitAmount + splitArbitration, splitAmount + splitArbitration - splitFeeAmount]
       );
   });
 });
