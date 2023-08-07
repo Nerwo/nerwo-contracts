@@ -75,7 +75,7 @@ library SafeTransfer {
                     switch returndatasize()
                     case 0x00 {
                         // This is a non-standard ERC-20
-                        success := not(0) // set success to true
+                        success := true
                     }
                     case 0x20 {
                         // This is a complaint ERC-20
@@ -84,7 +84,7 @@ library SafeTransfer {
                     }
                     default {
                         // This is an excessively non-compliant ERC-20
-                        success := 0
+                        success := false
                     }
                 }
             }
