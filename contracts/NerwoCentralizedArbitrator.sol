@@ -5,6 +5,7 @@
  *  @author: [@ferittuncer, @hbarcelos, @sherpya]
  *
  *  @notice This contract implement a simple not appealable Centralized Arbitrator
+ *  and Arbitrator Proxy, mainly used for test units.
  */
 
 pragma solidity ^0.8.21;

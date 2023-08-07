@@ -5,8 +5,8 @@
  *  @notice Original authors of the Kleros escrow example: @eburgos, @n1c01a5
  *
  *  @notice This contract implements an escrow system with dispute resolution, allowing secure transactions
- * between a client and a freelancer. The contract holds funds on behalf of the client until the transaction
- * is completed or a dispute arises. If a dispute occurs, an external arbitrator determines the outcome.
+ *  between a client and a freelancer. The contract holds funds on behalf of the client until the transaction
+ *  is completed or a dispute arises. If a dispute occurs, an external arbitrator determines the outcome.
  */
 
 pragma solidity ^0.8.21;
@@ -206,8 +206,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
      *  @param arbitratorExtraData Extra data for the arbitrator.
      *  @param metaEvidenceURI Meta Evidence json IPFS URI
      *  @param feeRecipient Address which receives a share of receiver payment.
-     *  @param feeRecipientBasisPoint The share of fee to be received by the feeRecipient,
-     *                                down to 2 decimal places as 550 = 5.5%
+     *  @param feeRecipientBasisPoint The share of fee to be received by the feeRecipient, down to 2 decimal places as 550 = 5.5%
      *  @param supportedTokens List of whitelisted ERC20 tokens
      */
     function initialize(
@@ -257,8 +256,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
     /**
      *  @dev modifies fee reciarbitratorDatapient and basis point - Internal function without access restriction
      *  @param newFeeRecipient Address which receives a share of receiver payment.
-     *  @param feeRecipientBasisPoint The share of fee to be received by the feeRecipient,
-     *         down to 2 decimal places as 550 = 5.5%
+     *  @param feeRecipientBasisPoint The share of fee to be received by the feeRecipient, down to 2 decimal places as 550 = 5.5%
      */
     function setFeeRecipientAndBasisPoint(address newFeeRecipient, uint256 feeRecipientBasisPoint) public onlyOwner {
         if (newFeeRecipient == address(0)) {
@@ -296,8 +294,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
         }
     }
 
-    /** @dev Admin function to fund the contract with ether, e.g. to unblock if
-     *       the arbitrator cost changes in between (possible?)
+    /** @dev Admin function to fund the contract with ether, e.g. to unblock if the arbitrator cost changes in between (possible?)
      *  @notice It's harmless and there is no withdraw function.
      */
     receive() external payable {
@@ -337,13 +334,13 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
             revert InvalidCaller();
         }
 
-        // Native Token
         if (address(token) == address(0)) {
+            // Native Token
             if (msg.value != amount) {
                 revert InvalidAmount();
             }
-            // ERC20
         } else {
+            // ERC20
             if (!tokens[token] || (msg.value != 0)) {
                 revert InvalidToken();
             }
@@ -601,7 +598,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
     /**
      * @dev Get transaction by id
      *  @param transactionID The index of the transaction.
-     * @return transaction
+     *  @return transaction The specified transaction if does exist.
      */
     function getTransaction(
         uint256 transactionID
