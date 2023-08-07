@@ -69,7 +69,7 @@ library SafeTransfer {
                 mstore(add(args, 0x04), and(to, 0xffffffffffffffffffffffffffffffffffffffff))
                 mstore(add(args, 0x24), amount)
 
-                success := call(gas(), token, 0, args, 0x44, 0, 0x20)
+                success := call(gas(), token, 0, args, 0x44, 0, 0)
 
                 if iszero(iszero(success)) {
                     switch returndatasize()
