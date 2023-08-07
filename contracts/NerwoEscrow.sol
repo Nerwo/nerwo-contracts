@@ -378,7 +378,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
      *  @param transactionID The index of the transaction.
      *  @param amount Amount to pay in wei.
      */
-    function pay(uint256 transactionID, uint256 amount) external onlyValidTransaction(transactionID) {
+    function pay(uint256 transactionID, uint256 amount) external nonReentrant onlyValidTransaction(transactionID) {
         Transaction storage transaction = _transactions[transactionID];
 
         if (msg.sender != transaction.client) {
@@ -412,7 +412,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
      *  @param transactionID The index of the transaction.
      *  @param amountReimbursed Amount to reimburse in wei.
      */
-    function reimburse(uint256 transactionID, uint256 amountReimbursed) external onlyValidTransaction(transactionID) {
+    function reimburse(uint256 transactionID, uint256 amountReimbursed) external nonReentrant onlyValidTransaction(transactionID) {
         Transaction storage transaction = _transactions[transactionID];
 
         if (msg.sender != transaction.freelancer) {
@@ -441,7 +441,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
      *  which will make this function throw and therefore lead to a party being timed-out.
      *  @param transactionID The index of the transaction.
      */
-    function payArbitrationFee(uint256 transactionID) external payable onlyValidTransaction(transactionID) {
+    function payArbitrationFee(uint256 transactionID) external payable nonReentrant onlyValidTransaction(transactionID) {
         Transaction storage transaction = _transactions[transactionID];
 
         if (transaction.status >= Status.DisputeCreated) {
