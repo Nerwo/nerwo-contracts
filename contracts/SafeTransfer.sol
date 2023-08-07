@@ -2,6 +2,7 @@
 /**
  *  @title SafeTransfer
  *  @author: [@sherpya]
+ *  @notice: Optimized Native Token / ERC20 transfers with error check
  */
 
 pragma solidity ^0.8.21;
