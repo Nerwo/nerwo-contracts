@@ -7,7 +7,7 @@
  *  @notice This contract implement a simple not appealable Centralized Arbitrator
  */
 
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.21;
 
 import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";

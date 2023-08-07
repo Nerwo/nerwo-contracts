@@ -9,7 +9,7 @@
  * is completed or a dispute arises. If a dispute occurs, an external arbitrator determines the outcome.
  */
 
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.21;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
