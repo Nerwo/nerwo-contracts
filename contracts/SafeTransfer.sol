@@ -23,7 +23,14 @@ library SafeTransfer {
      *  @param amount Transaction amount.
      */
     function sendTo(address target, uint256 amount) internal {
-        (bool success, ) = target.call{value: amount}("");
+        bool success;
+
+        /// @solidity memory-safe-assembly
+        assembly {
+            // Transfer the ETH and store if it succeeded or not.
+            success := call(gas(), target, amount, 0, 0, 0, 0)
+        }
+
         if (!success) {
             emit SendFailed(target, address(0), amount);
         }
@@ -34,7 +41,14 @@ library SafeTransfer {
      *  @param amount Transaction amount.
      */
     function transferTo(address target, uint256 amount) internal {
-        (bool success, ) = target.call{value: amount}("");
+        bool success;
+
+        /// @solidity memory-safe-assembly
+        assembly {
+            // Transfer the ETH and store if it succeeded or not.
+            success := call(gas(), target, amount, 0, 0, 0, 0)
+        }
+
         if (!success) {
             revert TransferFailed(target, IERC20(address(0)), amount);
         }
@@ -46,11 +60,9 @@ library SafeTransfer {
      * @param token The address of the token contract.
      * @param amount The amount to be transferred.
      */
-    function _safeTransferToken(
-        address to,
-        IERC20 token,
-        uint256 amount
-    ) internal returns (bool success, bytes memory data) {
+    function _safeTransferToken(address to, IERC20 token, uint256 amount) internal returns (bool success) {
+        bytes memory data;
+
         // solhint-disable-next-line avoid-low-level-calls
         (success, data) = address(token).call(abi.encodeWithSignature("transfer(address,uint256)", to, amount));
 
@@ -69,8 +81,7 @@ library SafeTransfer {
             return sendTo(to, amount);
         }
 
-        (bool success, ) = _safeTransferToken(to, token, amount);
-        if (!success) {
+        if (!_safeTransferToken(to, token, amount)) {
             emit SendFailed(to, address(token), amount);
         }
     }
@@ -85,8 +96,7 @@ library SafeTransfer {
             return transferTo(to, amount);
         }
 
-        (bool success, ) = _safeTransferToken(to, token, amount);
-        if (!success) {
+        if (!_safeTransferToken(to, token, amount)) {
             revert TransferFailed(to, token, amount);
         }
     }
