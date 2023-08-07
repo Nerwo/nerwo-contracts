@@ -400,11 +400,11 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
 
         uint256 feeAmount = calculateFeeRecipientAmount(amount);
         if (feeAmount != 0) {
-            feeRecipientData.feeRecipient.transferToken(transaction.token, feeAmount);
+            feeRecipientData.feeRecipient.sendToken(transaction.token, feeAmount, true);
             emit FeeRecipientPayment(transactionID, feeRecipientData.feeRecipient, transaction.token, feeAmount);
         }
 
-        transaction.freelancer.sendToken(transaction.token, amount - feeAmount);
+        transaction.freelancer.sendToken(transaction.token, amount - feeAmount, false);
         emit Payment(transactionID, msg.sender, transaction.freelancer, transaction.token, amount);
     }
 
@@ -432,7 +432,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
             transaction.amount -= amountReimbursed;
         }
 
-        transaction.client.sendToken(transaction.token, amountReimbursed);
+        transaction.client.sendToken(transaction.token, amountReimbursed, false);
         emit Payment(transactionID, msg.sender, transaction.client, transaction.token, amountReimbursed);
     }
 
@@ -559,33 +559,33 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
         // Give the arbitration fee back.
         // Note that we use send to prevent a party from blocking the execution.
         if (ruling == CLIENT_WINS) {
-            client.sendToken(transaction.token, amount);
-            client.sendTo(clientArbitrationFee);
+            client.sendToken(transaction.token, amount, false);
+            client.sendTo(clientArbitrationFee, false);
         } else if (ruling == FREELANCER_WINS) {
             feeAmount = calculateFeeRecipientAmount(amount);
             if (feeAmount != 0) {
-                feeRecipientData.feeRecipient.transferToken(transaction.token, feeAmount);
+                feeRecipientData.feeRecipient.sendToken(transaction.token, feeAmount, true);
                 emit FeeRecipientPayment(transactionID, feeRecipientData.feeRecipient, transaction.token, feeAmount);
             }
 
-            freelancer.sendToken(transaction.token, amount - feeAmount);
-            freelancer.sendTo(freelancerArbitrationFee);
+            freelancer.sendToken(transaction.token, amount - feeAmount, false);
+            freelancer.sendTo(freelancerArbitrationFee, false);
         } else {
             uint256 splitArbitration = clientArbitrationFee / 2;
             uint256 splitAmount = amount / 2;
 
             feeAmount = calculateFeeRecipientAmount(splitAmount);
             if (feeAmount != 0) {
-                feeRecipientData.feeRecipient.transferToken(transaction.token, feeAmount);
+                feeRecipientData.feeRecipient.sendToken(transaction.token, feeAmount, true);
                 emit FeeRecipientPayment(transactionID, feeRecipientData.feeRecipient, transaction.token, feeAmount);
             }
 
             // In the case of an uneven token amount, one basic token unit can be burnt.
-            client.sendToken(transaction.token, splitAmount);
-            freelancer.sendToken(transaction.token, splitAmount - feeAmount);
+            client.sendToken(transaction.token, splitAmount, false);
+            freelancer.sendToken(transaction.token, splitAmount - feeAmount, false);
 
-            client.sendTo(splitArbitration);
-            freelancer.sendTo(splitArbitration);
+            client.sendTo(splitArbitration, false);
+            freelancer.sendTo(splitArbitration, false);
         }
     }
 

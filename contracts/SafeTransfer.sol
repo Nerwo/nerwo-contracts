@@ -9,6 +9,8 @@ pragma solidity ^0.8.21;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 library SafeTransfer {
+    IERC20 private constant NATIVE_TOKEN = IERC20(address(0));
+
     error TransferFailed(address recipient, IERC20 token, uint256 amount);
 
     /** @dev To be emitted if a transfer to a party fails.
@@ -16,52 +18,45 @@ library SafeTransfer {
      *  @param token The token address.
      *  @param amount The amount.
      */
-    event SendFailed(address indexed recipient, address indexed token, uint256 amount);
+    event SendFailed(address indexed recipient, IERC20 indexed token, uint256 amount);
 
     /** @dev Send amount to recipent, emit a log when fails.
-     *  @param target To address to send to.
+     *  @param to To address to send to.
      *  @param amount Transaction amount.
+     *  @param revertOnError Whether the operation should revert on error.
      */
-    function sendTo(address target, uint256 amount) internal {
+    function sendTo(address to, uint256 amount, bool revertOnError) internal {
         bool success;
 
         /// @solidity memory-safe-assembly
         assembly {
-            // Transfer the ETH and store if it succeeded or not.
-            success := call(gas(), target, amount, 0, 0, 0, 0)
+            success := call(gas(), to, amount, 0, 0, 0, 0)
         }
 
-        if (!success) {
-            emit SendFailed(target, address(0), amount);
+        if (success) {
+            return;
         }
+
+        if (revertOnError) {
+            revert TransferFailed(to, NATIVE_TOKEN, amount);
+        }
+
+        emit SendFailed(to, NATIVE_TOKEN, amount);
     }
 
-    /** @dev Send amount to recipent, reverts on failure.
-     *  @param target To address to send to.
-     *  @param amount Transaction amount.
+    /** @dev Send tokens to recipent, emit a log when fails.
+     *  @param to To address to send to.
+     *  @param token The token address.
+     *  @param amount The amount to be transferred.
+     *  @param revertOnError Whether the operation should revert on error.
      */
-    function transferTo(address target, uint256 amount) internal {
-        bool success;
-
-        /// @solidity memory-safe-assembly
-        assembly {
-            // Transfer the ETH and store if it succeeded or not.
-            success := call(gas(), target, amount, 0, 0, 0, 0)
+    function sendToken(address to, IERC20 token, uint256 amount, bool revertOnError) internal {
+        if (token == NATIVE_TOKEN) {
+            return sendTo(to, amount, revertOnError);
         }
 
-        if (!success) {
-            revert TransferFailed(target, IERC20(address(0)), amount);
-        }
-    }
-
-    /**
-     * @dev Transfers tokens to a specified address, returns error if fails.
-     * @param to The address to transfer to.
-     * @param token The address of the token contract.
-     * @param amount The amount to be transferred.
-     */
-    function _safeTransferToken(address to, IERC20 token, uint256 amount) internal returns (bool success) {
         bytes memory data;
+        bool success;
 
         // solhint-disable-next-line avoid-low-level-calls
         (success, data) = address(token).call(abi.encodeWithSignature("transfer(address,uint256)", to, amount));
@@ -69,35 +64,15 @@ library SafeTransfer {
         if (success && data.length > 0) {
             success = abi.decode(data, (bool));
         }
-    }
 
-    /** @dev Send tokens to recipent, emit a log when fails.
-     *  @param to To address to send to.
-     *  @param token The token address.
-     *  @param amount The amount to be transferred.
-     */
-    function sendToken(address to, IERC20 token, uint256 amount) internal {
-        if (address(token) == address(0)) {
-            return sendTo(to, amount);
+        if (success) {
+            return;
         }
 
-        if (!_safeTransferToken(to, token, amount)) {
-            emit SendFailed(to, address(token), amount);
-        }
-    }
-
-    /** @dev Transfers tokens to a specified address, reverts on failure.
-     *  @param to To address to send to.
-     *  @param token The token address.
-     *  @param amount The amount to be transferred.
-     */
-    function transferToken(address to, IERC20 token, uint256 amount) internal {
-        if (address(token) == address(0)) {
-            return transferTo(to, amount);
-        }
-
-        if (!_safeTransferToken(to, token, amount)) {
+        if (revertOnError) {
             revert TransferFailed(to, token, amount);
         }
+
+        emit SendFailed(to, token, amount);
     }
 }
