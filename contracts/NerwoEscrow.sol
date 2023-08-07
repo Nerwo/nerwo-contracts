@@ -254,7 +254,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
     }
 
     /**
-     *  @dev modifies fee reciarbitratorDatapient and basis point - Internal function without access restriction
+     *  @dev modifies fee reciarbitratorDatapient and basis point
      *  @param newFeeRecipient Address which receives a share of receiver payment.
      *  @param feeRecipientBasisPoint The share of fee to be received by the feeRecipient, down to 2 decimal places as 550 = 5.5%
      */
