@@ -55,14 +55,36 @@ library SafeTransfer {
             return sendTo(to, amount, revertOnError);
         }
 
-        bytes memory data;
         bool success;
 
-        // solhint-disable-next-line avoid-low-level-calls
-        (success, data) = address(token).call(abi.encodeWithSignature("transfer(address,uint256)", to, amount));
+        /// @solidity memory-safe-assembly
+        assembly {
+            let args := mload(0x40)
 
-        if (success && data.length > 0) {
-            success = abi.decode(data, (bool));
+            // bytes4(keccak256("transfer(address,uint256)")) //Function signature
+            // unfortunately yul cannot refer constants
+            mstore(args, 0xa9059cbb00000000000000000000000000000000000000000000000000000000)
+            mstore(add(args, 0x04), and(to, 0xffffffffffffffffffffffffffffffffffffffff))
+            mstore(add(args, 0x24), amount)
+
+            success := call(gas(), token, 0, args, 0x44, 0, 0x20)
+
+            if iszero(iszero(success)) {
+                switch returndatasize()
+                case 0x00 {
+                    // This is a non-standard ERC-20
+                    success := not(0) // set success to true
+                }
+                case 0x20 {
+                    // This is a complaint ERC-20
+                    returndatacopy(0, 0, 0x20)
+                    success := mload(0) // Set `success = returndata` of external call
+                }
+                default {
+                    // This is an excessively non-compliant ERC-20
+                    success := 0
+                }
+            }
         }
 
         if (success) {
