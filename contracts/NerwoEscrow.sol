@@ -334,7 +334,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
             revert InvalidCaller();
         }
 
-        if (address(token) == address(0)) {
+        if (token == SafeTransfer.NATIVE_TOKEN) {
             // Native Token
             if (msg.value != amount) {
                 revert InvalidAmount();

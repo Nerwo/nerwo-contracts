@@ -9,7 +9,7 @@ pragma solidity ^0.8.21;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 library SafeTransfer {
-    IERC20 private constant NATIVE_TOKEN = IERC20(address(0));
+    IERC20 public constant NATIVE_TOKEN = IERC20(address(0));
 
     error TransferFailed(address recipient, IERC20 token, uint256 amount);
 
