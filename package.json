@@ -22,7 +22,7 @@
     "@typechain/hardhat": "^8.0.3",
     "@types/chai": "^4.3.5",
     "@types/mocha": "^10.0.1",
-    "@types/node": "^20.4.8",
+    "@types/node": "^20.4.9",
     "chai": "^4.3.7",
     "dotenv": "^16.3.1",
     "ethers": "^6.7.0",
