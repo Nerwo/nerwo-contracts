@@ -247,7 +247,7 @@ contract NerwoCentralizedArbitrator is
 
         dispute.arbitrated.rule(_disputeID, _ruling);
 
-        SafeTransfer.sendTo(payable(msg.sender), arbitrationPrice, true);
+        SafeTransfer.sendETH(payable(msg.sender), arbitrationPrice, true);
     }
 
     function getDispute(

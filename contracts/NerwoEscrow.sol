@@ -562,7 +562,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
         // Note that we use send to prevent a party from blocking the execution.
         if (ruling == CLIENT_WINS) {
             client.sendToken(transaction.token, amount, false);
-            client.sendTo(clientArbitrationFee, false);
+            client.sendETH(clientArbitrationFee, false);
         } else if (ruling == FREELANCER_WINS) {
             feeAmount = calculateFeeRecipientAmount(amount);
             if (feeAmount != 0) {
@@ -571,7 +571,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
             }
 
             freelancer.sendToken(transaction.token, amount - feeAmount, false);
-            freelancer.sendTo(freelancerArbitrationFee, false);
+            freelancer.sendETH(freelancerArbitrationFee, false);
         } else {
             uint256 splitArbitration = clientArbitrationFee / 2;
             uint256 splitAmount = amount / 2;
@@ -586,8 +586,8 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
             client.sendToken(transaction.token, splitAmount, false);
             freelancer.sendToken(transaction.token, splitAmount - feeAmount, false);
 
-            client.sendTo(splitArbitration, false);
-            freelancer.sendTo(splitArbitration, false);
+            client.sendETH(splitArbitration, false);
+            freelancer.sendETH(splitArbitration, false);
         }
     }
 

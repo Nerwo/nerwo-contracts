@@ -26,7 +26,7 @@ library SafeTransfer {
      *  @param amount Transaction amount.
      *  @param revertOnError Whether the operation should revert on error.
      */
-    function sendTo(address to, uint256 amount, bool revertOnError) internal {
+    function sendETH(address to, uint256 amount, bool revertOnError) internal {
         bool success;
 
         /// @solidity memory-safe-assembly
