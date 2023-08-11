@@ -36,14 +36,18 @@ describe('NerwoEscrow: pay', function () {
 
     const feeAmount = await escrow.calculateFeeRecipientAmount(amount);
 
-    await expect(escrow.connect(client).pay(transactionID, amount))
-      .to.changeTokenBalances(
-        usdt,
-        [escrow, platform, freelancer],
-        [-amount, feeAmount, amount - feeAmount]
-      )
-      .to.emit(escrow, 'Payment').withArgs(transactionID, client.address, freelancer.address, await usdt.getAddress(), amount)
-      .to.emit(escrow, 'FeeRecipientPayment');
+    const tx = escrow.connect(client).pay(transactionID, amount);
+
+    await expect(tx).to.changeTokenBalances(
+      usdt,
+      [escrow, platform, freelancer],
+      [-amount, feeAmount, amount - feeAmount]
+    );
+
+    await expect(tx).to.emit(escrow, 'Payment')
+      .withArgs(transactionID, client.address, freelancer.address, await usdt.getAddress(), amount);
+
+    await expect(tx).to.emit(escrow, 'FeeRecipientPayment');
   });
 
   it('create a transaction and pay (Native)', async () => {
@@ -58,12 +62,16 @@ describe('NerwoEscrow: pay', function () {
 
     const feeAmount = await escrow.calculateFeeRecipientAmount(amount);
 
-    await expect(escrow.connect(client).pay(transactionID, amount))
-      .to.changeEtherBalances(
-        [escrow, platform, freelancer],
-        [-amount, feeAmount, amount - feeAmount]
-      )
-      .to.emit(escrow, 'Payment').withArgs(transactionID, client.address, freelancer.address, NativeToken, amount)
-      .to.emit(escrow, 'FeeRecipientPayment');
+    const tx = escrow.connect(client).pay(transactionID, amount);
+
+    await expect(tx).to.changeEtherBalances(
+      [escrow, platform, freelancer],
+      [-amount, feeAmount, amount - feeAmount]
+    );
+
+    await expect(tx).to.emit(escrow, 'Payment')
+      .withArgs(transactionID, client.address, freelancer.address, NativeToken, amount);
+
+    await expect(tx).to.emit(escrow, 'FeeRecipientPayment');
   });
 });

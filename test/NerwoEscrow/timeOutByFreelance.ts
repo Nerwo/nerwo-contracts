@@ -34,9 +34,9 @@ describe('NerwoEscrow: timeOutByFreelancer', function () {
     const amount = await randomAmount();
     const transactionID = await createTransaction(client, freelancer.address, usdt, amount);
 
-    await expect(escrow.connect(freelancer).payArbitrationFee(
-      transactionID, { value: arbitrationPrice }))
-      .to.emit(escrow, 'HasToPayFee')
+    const tx = escrow.connect(freelancer).payArbitrationFee(transactionID, { value: arbitrationPrice });
+
+    await expect(tx).to.emit(escrow, 'HasToPayFee')
       .withArgs(transactionID, client.address);
 
     await expect(escrow.connect(freelancer).timeOut(transactionID))
@@ -58,26 +58,29 @@ describe('NerwoEscrow: timeOutByFreelancer', function () {
     const feeAmount = await escrow.calculateFeeRecipientAmount(amount);
     const transactionID = await createTransaction(client, freelancer.address, usdt, amount);
 
-    await expect(escrow.connect(freelancer).payArbitrationFee(
-      transactionID, { value: arbitrationPrice }))
-      .to.changeEtherBalances(
-        [escrow, client, freelancer],
-        [arbitrationPrice, 0, -arbitrationPrice]
-      )
-      .to.emit(escrow, 'HasToPayFee')
+    let tx = escrow.connect(freelancer).payArbitrationFee(transactionID, { value: arbitrationPrice });
+
+    await expect(tx).to.changeEtherBalances(
+      [escrow, client, freelancer],
+      [arbitrationPrice, 0, -arbitrationPrice]
+    );
+
+    await expect(tx).to.emit(escrow, 'HasToPayFee')
       .withArgs(transactionID, client.address);
 
     await time.increase(constants.FEE_TIMEOUT);
 
-    await expect(escrow.connect(freelancer).timeOut(transactionID))
-      .to.changeEtherBalances(
-        [escrow, platform, freelancer],
-        [-arbitrationPrice, 0, arbitrationPrice]
-      )
-      .to.changeTokenBalances(
-        usdt,
-        [escrow, platform, client, freelancer],
-        [-amount, feeAmount, 0, amount - feeAmount]
-      );
+    tx = escrow.connect(freelancer).timeOut(transactionID);
+
+    await expect(tx).to.changeEtherBalances(
+      [escrow, platform, freelancer],
+      [-arbitrationPrice, 0, arbitrationPrice]
+    );
+
+    await expect(tx).to.changeTokenBalances(
+      usdt,
+      [escrow, platform, client, freelancer],
+      [-amount, feeAmount, 0, amount - feeAmount]
+    );
   });
 });

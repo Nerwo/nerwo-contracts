@@ -55,14 +55,15 @@ export async function createTransaction(
         await token.connect(client).approve(await escrow.getAddress(), amount);
     }
 
-    await expect(escrow.connect(client).createTransaction(
-        await token.getAddress(), amount, receiver_address))
-        .to.changeTokenBalances(
-            token,
-            [platform, client],
-            [0, -amount]
-        )
-        .to.emit(escrow, 'TransactionCreated');
+    const tx = escrow.connect(client).createTransaction(await token.getAddress(), amount, receiver_address);
+
+    await expect(tx).to.changeTokenBalances(
+        token,
+        [platform, client],
+        [0, -amount]
+    );
+
+    await expect(tx).to.emit(escrow, 'TransactionCreated');
 
     const events = await escrow.queryFilter(escrow.filters.TransactionCreated(), blockNumber);
     expect(events).to.be.an('array');
@@ -81,13 +82,14 @@ export async function createNativeTransaction(
     const { escrow } = await getContracts();
     const { platform } = await getSigners();
 
-    await expect(escrow.connect(client).createTransaction(
-        ZeroAddress, amount, receiver_address, { value: amount }))
-        .to.changeEtherBalances(
-            [platform, client],
-            [0, -amount]
-        )
-        .to.emit(escrow, 'TransactionCreated');
+    const tx = escrow.connect(client).createTransaction(ZeroAddress, amount, receiver_address, { value: amount });
+
+    await expect(tx).to.changeEtherBalances(
+        [platform, client],
+        [0, -amount]
+    );
+
+    await expect(tx).to.emit(escrow, 'TransactionCreated');
 
     const events = await escrow.queryFilter(escrow.filters.TransactionCreated(), blockNumber);
     expect(events).to.be.an('array');
@@ -114,12 +116,14 @@ export async function createDispute(actor: Actor, usdt: NerwoTetherToken | null 
 
     actor.toggle();
 
-    await expect(actor.is_client ? payByClient() : payByFreelancer())
-        .to.changeEtherBalances(
-            [escrow, client, freelancer],
-            [arbitrationPrice, actor.is_client ? -arbitrationPrice : 0, actor.is_client ? 0 : -arbitrationPrice]
-        )
-        .to.emit(escrow, 'HasToPayFee')
+    let tx = actor.is_client ? payByClient() : payByFreelancer();
+
+    await expect(tx).to.changeEtherBalances(
+        [escrow, client, freelancer],
+        [arbitrationPrice, actor.is_client ? -arbitrationPrice : 0, actor.is_client ? 0 : -arbitrationPrice]
+    );
+
+    await expect(tx).to.emit(escrow, 'HasToPayFee')
         .withArgs(transactionID, actor.is_client ? freelancer.address : client.address);
 
     await expect(actor.is_client ? payByClient() : payByFreelancer())
@@ -127,15 +131,20 @@ export async function createDispute(actor: Actor, usdt: NerwoTetherToken | null 
 
     const blockNumber = await ethers.provider.getBlockNumber();
 
-    await expect(actor.is_client ? payByFreelancer() : payByClient())
-        .to.changeEtherBalances(
-            [escrow, proxy, client, freelancer],
-            [0, arbitrationPrice, actor.is_client ? 0 : -arbitrationPrice, actor.is_client ? -arbitrationPrice : 0]
-        )
-        .to.emit(proxy, 'Dispute')
-        .to.emit(escrow, 'DisputeCreated')
-        .withArgs(transactionID, anyUint, actor.is_client ? client.address : freelancer.address)
-        .to.not.emit(escrow, 'HasToPayFee');
+    tx = actor.is_client ? payByFreelancer() : payByClient();
+
+
+    await expect(tx).to.changeEtherBalances(
+        [escrow, proxy, client, freelancer],
+        [0, arbitrationPrice, actor.is_client ? 0 : -arbitrationPrice, actor.is_client ? -arbitrationPrice : 0]
+    );
+
+    await expect(tx).to.emit(proxy, 'Dispute');
+
+    await expect(tx).to.emit(escrow, 'DisputeCreated')
+        .withArgs(transactionID, anyUint, actor.is_client ? client.address : freelancer.address);
+
+    await expect(tx).to.not.emit(escrow, 'HasToPayFee');
 
     const events = await proxy.queryFilter(proxy.filters.Dispute(), blockNumber);
     expect(events).to.be.an('array');

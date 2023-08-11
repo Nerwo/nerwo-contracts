@@ -31,29 +31,37 @@ describe('NerwoEscrow: reimburse', function () {
 
     const usdtAddress = await usdt.getAddress();
 
-    await expect(escrow.connect(freelancer).reimburse(transactionID, partialAmount))
-      .to.changeTokenBalances(
-        usdt,
-        [escrow, client, freelancer],
-        [-partialAmount, partialAmount, 0]
-      )
-      .to.emit(escrow, 'Payment').withArgs(transactionID, freelancer.address, client.address, usdtAddress, partialAmount);
+    let tx = escrow.connect(freelancer).reimburse(transactionID, partialAmount);
 
-    await expect(escrow.connect(client).pay(transactionID, partialAmount))
-      .to.changeTokenBalances(
-        usdt,
-        [escrow, platform, freelancer],
-        [-partialAmount, feeAmount, partialAmount - feeAmount]
-      )
-      .to.emit(escrow, 'Payment').withArgs(transactionID, client.address, freelancer.address, usdtAddress, partialAmount)
-      .to.emit(escrow, 'FeeRecipientPayment').withArgs(transactionID, platform.address, usdtAddress, feeAmount);
+    await expect(tx).to.changeTokenBalances(
+      usdt,
+      [escrow, client, freelancer],
+      [-partialAmount, partialAmount, 0]
+    );
+
+    await expect(tx).to.emit(escrow, 'Payment')
+      .withArgs(transactionID, freelancer.address, client.address, usdtAddress, partialAmount);
+
+    tx = escrow.connect(client).pay(transactionID, partialAmount);
+
+    await expect(tx).to.changeTokenBalances(
+      usdt,
+      [escrow, platform, freelancer],
+      [-partialAmount, feeAmount, partialAmount - feeAmount]
+    );
+
+    await expect(tx).to.emit(escrow, 'Payment')
+      .withArgs(transactionID, client.address, freelancer.address, usdtAddress, partialAmount);
+
+    await expect(tx).to.emit(escrow, 'FeeRecipientPayment')
+      .withArgs(transactionID, platform.address, usdtAddress, feeAmount);
 
     await expect(escrow.connect(freelancer).reimburse(transactionID, partialAmount))
       .to.be.revertedWithCustomError(escrow, 'InvalidAmount');
   });
 
   it('reimbursing a transaction (Native)', async () => {
-    const { escrow, usdt } = await getContracts();
+    const { escrow } = await getContracts();
     const { platform, client, freelancer } = await getSigners();
 
     const amount = await randomAmount();
@@ -71,20 +79,28 @@ describe('NerwoEscrow: reimburse', function () {
     const partialAmount = amount / 2n;
     const feeAmount = await escrow.calculateFeeRecipientAmount(partialAmount);
 
-    await expect(escrow.connect(freelancer).reimburse(transactionID, partialAmount))
-      .to.changeEtherBalances(
-        [escrow, client, freelancer],
-        [-partialAmount, partialAmount, 0]
-      )
-      .to.emit(escrow, 'Payment').withArgs(transactionID, freelancer.address, client.address, NativeToken, partialAmount);
+    let tx = escrow.connect(freelancer).reimburse(transactionID, partialAmount);
 
-    await expect(escrow.connect(client).pay(transactionID, partialAmount))
-      .to.changeEtherBalances(
-        [escrow, platform, freelancer],
-        [-partialAmount, feeAmount, partialAmount - feeAmount]
-      )
-      .to.emit(escrow, 'Payment').withArgs(transactionID, client.address, freelancer.address, NativeToken, partialAmount)
-      .to.emit(escrow, 'FeeRecipientPayment').withArgs(transactionID, platform.address, NativeToken, feeAmount);
+    await expect(tx).to.changeEtherBalances(
+      [escrow, client, freelancer],
+      [-partialAmount, partialAmount, 0]
+    );
+
+    await expect(tx).to.emit(escrow, 'Payment')
+      .withArgs(transactionID, freelancer.address, client.address, NativeToken, partialAmount);
+
+    tx = escrow.connect(client).pay(transactionID, partialAmount);
+
+    await expect(tx).to.changeEtherBalances(
+      [escrow, platform, freelancer],
+      [-partialAmount, feeAmount, partialAmount - feeAmount]
+    );
+
+    await expect(tx).to.emit(escrow, 'Payment')
+      .withArgs(transactionID, client.address, freelancer.address, NativeToken, partialAmount);
+
+    await expect(tx).to.emit(escrow, 'FeeRecipientPayment')
+      .withArgs(transactionID, platform.address, NativeToken, feeAmount);
 
     await expect(escrow.connect(freelancer).reimburse(transactionID, partialAmount))
       .to.be.revertedWithCustomError(escrow, 'InvalidAmount');

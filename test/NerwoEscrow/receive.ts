@@ -26,9 +26,12 @@ describe('NerwoEscrow: receive', function () {
     let amount = await randomAmount();
     const address = await escrow.getAddress();
 
-    await expect(deployer.sendTransaction({ to: address, value: amount }))
-      .to.changeEtherBalance(escrow, amount)
-      .to.emit(escrow, 'ContractFunded').withArgs(deployer.address, amount);
+    const tx = deployer.sendTransaction({ to: address, value: amount });
+
+    await expect(tx).to.changeEtherBalance(escrow, amount);
+
+    await expect(tx).to.emit(escrow, 'ContractFunded')
+      .withArgs(deployer.address, amount);
 
     await expect(client.sendTransaction({ to: address, value: amount }))
       .to.be.reverted;

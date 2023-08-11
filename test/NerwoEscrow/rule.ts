@@ -58,16 +58,18 @@ describe('NerwoEscrow: rule (ERC20)', function () {
     expect(ruling).to.be.equal(constants.Ruling.ClientWins);
 
     // SENDER_WINS -> no platform fee
-    await expect(escrow.connect(client).acceptRuling(transactionID))
-      .to.changeEtherBalances(
-        [platform, client, freelancer],
-        [0, arbitrationCost, 0]
-      )
-      .to.changeTokenBalances(
-        usdt,
-        [platform, client, freelancer],
-        [0, amount, 0]
-      );
+    const tx = escrow.connect(client).acceptRuling(transactionID);
+
+    await expect(tx).to.changeEtherBalances(
+      [platform, client, freelancer],
+      [0, arbitrationCost, 0]
+    );
+
+    await expect(tx).to.changeTokenBalances(
+      usdt,
+      [platform, client, freelancer],
+      [0, amount, 0]
+    );
   });
 
   it('RECEIVER_WINS -> platform gains', async () => {
@@ -78,16 +80,18 @@ describe('NerwoEscrow: rule (ERC20)', function () {
     expect(ruling).to.be.equal(constants.Ruling.FreelancerWins);
 
     // RECEIVER_WINS -> platform gains
-    await expect(escrow.connect(freelancer).acceptRuling(transactionID))
-      .to.changeEtherBalances(
-        [escrow, client, freelancer],
-        [-arbitrationCost, 0, arbitrationCost]
-      )
-      .to.changeTokenBalances(
-        usdt,
-        [escrow, platform, client, freelancer],
-        [-amount, feeAmount, 0, amount - feeAmount]
-      );
+    const tx = escrow.connect(freelancer).acceptRuling(transactionID);
+
+    await expect(tx).to.changeEtherBalances(
+      [escrow, client, freelancer],
+      [-arbitrationCost, 0, arbitrationCost]
+    );
+
+    await expect(tx).to.changeTokenBalances(
+      usdt,
+      [escrow, platform, client, freelancer],
+      [-amount, feeAmount, 0, amount - feeAmount]
+    );
   });
 
   it('Split amount', async () => {
@@ -101,16 +105,18 @@ describe('NerwoEscrow: rule (ERC20)', function () {
     expect(isRuled).to.be.equal(true);
     expect(ruling).to.be.equal(constants.Ruling.SplitAmount);
 
-    await expect(escrow.connect(client).acceptRuling(transactionID))
-      .to.changeEtherBalances(
-        [escrow, platform, client, freelancer],
-        [-arbitrationCost, 0, splitArbitration, splitArbitration]
-      )
-      .to.changeTokenBalances(
-        usdt,
-        [escrow, platform, client, freelancer],
-        [-amount, splitFeeAmount, splitAmount, splitAmount - splitFeeAmount]
-      );
+    const tx = escrow.connect(client).acceptRuling(transactionID);
+
+    await expect(tx).to.changeEtherBalances(
+      [escrow, platform, client, freelancer],
+      [-arbitrationCost, 0, splitArbitration, splitArbitration]
+    );
+
+    await expect(tx).to.changeTokenBalances(
+      usdt,
+      [escrow, platform, client, freelancer],
+      [-amount, splitFeeAmount, splitAmount, splitAmount - splitFeeAmount]
+    );
   });
 });
 
