@@ -39,9 +39,9 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
     // **************************** //
     // *    Contract variables    * //
     // **************************** //
-    uint8 private constant AMOUNT_OF_CHOICES = 2;
-    uint8 private constant CLIENT_WINS = 1;
-    uint8 private constant FREELANCER_WINS = 2;
+    uint256 private constant AMOUNT_OF_CHOICES = 2;
+    uint256 private constant CLIENT_WINS = 1;
+    uint256 private constant FREELANCER_WINS = 2;
     uint256 private constant MAX_FEEBASISPOINT = 2_000; // 20%
     uint256 private constant MULTIPLIER_DIVISOR = 10_000; // Divisor parameter for multipliers.
     uint256 private constant MIN_AMOUNT = 10_000; // Minimal amount with non zero fee basis point for non zero fee
