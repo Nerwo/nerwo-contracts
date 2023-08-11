@@ -22,6 +22,7 @@ import {SafeTransfer} from "./SafeTransfer.sol";
 
 contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
     using SafeTransfer for address;
+    using SafeTransfer for IERC20;
 
     error NullAddress();
     error NoTimeout();
@@ -346,7 +347,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
             }
             // first transfer tokens to the contract
             // NOTE: user must have approved the allowance
-            if (!token.transferFrom(msg.sender, address(this), amount)) {
+            if (!token.safeTransferFrom(msg.sender, address(this), amount)) {
                 revert TokenTransferFailed();
             }
         }

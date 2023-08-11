@@ -64,7 +64,7 @@ library SafeTransfer {
             default {
                 let args := mload(0x40)
 
-                // bytes4(keccak256("transfer(address,uint256)")) //Function signature
+                // bytes4(keccak256("transfer(address,uint256)")) // Function signature
                 // unfortunately yul cannot refer constants
                 mstore(args, 0xa9059cbb00000000000000000000000000000000000000000000000000000000)
                 mstore(add(args, 0x04), and(to, 0xffffffffffffffffffffffffffffffffffffffff))
@@ -100,5 +100,48 @@ library SafeTransfer {
         }
 
         emit SendFailed(to, token, amount);
+    }
+
+    /** @dev Send tokens from recipent, emit a log when fails.
+     *  @param token The token address.
+     *  @param from From address (previously approved).
+     *  @param to To address to send to.
+     *  @param amount The amount to be transferred.
+     */
+    function safeTransferFrom(IERC20 token, address from, address to, uint256 amount) internal returns (bool success) {
+        /// @solidity memory-safe-assembly
+        assembly {
+            let args := mload(0x40)
+
+            // bytes4(keccak256("transferFrom(address,address,uint256)")) // Function signature
+            // unfortunately yul cannot refer constants
+            mstore(args, 0x23b872dd00000000000000000000000000000000000000000000000000000000)
+            mstore(add(args, 0x04), and(from, 0xffffffffffffffffffffffffffffffffffffffff))
+            mstore(add(args, 0x24), and(to, 0xffffffffffffffffffffffffffffffffffffffff))
+            mstore(add(args, 0x44), amount)
+
+            success := call(gas(), token, 0, args, 0x64, 0, 0)
+
+            // Bubble reason
+            if iszero(success) {
+                returndatacopy(args, 0, returndatasize())
+                revert(args, returndatasize())
+            }
+
+            switch returndatasize()
+            case 0x00 {
+                // This is a non-standard ERC-20
+                success := true
+            }
+            case 0x20 {
+                // This is a complaint ERC-20
+                returndatacopy(0, 0, 0x20)
+                success := mload(0) // Set `success = returndata` of external call
+            }
+            default {
+                // This is an excessively non-compliant ERC-20
+                success := false
+            }
+        }
     }
 }
