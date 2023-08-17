@@ -97,7 +97,7 @@ contract NerwoCentralizedArbitrator is
         }
 
         unchecked {
-            for (uint i = 0; i < court.length; i++) {
+            for (uint256 i = 0; i < court.length; i++) {
                 _setupRole(COURT_ROLE, court[i]);
             }
         }

@@ -285,7 +285,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
      */
     function changeWhitelist(TokenAllow[] calldata supportedTokens) public onlyOwner {
         unchecked {
-            for (uint i = 0; i < supportedTokens.length; i++) {
+            for (uint256 i = 0; i < supportedTokens.length; i++) {
                 if (address(supportedTokens[i].token) == address(0)) {
                     revert InvalidToken();
                 }
@@ -300,6 +300,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
      */
     receive() external payable {
         // using onlyOwner modifier trips hardhat
+        // solhint-disable-next-line custom-errors
         require(owner() == msg.sender, "Ownable: caller is not the owner");
         emit ContractFunded(msg.sender, msg.value);
     }
