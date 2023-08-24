@@ -42,18 +42,18 @@ const config: HardhatUserConfig = {
     goerli: {
       url: 'https://ethereum-goerli.publicnode.com',
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : undefined,
-      deploy: ['deploy']
+      deploy: ['deploy-token', 'deploy', 'deploy-token']
     },
     sepolia: {
       url: `https://eth-sepolia.g.alchemy.com/v2/${process.env.ALCHEMY_SEPOLIA_KEY || ''}`,
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : undefined,
-      deploy: ['deploy']
+      deploy: ['deploy-token', 'deploy']
     },
     hardhat: {
       accounts: {
         mnemonic: process.env.HARDHAT_MNEMONIC || HARDHAT_NETWORK_MNEMONIC
       },
-      deploy: ['deploy-test', 'deploy']
+      deploy: ['deploy-test', 'deploy-token', 'deploy']
     },
     buildbear: {
       url: `https://rpc.buildbear.io/${BUILDBEAR_CONTAINER_NAME}`,
