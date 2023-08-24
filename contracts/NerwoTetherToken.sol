@@ -13,6 +13,10 @@ import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 contract NerwoTetherToken is ERC20 {
     constructor() ERC20("Tether USD", "USDT") {}
 
+    function decimals() public pure override returns (uint8) {
+        return 6;
+    }
+
     function mint(uint256 amount) external {
         _mint(msg.sender, amount);
     }
