@@ -57,7 +57,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
     struct Transaction {
         Status status;
         uint8 ruling;
-        uint64 lastInteraction; // Last interaction for the dispute procedure.
+        uint32 lastInteraction; // Last interaction for the dispute procedure.
         address client;
         address freelancer;
         IERC20 token;
@@ -79,7 +79,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
     struct ArbitratorData {
         // Time in seconds a party can take to pay arbitration
         // fees before being considered unresponding and lose the dispute.
-        uint64 feeTimeout;
+        uint32 feeTimeout;
         IArbitrator arbitrator; // Address of the arbitrator contract.
         IArbitrableProxy proxy; // Address of the arbitrator proxy contract.
         string metaEvidenceURI; // metaEvidence uri to set up the arbitration.
@@ -248,7 +248,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
         address arbitratorProxy,
         bytes calldata arbitratorExtraData
     ) internal {
-        arbitratorData.feeTimeout = uint64(feeTimeout);
+        arbitratorData.feeTimeout = uint32(feeTimeout);
         arbitratorData.arbitrator = IArbitrator(arbitrator);
         arbitratorData.proxy = IArbitrableProxy(arbitratorProxy);
         arbitratorData.extraData = arbitratorExtraData;
@@ -360,7 +360,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
         _transactions[transactionID] = Transaction({
             status: Status.NoDispute,
             ruling: 0,
-            lastInteraction: uint64(block.timestamp),
+            lastInteraction: uint32(block.timestamp),
             client: msg.sender,
             freelancer: freelancer,
             token: token,
@@ -462,7 +462,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
             revert InvalidAmount();
         }
 
-        transaction.lastInteraction = uint64(block.timestamp);
+        transaction.lastInteraction = uint32(block.timestamp);
 
         if (msg.sender == transaction.client) {
             if (transaction.clientFee != 0) {
