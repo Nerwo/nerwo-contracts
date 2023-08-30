@@ -14,22 +14,21 @@ describe('NerwoEscrow: setFeeRecipientAndBasisPoint', function () {
 
   let escrow: NerwoEscrow;
 
-  let deployer: SignerWithAddress;
   let platform: SignerWithAddress;
 
   beforeEach(async () => {
     ({ escrow } = await getContracts());
-    ({ deployer, platform } = await getSigners());
+    ({ platform } = await getSigners());
   });
 
   it('Changing fee recipient', async () => {
-    await expect(escrow.connect(deployer).setFeeRecipientAndBasisPoint(platform.address, 2000)) // < MAX
+    await expect(escrow.connect(platform).setFeeRecipientAndBasisPoint(platform.address, 2000)) // < MAX
       .to.emit(escrow, 'FeeRecipientChanged')
       .withArgs(platform.address, 2000);
   });
 
   it('Changing fee recipient: Invalid fee basis point', async () => {
-    await expect(escrow.connect(deployer).setFeeRecipientAndBasisPoint(platform.address, 2001)) // > MAX
+    await expect(escrow.connect(platform).setFeeRecipientAndBasisPoint(platform.address, 2001)) // > MAX
       .to.be.revertedWithCustomError(escrow, 'InvalidFeeBasisPoint');
   });
 });

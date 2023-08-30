@@ -14,24 +14,24 @@ describe('NerwoEscrow: receive', function () {
 
   let escrow: NerwoEscrow;
 
-  let deployer: SignerWithAddress;
+  let platform: SignerWithAddress;
   let client: SignerWithAddress;
 
   beforeEach(async () => {
     ({ escrow } = await getContracts());
-    ({ deployer, client } = await getSigners());
+    ({ platform, client } = await getSigners());
   });
 
-  it('check if contract does accepts ethers only from owner', async () => {
+  it('check if contract does accepts ethers only from platform', async () => {
     let amount = await randomAmount();
     const address = await escrow.getAddress();
 
-    const tx = deployer.sendTransaction({ to: address, value: amount });
+    const tx = platform.sendTransaction({ to: address, value: amount });
 
     await expect(tx).to.changeEtherBalance(escrow, amount);
 
     await expect(tx).to.emit(escrow, 'ContractFunded')
-      .withArgs(deployer.address, amount);
+      .withArgs(platform.address, amount);
 
     await expect(client.sendTransaction({ to: address, value: amount }))
       .to.be.reverted;

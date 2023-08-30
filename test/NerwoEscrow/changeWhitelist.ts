@@ -17,16 +17,16 @@ describe('NerwoEscrow: changeWhitelist', function () {
   let escrow: NerwoEscrow;
   let usdt: NerwoTetherToken;
 
-  let deployer: SignerWithAddress;
+  let platform: SignerWithAddress;
   let client: SignerWithAddress;
 
   beforeEach(async () => {
     ({ escrow, usdt } = await getContracts());
-    ({ deployer, client } = await getSigners());
+    ({ platform, client } = await getSigners());
   });
 
   it('change whitelist', async () => {
-    await escrow.connect(deployer).changeWhitelist(constants.getTokenWhitelist(await usdt.getAddress()));
+    await escrow.connect(platform).changeWhitelist(constants.getTokenWhitelist(await usdt.getAddress()));
   });
 
   it('errors', async () => {

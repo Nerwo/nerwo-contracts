@@ -19,8 +19,8 @@ import { NerwoCentralizedArbitrator, NerwoEscrow } from '../typechain-types';
         const escrow: NerwoEscrow = await NerwoEscrow.deploy() as NerwoEscrow;
         await escrow.waitForDeployment();
         const args = escrowArgs(deployer.address, deployer.address, deployer.address) as [
-            string, string, string, string, string, string, string, any[] // wft
+            string, string, string, string, string, string, string, string, any[] // wft
         ];
-        await escrow.initialize(...args);
+        await escrow.connect(deployer).initialize(...args);
     });
 });

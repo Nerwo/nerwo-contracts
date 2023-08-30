@@ -17,7 +17,7 @@ export function escrowArgs(
     const whitelist = constants.getTokenWhitelist(usdt);
 
     return [
-        process.env.NERWO_OWNER_ADDRESS || owner,           /* newOwner */
+        process.env.NERWO_OWNER_ADDRESS || owner,           /* owner */
         constants.FEE_TIMEOUT,                              /* feeTimeout */
         process.env.NERWO_ARBITRATOR_ADDRESS || proxy,      /* arbitrator */
         process.env.NERWO_ARBITRATORPROXY_ADDRESS || proxy, /* arbitratorProxy */
