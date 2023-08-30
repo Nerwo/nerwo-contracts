@@ -3,6 +3,22 @@
 /**
  *  @title NerwoCentralizedArbitrator
  *  @author: [@ferittuncer, @hbarcelos, @sherpya]
+*
+ *                         ////////                 ////////
+ *                       ////////////             ////////////
+ *                       /////////////            ////////////
+ *                       //////////////           ////////////
+ *                         /////////////            ////////
+ *                              ,/////////
+ *                                    /////*
+ *                                       /////
+ *                                         //////
+ *                                           /////////,
+ *                         ////////            /////////////
+ *                       ////////////           //////////////
+ *                      ,////////////            /////////////
+ *                       ////////////             ////////////
+ *                         ////////                 ////////
  *
  *  @notice This contract implement a simple not appealable Centralized Arbitrator
  *  and Arbitrator Proxy, mainly used for test units.

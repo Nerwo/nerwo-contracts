@@ -4,6 +4,22 @@
  *  @author Gianluigi Tiesi <sherpya@gmail.com>
  *  @notice Original authors of the Kleros escrow example: @eburgos, @n1c01a5
  *
+ *                         ////////                 ////////
+ *                       ////////////             ////////////
+ *                       /////////////            ////////////
+ *                       //////////////           ////////////
+ *                         /////////////            ////////
+ *                              ,/////////
+ *                                    /////*
+ *                                       /////
+ *                                         //////
+ *                                           /////////,
+ *                         ////////            /////////////
+ *                       ////////////           //////////////
+ *                      ,////////////            /////////////
+ *                       ////////////             ////////////
+ *                         ////////                 ////////
+ *
  *  @notice This contract implements an escrow system with dispute resolution, allowing secure transactions
  *  between a client and a freelancer. The contract holds funds on behalf of the client until the transaction
  *  is completed or a dispute arises. If a dispute occurs, an external arbitrator determines the outcome.
