@@ -93,12 +93,12 @@ contract NerwoCentralizedArbitrator is
         uint256 _arbitrationPrice
     ) external onlyRole(DEFAULT_ADMIN_ROLE) initializer {
         if (!hasRole(DEFAULT_ADMIN_ROLE, owner)) {
-            _setupRole(DEFAULT_ADMIN_ROLE, owner);
+            _grantRole(DEFAULT_ADMIN_ROLE, owner);
         }
 
         unchecked {
             for (uint256 i = 0; i < court.length; i++) {
-                _setupRole(COURT_ROLE, court[i]);
+                _grantRole(COURT_ROLE, court[i]);
             }
         }
         arbitrationPrice = _arbitrationPrice;
