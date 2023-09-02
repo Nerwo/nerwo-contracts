@@ -239,8 +239,8 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
     ) external onlyOwner initializer {
         _setArbitratorData(feeTimeout, arbitrator, arbitratorProxy, arbitratorExtraData);
         setFeeRecipientAndBasisPoint(feeRecipient, feeRecipientBasisPoint);
-        setMetaEvidenceURI(metaEvidenceURI);
         changeWhitelist(supportedTokens);
+        arbitratorData.metaEvidenceURI = metaEvidenceURI;
 
         if (owner() != newOwner) {
             _transferOwnership(newOwner);
@@ -291,8 +291,12 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
         emit FeeRecipientChanged(newFeeRecipient, feeRecipientBasisPoint_);
     }
 
-    function setMetaEvidenceURI(string calldata metaEvidenceURI_) public onlyOwner {
+    function setMetaEvidenceURI(string calldata metaEvidenceURI_) external onlyOwner {
         arbitratorData.metaEvidenceURI = metaEvidenceURI_;
+    }
+
+    function setExtraData(bytes calldata arbitratorExtraData) external onlyOwner {
+        arbitratorData.extraData = arbitratorExtraData;
     }
 
     /**
