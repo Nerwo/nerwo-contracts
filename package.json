@@ -18,6 +18,7 @@
     "@nomicfoundation/hardhat-toolbox": "3.0.0",
     "@nomicfoundation/hardhat-verify": "^1.1.1",
     "@openzeppelin/contracts": "^4.9.3",
+    "@truffle/dashboard-hardhat-plugin": "^0.2.13",
     "@typechain/ethers-v6": "^0.5.0",
     "@typechain/hardhat": "^9.0.0",
     "@types/chai": "^4.3.5",
