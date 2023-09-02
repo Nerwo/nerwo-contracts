@@ -5,7 +5,10 @@ const func: DeployFunction = async function ({ deployments: { get, deploy, execu
   let { deployer, platform } = await getNamedAccounts();
   platform = platform || deployer;
 
-  const arbitrator = await get('NerwoCentralizedArbitrator');
+  let arbitrator;
+  try {
+    arbitrator = await get('NerwoCentralizedArbitrator');
+  } catch (_) { }
 
   const result = await deploy('NerwoEscrow', {
     from: deployer,
@@ -22,7 +25,7 @@ const func: DeployFunction = async function ({ deployments: { get, deploy, execu
     usdt = await get('NerwoTetherToken');
   } catch (_) { }
 
-  const args = escrowArgs(deployer, arbitrator.address, platform, usdt?.address);
+  const args = escrowArgs(deployer, arbitrator?.address, platform, usdt?.address);
   await execute('NerwoEscrow', {
     from: deployer,
     log: true
