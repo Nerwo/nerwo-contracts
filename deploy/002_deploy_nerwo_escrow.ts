@@ -25,7 +25,7 @@ const func: DeployFunction = async function ({ deployments: { get, deploy, execu
     usdt = await get('NerwoTetherToken');
   } catch (_) { }
 
-  const args = escrowArgs(deployer, arbitrator?.address, platform, usdt?.address);
+  const args = escrowArgs(platform, arbitrator?.address, platform, usdt?.address);
   await execute('NerwoEscrow', {
     from: deployer,
     log: true
