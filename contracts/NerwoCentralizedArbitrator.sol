@@ -65,7 +65,7 @@ contract NerwoCentralizedArbitrator is
         DisputeStatus status;
     }
 
-    IArbitrator public arbitrator = IArbitrator(this);
+    IArbitrator public immutable arbitrator = IArbitrator(this);
 
     uint256 public lastDispute;
     mapping(uint256 => ArbitratorDispute) private arbitratorDisputes;
