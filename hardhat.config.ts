@@ -41,11 +41,6 @@ const config: HardhatUserConfig = {
     excludeContracts: ['NerwoTetherToken']
   },
   networks: {
-    goerli: {
-      url: 'https://ethereum-goerli.publicnode.com',
-      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : undefined,
-      deploy: ['deploy-token', 'deploy', 'deploy-token']
-    },
     sepolia: {
       url: `https://eth-sepolia.g.alchemy.com/v2/${process.env.ALCHEMY_SEPOLIA_KEY || ''}`,
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : undefined,
@@ -67,7 +62,6 @@ const config: HardhatUserConfig = {
   etherscan: {
     apiKey: {
       mainnet: process.env.ETHERSCAN_API_KEY || '',
-      goerli: process.env.ETHERSCAN_API_KEY || '',
       sepolia: process.env.ETHERSCAN_API_KEY || '',
       buildbear: 'verifyContract'
     },
