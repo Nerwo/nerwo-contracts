@@ -40,6 +40,11 @@ const config: HardhatUserConfig = {
     coinmarketcap: process.env.COINMARKETCAP_API_KEY,
     excludeContracts: ['NerwoTetherToken']
   },
+  /* - for token only deploy
+  paths: {
+    deploy: 'deploy-token'
+  },
+  */
   networks: {
     sepolia: {
       url: `https://eth-sepolia.g.alchemy.com/v2/${process.env.ALCHEMY_SEPOLIA_KEY || ''}`,
