@@ -23,7 +23,7 @@ const config: HardhatUserConfig = {
   solidity: {
     version: '0.8.21',
     settings: {
-      //evmVersion: 'paris',
+      evmVersion: 'shanghai', // paris for chains not supporting push0
       optimizer: {
         enabled: true,
         runs: 200
