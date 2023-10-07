@@ -65,6 +65,7 @@ contract NerwoCentralizedArbitrator is
         DisputeStatus status;
     }
 
+    /* solhint-disable immutable-vars-naming */
     IArbitrator public immutable arbitrator = IArbitrator(this);
 
     uint256 public lastDispute;
