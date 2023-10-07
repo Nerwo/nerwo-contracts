@@ -61,7 +61,7 @@ describe('NerwoEscrow: createTransaction', function () {
   it('Creating a transaction with insufficient allowance', async () => {
     const amount = await randomAmount();
     await expect(createTransaction(client, freelancer.address, usdt, amount, false))
-      .to.be.revertedWith('ERC20: insufficient allowance');
+      .to.be.revertedWithCustomError(usdt, 'ERC20InsufficientAllowance');
   });
 
   it('InvalidToken', async () => {

@@ -29,7 +29,7 @@ pragma solidity ^0.8.21;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
-import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IArbitrator} from "@kleros/erc-792/contracts/IArbitrator.sol";
 
@@ -210,17 +210,12 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
      *  @notice since we are using hardhat-deploy deterministic deployment the sender
      *  @notice is 0x4e59b44847b379578588920ca78fbf26c0b4956c
      */
-    constructor() {
-        /* solhint-disable avoid-tx-origin */
-        _transferOwnership(tx.origin);
-    }
+    /* solhint-disable avoid-tx-origin */
+    constructor() Ownable(tx.origin) {}
 
     /** @dev initialize (deferred constructor)
      *  @param newOwner The initial owner
-     *  @param feeTimeout Arbitration fee timeout for the parties.
-     *  @param arbitrator The arbitrator of the contract.
-     *  @param arbitratorProxy The arbitrator proxy of the contract.
-     *  @param arbitratorExtraData Extra data for the arbitrator.
+     *  @param arbitrators arbitrator and arbitratorProxy addresses.
      *  @param metaEvidenceURI Meta Evidence json IPFS URI
      *  @param feeRecipient Address which receives a share of receiver payment.
      *  @param feeRecipientBasisPoint The share of fee to be received by the feeRecipient, down to 2 decimal places as 550 = 5.5%
@@ -228,18 +223,19 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
      */
     function initialize(
         address newOwner,
-        uint256 feeTimeout,
-        address arbitrator,
-        address arbitratorProxy,
-        bytes calldata arbitratorExtraData,
+        address[] calldata arbitrators,
         string calldata metaEvidenceURI,
         address feeRecipient,
         uint256 feeRecipientBasisPoint,
         TokenAllow[] calldata supportedTokens
     ) external onlyOwner initializer {
-        _setArbitratorData(feeTimeout, arbitrator, arbitratorProxy, arbitratorExtraData);
         setFeeRecipientAndBasisPoint(feeRecipient, feeRecipientBasisPoint);
         changeWhitelist(supportedTokens);
+
+        arbitratorData.feeTimeout = 604800;
+        arbitratorData.arbitrator = IArbitrator(arbitrators[0]);
+        arbitratorData.proxy = IArbitrableProxy(arbitrators[1]);
+        arbitratorData.extraData = hex"00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003";
         arbitratorData.metaEvidenceURI = metaEvidenceURI;
 
         if (owner() != newOwner) {
@@ -250,25 +246,6 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
     // **************************** //
     // *        Setters           * //
     // **************************** //
-
-    /**
-     *  @dev modifies Arbitrator - Internal function without access restriction
-     *  @param feeTimeout Arbitration fee timeout for the parties.
-     *  @param arbitrator The arbitrator of the contract.
-     *  @param arbitratorProxy The arbitrator proxy of the contract.
-     *  @param arbitratorExtraData Extra data for the arbitrator.
-     */
-    function _setArbitratorData(
-        uint256 feeTimeout,
-        address arbitrator,
-        address arbitratorProxy,
-        bytes calldata arbitratorExtraData
-    ) internal {
-        arbitratorData.feeTimeout = uint32(feeTimeout);
-        arbitratorData.arbitrator = IArbitrator(arbitrator);
-        arbitratorData.proxy = IArbitrableProxy(arbitratorProxy);
-        arbitratorData.extraData = arbitratorExtraData;
-    }
 
     /**
      *  @dev modifies fee reciarbitratorDatapient and basis point

@@ -13,7 +13,7 @@ export const enum Ruling {
     FreelancerWins = 2
 }
 
-export const FEE_TIMEOUT = parseInt(process.env.NERWO_FEE_TIMEOUT, 10);
+export const FEE_TIMEOUT = 604800n;
 export const FEE_RECIPIENT_BASISPOINT = parseInt(process.env.NERWO_FEE_RECIPIENT_BASISPOINT);
 
 export const ARBITRATOR_PRICE = parseEther(process.env.NERWO_ARBITRATION_PRICE);

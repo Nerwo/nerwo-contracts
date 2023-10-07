@@ -31,6 +31,6 @@ describe('NerwoEscrow: changeWhitelist', function () {
 
   it('errors', async () => {
     await expect(escrow.connect(client).changeWhitelist([]))
-      .to.be.revertedWith('Ownable: caller is not the owner');
+      .to.be.revertedWithCustomError(escrow, 'OwnableUnauthorizedAccount');
   });
 });

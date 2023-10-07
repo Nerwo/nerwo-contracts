@@ -27,7 +27,7 @@
 pragma solidity ^0.8.21;
 
 import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
-import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 
 import {IArbitrator} from "@kleros/erc-792/contracts/IArbitrator.sol";
@@ -95,7 +95,7 @@ contract NerwoCentralizedArbitrator is
      */
     constructor() {
         /* solhint-disable avoid-tx-origin */
-        _setupRole(DEFAULT_ADMIN_ROLE, tx.origin);
+        _grantRole(DEFAULT_ADMIN_ROLE, tx.origin);
     }
 
     /** @dev initialize (deferred constructor)
