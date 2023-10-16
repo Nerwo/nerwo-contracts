@@ -17,6 +17,8 @@ if (network) {
   dotenv.config({ path: `.env.${global.network}`, override: true });
 }
 
+const DUMMY_KEY = '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80';
+
 const BUILDBEAR_CONTAINER_NAME = process.env.BUILDBEAR_CONTAINER_NAME || 'invalid';
 
 const config: HardhatUserConfig = {
@@ -48,7 +50,7 @@ const config: HardhatUserConfig = {
   networks: {
     sepolia: {
       url: `https://eth-sepolia.g.alchemy.com/v2/${process.env.ALCHEMY_SEPOLIA_KEY || ''}`,
-      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : undefined,
+      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [DUMMY_KEY],
       deploy: ['deploy-token', 'deploy']
     },
     hardhat: {
