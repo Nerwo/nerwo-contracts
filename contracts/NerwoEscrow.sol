@@ -119,7 +119,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
     // *          Events          * //
     // **************************** //
 
-    /** @dev To be emitted when a party pays or reimburses the other.
+    /** @dev To be emitted when the client pays the freelancer.
      *  @param transactionID The index of the transaction.
      *  @param from The address that paid.
      *  @param to The address that received the payment.
@@ -127,6 +127,21 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
      *  @param amount The amount paid.
      */
     event Payment(
+        uint256 indexed transactionID,
+        address indexed from,
+        address indexed to,
+        IERC20 token,
+        uint256 amount
+    );
+
+    /** @dev To be emitted when the freelancer reimburses the client.
+     *  @param transactionID The index of the transaction.
+     *  @param from The address that paid.
+     *  @param to The address that received the payment.
+     *  @param token The token address.
+     *  @param amount The amount paid.
+     */
+    event Reimburse(
         uint256 indexed transactionID,
         address indexed from,
         address indexed to,
@@ -432,7 +447,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
         }
 
         transaction.client.sendToken(transaction.token, amountReimbursed, false);
-        emit Payment(transactionID, msg.sender, transaction.client, transaction.token, amountReimbursed);
+        emit Reimburse(transactionID, msg.sender, transaction.client, transaction.token, amountReimbursed);
     }
 
     /** @dev Pay the arbitration fee to raise a dispute. To be called by the client or freelancer. UNTRUSTED.

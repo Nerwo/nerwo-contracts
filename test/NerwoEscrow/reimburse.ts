@@ -39,7 +39,7 @@ describe('NerwoEscrow: reimburse', function () {
       [-partialAmount, partialAmount, 0]
     );
 
-    await expect(tx).to.emit(escrow, 'Payment')
+    await expect(tx).to.emit(escrow, 'Reimburse')
       .withArgs(transactionID, freelancer.address, client.address, usdtAddress, partialAmount);
 
     tx = escrow.connect(client).pay(transactionID, partialAmount);
@@ -86,7 +86,7 @@ describe('NerwoEscrow: reimburse', function () {
       [-partialAmount, partialAmount, 0]
     );
 
-    await expect(tx).to.emit(escrow, 'Payment')
+    await expect(tx).to.emit(escrow, 'Reimburse')
       .withArgs(transactionID, freelancer.address, client.address, NativeToken, partialAmount);
 
     tx = escrow.connect(client).pay(transactionID, partialAmount);
