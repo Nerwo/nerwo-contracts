@@ -250,7 +250,8 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
         arbitratorData.feeTimeout = 604800;
         arbitratorData.arbitrator = IArbitrator(arbitrators[0]);
         arbitratorData.proxy = IArbitrableProxy(arbitrators[1]);
-        arbitratorData.extraData = hex"00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003";
+        arbitratorData
+            .extraData = hex"00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003";
         arbitratorData.metaEvidenceURI = metaEvidenceURI;
 
         if (owner() != newOwner) {
@@ -386,10 +387,9 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
     }
 
     /** @dev Pay receiver. To be called if the good or service is provided.
-     *  @param transactionID The index of the transaction.
-     *  @param amount Amount to pay in wei.
+     *  @param transactionID The index of the transaction
      */
-    function pay(uint256 transactionID, uint256 amount) external nonReentrant onlyValidTransaction(transactionID) {
+    function pay(uint256 transactionID) external nonReentrant onlyValidTransaction(transactionID) {
         Transaction storage transaction = _transactions[transactionID];
 
         if (msg.sender != transaction.client) {
@@ -400,14 +400,12 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
             revert InvalidStatus();
         }
 
-        if ((amount == 0) || (transaction.amount == 0) || (amount > transaction.amount)) {
+        if (transaction.amount == 0) {
             revert InvalidAmount();
         }
 
-        // _amount <= transaction.amount
-        unchecked {
-            transaction.amount -= amount;
-        }
+        uint256 amount = transaction.amount;
+        transaction.amount = 0;
 
         uint256 feeAmount = calculateFeeRecipientAmount(amount);
         if (feeAmount != 0) {
@@ -421,12 +419,8 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
 
     /** @dev Reimburse sender. To be called if the good or service can't be fully provided.
      *  @param transactionID The index of the transaction.
-     *  @param amountReimbursed Amount to reimburse in wei.
      */
-    function reimburse(
-        uint256 transactionID,
-        uint256 amountReimbursed
-    ) external nonReentrant onlyValidTransaction(transactionID) {
+    function reimburse(uint256 transactionID) external nonReentrant onlyValidTransaction(transactionID) {
         Transaction storage transaction = _transactions[transactionID];
 
         if (msg.sender != transaction.freelancer) {
@@ -437,14 +431,12 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
             revert InvalidStatus();
         }
 
-        if ((amountReimbursed == 0) || (transaction.amount == 0) || (amountReimbursed > transaction.amount)) {
+        if (transaction.amount == 0) {
             revert InvalidAmount();
         }
 
-        // _amountReimbursed <= transaction.amount
-        unchecked {
-            transaction.amount -= amountReimbursed;
-        }
+        uint256 amountReimbursed = transaction.amount;
+        transaction.amount = 0;
 
         transaction.client.sendToken(transaction.token, amountReimbursed, false);
         emit Reimburse(transactionID, msg.sender, transaction.client, transaction.token, amountReimbursed);

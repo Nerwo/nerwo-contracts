@@ -28,15 +28,9 @@ describe('NerwoEscrow: pay', function () {
     let amount = await randomAmount();
     const transactionID = await createTransaction(client, freelancer.address, usdt, amount);
 
-    await expect(escrow.connect(client).pay(transactionID, 0))
-      .to.be.revertedWithCustomError(escrow, 'InvalidAmount');
-
-    await expect(escrow.connect(client).pay(transactionID, amount * 2n))
-      .to.be.revertedWithCustomError(escrow, 'InvalidAmount');
-
     const feeAmount = await escrow.calculateFeeRecipientAmount(amount);
 
-    const tx = escrow.connect(client).pay(transactionID, amount);
+    const tx = escrow.connect(client).pay(transactionID);
 
     await expect(tx).to.changeTokenBalances(
       usdt,
@@ -48,21 +42,18 @@ describe('NerwoEscrow: pay', function () {
       .withArgs(transactionID, client.address, freelancer.address, await usdt.getAddress(), amount);
 
     await expect(tx).to.emit(escrow, 'FeeRecipientPayment');
+
+    await expect(escrow.connect(client).pay(transactionID))
+      .to.be.revertedWithCustomError(escrow, 'InvalidAmount');
   });
 
   it('create a transaction and pay (Native)', async () => {
     let amount = await randomAmount();
     const transactionID = await createNativeTransaction(client, freelancer.address, amount);
 
-    await expect(escrow.connect(client).pay(transactionID, 0))
-      .to.be.revertedWithCustomError(escrow, 'InvalidAmount');
-
-    await expect(escrow.connect(client).pay(transactionID, amount * 2n))
-      .to.be.revertedWithCustomError(escrow, 'InvalidAmount');
-
     const feeAmount = await escrow.calculateFeeRecipientAmount(amount);
 
-    const tx = escrow.connect(client).pay(transactionID, amount);
+    const tx = escrow.connect(client).pay(transactionID);
 
     await expect(tx).to.changeEtherBalances(
       [escrow, platform, freelancer],
@@ -73,5 +64,8 @@ describe('NerwoEscrow: pay', function () {
       .withArgs(transactionID, client.address, freelancer.address, NativeToken, amount);
 
     await expect(tx).to.emit(escrow, 'FeeRecipientPayment');
+
+    await expect(escrow.connect(client).pay(transactionID))
+      .to.be.revertedWithCustomError(escrow, 'InvalidAmount');
   });
 });

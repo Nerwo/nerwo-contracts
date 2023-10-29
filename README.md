@@ -26,12 +26,12 @@ The client must have approved the amount the ERC20 token transfer.
 
 ### pay
 
-`pay(uint256 transactionID, uint256 amount)`
+`pay(uint256 transactionID)`
 
 Allows the client to pay the freelancer for the provided goods or services.
 The function checks whether the caller is the transaction client,
 whether the transaction has a valid status,
-and whether the amount is within the valid range before proceeding.
+and whether the amount is not already paid.
 
 ### reimburse
 
@@ -40,7 +40,7 @@ and whether the amount is within the valid range before proceeding.
 Allows the freelancer to reimburse the client if the goods or services cannot be fully provided.
 The function checks whether the caller is the transaction freelancer,
 whether the transaction has a valid status,
-and whether the amount to be reimbursed is within the valid range before proceeding.
+and whether the amount is not already reimbursed.
 
 `payArbitrationFee(uint256 transactionID)`
 
@@ -97,6 +97,13 @@ Get the ruling for the dispute of given transaction.
 `event Payment(uint256 indexed transactionID, address indexed client, IERC20 indexed token, uint256 amount)`
 
 Emitted when a payment is made.
+It provides the transaction ID, the ERC20 token address, the amount paid, and the address of the client.
+
+### Reimburse
+
+`event Reimburse(uint256 indexed transactionID, address indexed client, IERC20 indexed token, uint256 amount)`
+
+Emitted when a reimburse is made.
 It provides the transaction ID, the ERC20 token address, the amount paid, and the address of the client.
 
 ### HasToPayFee

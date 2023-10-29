@@ -46,7 +46,7 @@ describe('NerwoEscrow: rule (ERC20)', function () {
     await expect(proxy.connect(court).giveRuling(0, 0))
       .to.be.revertedWithCustomError(proxy, 'InvalidDispute');
 
-    await expect(escrow.connect(client).pay(transactionID, amount))
+    await expect(escrow.connect(client).pay(transactionID))
       .to.revertedWithCustomError(escrow, 'InvalidStatus');
   });
 
@@ -157,7 +157,7 @@ describe('NerwoEscrow: rule (Native)', function () {
     await expect(proxy.connect(court).giveRuling(0, 0))
       .to.be.revertedWithCustomError(proxy, 'InvalidDispute');
 
-    await expect(escrow.connect(client).pay(transactionID, amount))
+    await expect(escrow.connect(client).pay(transactionID))
       .to.revertedWithCustomError(escrow, 'InvalidStatus');
   });
 
