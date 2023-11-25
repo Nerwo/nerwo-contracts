@@ -414,7 +414,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
         }
 
         transaction.freelancer.sendToken(transaction.token, amount - feeAmount, false);
-        emit Payment(transactionID, msg.sender, transaction.freelancer, transaction.token, amount);
+        emit Payment(transactionID, msg.sender, transaction.freelancer, transaction.token, amount - feeAmount);
     }
 
     /** @dev Reimburse sender. To be called if the good or service can't be fully provided.

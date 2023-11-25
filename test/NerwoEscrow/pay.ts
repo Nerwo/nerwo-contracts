@@ -39,7 +39,7 @@ describe('NerwoEscrow: pay', function () {
     );
 
     await expect(tx).to.emit(escrow, 'Payment')
-      .withArgs(transactionID, client.address, freelancer.address, await usdt.getAddress(), amount);
+      .withArgs(transactionID, client.address, freelancer.address, await usdt.getAddress(), amount - feeAmount);
 
     await expect(tx).to.emit(escrow, 'FeeRecipientPayment');
 
@@ -61,7 +61,7 @@ describe('NerwoEscrow: pay', function () {
     );
 
     await expect(tx).to.emit(escrow, 'Payment')
-      .withArgs(transactionID, client.address, freelancer.address, NativeToken, amount);
+      .withArgs(transactionID, client.address, freelancer.address, NativeToken, amount - feeAmount);
 
     await expect(tx).to.emit(escrow, 'FeeRecipientPayment');
 
