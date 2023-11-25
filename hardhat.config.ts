@@ -23,7 +23,7 @@ const BUILDBEAR_CONTAINER_NAME = process.env.BUILDBEAR_CONTAINER_NAME || 'invali
 
 const config: HardhatUserConfig = {
   solidity: {
-    version: '0.8.21',
+    version: '0.8.22',
     settings: {
       evmVersion: 'shanghai', // paris for chains not supporting push0
       optimizer: {
