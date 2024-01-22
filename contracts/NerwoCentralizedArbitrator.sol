@@ -3,7 +3,7 @@
 /**
  *  @title NerwoCentralizedArbitrator
  *  @author: [@ferittuncer, @hbarcelos, @sherpya]
-*
+ *
  *                         ////////                 ////////
  *                       ////////////             ////////////
  *                       /////////////            ////////////
@@ -26,9 +26,8 @@
 
 pragma solidity ^0.8.21;
 
-import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 import {IArbitrator} from "@kleros/erc-792/contracts/IArbitrator.sol";
 import {IArbitrable} from "@kleros/erc-792/contracts/IArbitrable.sol";
@@ -38,15 +37,7 @@ import {IArbitrableProxy} from "./IArbitrableProxy.sol";
 
 import {SafeTransfer} from "./SafeTransfer.sol";
 
-contract NerwoCentralizedArbitrator is
-    Initializable,
-    AccessControl,
-    ReentrancyGuard,
-    IArbitrable,
-    IArbitrator,
-    IArbitrableProxy,
-    IEvidence
-{
+contract NerwoCentralizedArbitrator is Ownable, ReentrancyGuard, IArbitrable, IArbitrator, IArbitrableProxy, IEvidence {
     bytes32 public constant COURT_ROLE = keccak256("COURT_ROLE");
 
     error InsufficientPayment();
@@ -90,41 +81,21 @@ contract NerwoCentralizedArbitrator is
     }
 
     /** @dev contructor
-     *  @notice set ownership before calling initialize to avoid front running in deployment
-     *  @notice since we are using hardhat-deploy deterministic deployment the sender
-     *  @notice is 0x4e59b44847b379578588920ca78fbf26c0b4956c
-     */
-    constructor() {
-        /* solhint-disable avoid-tx-origin */
-        _grantRole(DEFAULT_ADMIN_ROLE, tx.origin);
-    }
-
-    /** @dev initialize (deferred constructor)
-     *  @param owner The initial owner
-     *  @param court The address list of the court
+     *  @param newOwner The initial owner
      *  @param _arbitrationPrice Amount to be paid for arbitration.
      */
-    function initialize(
-        address owner,
-        address[] calldata court,
-        uint256 _arbitrationPrice
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) initializer {
-        if (!hasRole(DEFAULT_ADMIN_ROLE, owner)) {
-            _grantRole(DEFAULT_ADMIN_ROLE, owner);
-        }
-
-        unchecked {
-            for (uint256 i = 0; i < court.length; i++) {
-                _grantRole(COURT_ROLE, court[i]);
-            }
-        }
+    constructor(address newOwner, uint256 _arbitrationPrice) Ownable(msg.sender) {
         arbitrationPrice = _arbitrationPrice;
+
+        if (owner() != newOwner) {
+            _transferOwnership(newOwner);
+        }
     }
 
     /** @dev Set the arbitration price. Only callable by the owner.
      *  @param _arbitrationPrice Amount to be paid for arbitration.
      */
-    function setArbitrationPrice(uint256 _arbitrationPrice) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setArbitrationPrice(uint256 _arbitrationPrice) external onlyOwner {
         uint256 previousPrice = arbitrationPrice;
         arbitrationPrice = _arbitrationPrice;
         emit ArbitrationPriceChanged(previousPrice, _arbitrationPrice);
@@ -251,7 +222,7 @@ contract NerwoCentralizedArbitrator is
     function giveRuling(
         uint256 _disputeID,
         uint256 _ruling
-    ) external onlyRole(COURT_ROLE) onlyValidDispute(_disputeID) nonReentrant {
+    ) external onlyOwner onlyValidDispute(_disputeID) nonReentrant {
         ArbitratorDispute storage dispute = arbitratorDisputes[_disputeID];
 
         if (_ruling > MAX_NUMBER_OF_CHOICES) {

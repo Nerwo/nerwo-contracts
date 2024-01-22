@@ -25,10 +25,9 @@
  *  is completed or a dispute arises. If a dispute occurs, an external arbitrator determines the outcome.
  */
 
-pragma solidity ^0.8.22;
+pragma solidity ^0.8.23;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IArbitrator} from "@kleros/erc-792/contracts/IArbitrator.sol";
@@ -36,7 +35,7 @@ import {IArbitrator} from "@kleros/erc-792/contracts/IArbitrator.sol";
 import {IArbitrableProxy} from "./IArbitrableProxy.sol";
 import {SafeTransfer} from "./SafeTransfer.sol";
 
-contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
+contract NerwoEscrow is Ownable, ReentrancyGuard {
     using SafeTransfer for address;
     using SafeTransfer for IERC20;
 
@@ -221,14 +220,6 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
     }
 
     /** @dev contructor
-     *  @notice set ownership before calling initialize to avoid front running in deployment
-     *  @notice since we are using hardhat-deploy deterministic deployment the sender
-     *  @notice is 0x4e59b44847b379578588920ca78fbf26c0b4956c
-     */
-    /* solhint-disable avoid-tx-origin */
-    constructor() Ownable(tx.origin) {}
-
-    /** @dev initialize (deferred constructor)
      *  @param newOwner The initial owner
      *  @param arbitrators arbitrator and arbitratorProxy addresses.
      *  @param metaEvidenceURI Meta Evidence json IPFS URI
@@ -236,14 +227,15 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
      *  @param feeRecipientBasisPoint The share of fee to be received by the feeRecipient, down to 2 decimal places as 550 = 5.5%
      *  @param supportedTokens List of whitelisted ERC20 tokens
      */
-    function initialize(
+    constructor(
         address newOwner,
-        address[] calldata arbitrators,
-        string calldata metaEvidenceURI,
+        address[] memory arbitrators,
+        string memory metaEvidenceURI,
         address feeRecipient,
         uint256 feeRecipientBasisPoint,
-        TokenAllow[] calldata supportedTokens
-    ) external onlyOwner initializer {
+        TokenAllow[] memory supportedTokens
+    ) Ownable(msg.sender) {
+        // cannot set newOwner here because it would break guarded calls
         setFeeRecipientAndBasisPoint(feeRecipient, feeRecipientBasisPoint);
         changeWhitelist(supportedTokens);
 
@@ -296,7 +288,7 @@ contract NerwoEscrow is Ownable, Initializable, ReentrancyGuard {
      * @dev Sets whitelisted ERC20 tokens
      * @param supportedTokens An array of TokenAllow
      */
-    function changeWhitelist(TokenAllow[] calldata supportedTokens) public onlyOwner {
+    function changeWhitelist(TokenAllow[] memory supportedTokens) public onlyOwner {
         unchecked {
             for (uint256 i = 0; i < supportedTokens.length; i++) {
                 if (address(supportedTokens[i].token) == address(0)) {

@@ -5,8 +5,7 @@ const func: DeployFunction = async function ({ deployments: { deploy }, getNamed
 
     await deploy('NerwoTetherToken', {
         from: deployer,
-        log: true,
-        deterministicDeployment: true
+        log: true
     })
 }
 

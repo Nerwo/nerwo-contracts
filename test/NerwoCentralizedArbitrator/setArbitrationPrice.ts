@@ -13,7 +13,7 @@ describe('NerwoCentralizedArbitrator: setArbitrationPrice', function () {
 
   it('Testing setArbitrationPrice', async () => {
     const { proxy } = await getContracts();
-    const { client, deployer } = await getSigners();
+    const { client, court } = await getSigners();
 
     const arbitrationPrice = parseEther('0.005');
 
@@ -22,7 +22,7 @@ describe('NerwoCentralizedArbitrator: setArbitrationPrice', function () {
 
     const previousPrice = await proxy.arbitrationCost('0x00');
 
-    await expect(proxy.connect(deployer).setArbitrationPrice(arbitrationPrice))
+    await expect(proxy.connect(court).setArbitrationPrice(arbitrationPrice))
       .to.emit(proxy, 'ArbitrationPriceChanged').withArgs(previousPrice, arbitrationPrice);
   });
 });
