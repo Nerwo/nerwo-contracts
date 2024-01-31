@@ -303,10 +303,12 @@ contract NerwoEscrow is Ownable, ReentrancyGuard {
     /** @dev Admin function to fund the contract with ether, e.g. to unblock if the arbitrator cost changes in between (possible?)
      *  @notice It's harmless and there is no withdraw function.
      */
+    // solhint-disable-next-line no-complex-fallback
     receive() external payable {
         // using onlyOwner modifier trips hardhat
-        // solhint-disable-next-line custom-errors
-        require(owner() == msg.sender, "Ownable: caller is not the owner");
+        if (owner() != msg.sender) {
+            revert OwnableUnauthorizedAccount(msg.sender);
+        }
         emit ContractFunded(msg.sender, msg.value);
     }
 

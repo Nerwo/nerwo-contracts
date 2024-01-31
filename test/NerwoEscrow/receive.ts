@@ -34,6 +34,6 @@ describe('NerwoEscrow: receive', function () {
       .withArgs(platform.address, amount);
 
     await expect(client.sendTransaction({ to: address, value: amount }))
-      .to.be.reverted;
+      .to.be.revertedWithCustomError(escrow, 'OwnableUnauthorizedAccount');
   });
 });
