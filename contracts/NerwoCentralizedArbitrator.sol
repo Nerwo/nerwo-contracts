@@ -38,8 +38,6 @@ import {IArbitrableProxy} from "./IArbitrableProxy.sol";
 import {SafeTransfer} from "./SafeTransfer.sol";
 
 contract NerwoCentralizedArbitrator is Ownable, ReentrancyGuard, IArbitrable, IArbitrator, IArbitrableProxy, IEvidence {
-    bytes32 public constant COURT_ROLE = keccak256("COURT_ROLE");
-
     error InsufficientPayment();
     error InvalidRuling(uint256 _ruling, uint256 _numberOfChoices);
     error InvalidStatus(DisputeStatus _expected);
