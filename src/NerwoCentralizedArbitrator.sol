@@ -23,11 +23,10 @@
  *  @notice This contract implement a simple not appealable Centralized Arbitrator
  *  and Arbitrator Proxy, mainly used for test units.
  */
+pragma solidity ^0.8.28;
 
-pragma solidity ^0.8.21;
-
-import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {ReentrancyGuard} from "@openzeppelin-contracts/utils/ReentrancyGuard.sol";
+import {Ownable} from "@openzeppelin-contracts/access/Ownable.sol";
 
 import {IArbitrator} from "@kleros/erc-792/contracts/IArbitrator.sol";
 import {IArbitrable} from "@kleros/erc-792/contracts/IArbitrable.sol";
@@ -37,7 +36,14 @@ import {IArbitrableProxy} from "./IArbitrableProxy.sol";
 
 import {SafeTransfer} from "./SafeTransfer.sol";
 
-contract NerwoCentralizedArbitrator is Ownable, ReentrancyGuard, IArbitrable, IArbitrator, IArbitrableProxy, IEvidence {
+contract NerwoCentralizedArbitrator is
+    Ownable,
+    ReentrancyGuard,
+    IArbitrable,
+    IArbitrator,
+    IArbitrableProxy,
+    IEvidence
+{
     error InsufficientPayment();
     error InvalidRuling(uint256 _ruling, uint256 _numberOfChoices);
     error InvalidStatus(DisputeStatus _expected);
@@ -78,7 +84,8 @@ contract NerwoCentralizedArbitrator is Ownable, ReentrancyGuard, IArbitrable, IA
         _;
     }
 
-    /** @dev contructor
+    /**
+     * @dev contructor
      *  @param newOwner The initial owner
      *  @param _arbitrationPrice Amount to be paid for arbitration.
      */
@@ -90,7 +97,8 @@ contract NerwoCentralizedArbitrator is Ownable, ReentrancyGuard, IArbitrable, IA
         }
     }
 
-    /** @dev Set the arbitration price. Only callable by the owner.
+    /**
+     * @dev Set the arbitration price. Only callable by the owner.
      *  @param _arbitrationPrice Amount to be paid for arbitration.
      */
     function setArbitrationPrice(uint256 _arbitrationPrice) external onlyOwner {
@@ -100,10 +108,12 @@ contract NerwoCentralizedArbitrator is Ownable, ReentrancyGuard, IArbitrable, IA
     }
 
     /* IArbitrator */
-    function createDispute(
-        uint256 _choices,
-        bytes calldata _extraData
-    ) public payable override returns (uint256 disputeID) {
+    function createDispute(uint256 _choices, bytes calldata _extraData)
+        public
+        payable
+        override
+        returns (uint256 disputeID)
+    {
         uint256 requiredAmount = arbitrationCost(_extraData);
         if (msg.value != requiredAmount) {
             revert InsufficientPayment();
@@ -118,21 +128,18 @@ contract NerwoCentralizedArbitrator is Ownable, ReentrancyGuard, IArbitrable, IA
             disputeID = ++lastDispute;
         }
 
-        arbitratorDisputes[disputeID] = ArbitratorDispute({
-            arbitrated: this,
-            choices: uint8(_choices),
-            ruling: 0,
-            status: DisputeStatus.Waiting
-        });
+        arbitratorDisputes[disputeID] =
+            ArbitratorDispute({arbitrated: this, choices: uint8(_choices), ruling: 0, status: DisputeStatus.Waiting});
 
         emit DisputeCreation(disputeID, this);
     }
 
-    /** @dev Cost of arbitration. Accessor to arbitrationPrice.
+    /**
+     * @dev Cost of arbitration. Accessor to arbitrationPrice.
      *  _extraData Not used by this contract.
      *  @return cost Amount to be paid.
      */
-    function arbitrationCost(bytes calldata /*_extraData*/) public view override returns (uint256 cost) {
+    function arbitrationCost(bytes calldata /*_extraData*/ ) public view override returns (uint256 cost) {
         return arbitrationPrice;
     }
 
@@ -141,19 +148,22 @@ contract NerwoCentralizedArbitrator is Ownable, ReentrancyGuard, IArbitrable, IA
      * _disputeID Not used by this contract.
      * _extraData Not used by this contract.
      */
-    function appeal(uint256 /*_disputeID*/, bytes calldata /*_extraData*/) external payable override {
+    function appeal(uint256, /*_disputeID*/ bytes calldata /*_extraData*/ ) external payable override {
         revert InsufficientPayment();
     }
 
-    /** @dev Cost of appeal. If appeal is not possible, it's a high value which can never be paid.
+    /**
+     * @dev Cost of appeal. If appeal is not possible, it's a high value which can never be paid.
      *  _disputeID Not used by this contract.
      *  _extraData Not used by this contract.
      *  @return cost Amount to be paid.
      */
-    function appealCost(
-        uint256 /*_disputeID*/,
-        bytes calldata /*_extraData*/
-    ) external pure override returns (uint256 cost) {
+    function appealCost(uint256, /*_disputeID*/ bytes calldata /*_extraData*/ )
+        external
+        pure
+        override
+        returns (uint256 cost)
+    {
         return NOT_PAYABLE_VALUE;
     }
 
@@ -163,7 +173,7 @@ contract NerwoCentralizedArbitrator is Ownable, ReentrancyGuard, IArbitrable, IA
      * @return start The start of the period.
      * @return end The end of the period.
      */
-    function appealPeriod(uint256 /*_disputeID*/) external pure override returns (uint256 start, uint256 end) {
+    function appealPeriod(uint256 /*_disputeID*/ ) external pure override returns (uint256 start, uint256 end) {
         return (0, 0);
     }
 
@@ -172,9 +182,13 @@ contract NerwoCentralizedArbitrator is Ownable, ReentrancyGuard, IArbitrable, IA
      * @param _disputeID ID of the dispute to rule.
      * @return status The status of the dispute.
      */
-    function disputeStatus(
-        uint256 _disputeID
-    ) external view override onlyValidDispute(_disputeID) returns (DisputeStatus status) {
+    function disputeStatus(uint256 _disputeID)
+        external
+        view
+        override
+        onlyValidDispute(_disputeID)
+        returns (DisputeStatus status)
+    {
         status = arbitratorDisputes[_disputeID].status;
     }
 
@@ -187,7 +201,8 @@ contract NerwoCentralizedArbitrator is Ownable, ReentrancyGuard, IArbitrable, IA
         return arbitratorDisputes[_disputeID].ruling;
     }
 
-    /** @dev To be called by the arbitrator of the dispute, to declare winning ruling.
+    /**
+     * @dev To be called by the arbitrator of the dispute, to declare winning ruling.
      *  @param _disputeID ID of the dispute in arbitrator contract.
      *  @param _ruling The ruling choice of the arbitration.
      */
@@ -212,15 +227,18 @@ contract NerwoCentralizedArbitrator is Ownable, ReentrancyGuard, IArbitrable, IA
         emit Ruling(this, _disputeID, dispute.ruling);
     }
 
-    /** @dev Give a ruling.
+    /**
+     * @dev Give a ruling.
      *  @param _disputeID ID of the dispute to rule.
      *  @param _ruling Ruling given by the arbitrator.
      *                 Note that 0 means "Not able/wanting to make a decision".
      */
-    function giveRuling(
-        uint256 _disputeID,
-        uint256 _ruling
-    ) external onlyOwner onlyValidDispute(_disputeID) nonReentrant {
+    function giveRuling(uint256 _disputeID, uint256 _ruling)
+        external
+        onlyOwner
+        onlyValidDispute(_disputeID)
+        nonReentrant
+    {
         ArbitratorDispute storage dispute = arbitratorDisputes[_disputeID];
 
         if (_ruling > MAX_NUMBER_OF_CHOICES) {
@@ -236,9 +254,12 @@ contract NerwoCentralizedArbitrator is Ownable, ReentrancyGuard, IArbitrable, IA
         SafeTransfer.sendETH(payable(msg.sender), arbitrationPrice, true);
     }
 
-    function getDispute(
-        uint256 _disputeID
-    ) external view onlyValidDispute(_disputeID) returns (ArbitratorDispute memory) {
+    function getDispute(uint256 _disputeID)
+        external
+        view
+        onlyValidDispute(_disputeID)
+        returns (ArbitratorDispute memory)
+    {
         return arbitratorDisputes[_disputeID];
     }
 
@@ -262,14 +283,16 @@ contract NerwoCentralizedArbitrator is Ownable, ReentrancyGuard, IArbitrable, IA
         emit Dispute(this, disputeID, disputeID, disputeID);
     }
 
-    /** @dev Submit a reference to evidence. EVENT.
+    /**
+     * @dev Submit a reference to evidence. EVENT.
      *  @param _localDisputeID The index of the transaction.
      *  @param _evidenceURI Link to evidence.
      */
-    function submitEvidence(
-        uint256 _localDisputeID,
-        string calldata _evidenceURI
-    ) external override onlyValidDispute(_localDisputeID) {
+    function submitEvidence(uint256 _localDisputeID, string calldata _evidenceURI)
+        external
+        override
+        onlyValidDispute(_localDisputeID)
+    {
         ArbitratorDispute storage dispute = arbitratorDisputes[_localDisputeID];
         if (dispute.status == DisputeStatus.Solved) {
             revert AlreadyResolved();
@@ -282,9 +305,7 @@ contract NerwoCentralizedArbitrator is Ownable, ReentrancyGuard, IArbitrable, IA
         return _externalID;
     }
 
-    function disputes(
-        uint256 _localID
-    )
+    function disputes(uint256 _localID)
         external
         view
         onlyValidDispute(_localID)

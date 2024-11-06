@@ -1,5 +1,3 @@
-ds-test/=lib/forge-std/lib/ds-test/src/
-forge-std/=lib/forge-std/src/
-@kleros/erc-792/=lib/erc-792/
-@nerwo/contracts/=contracts/
-@nerwo/test/=test/
+@kleros/erc-792/=dependencies/@kleros-erc-792-8.0.0/
+@openzeppelin-contracts/=dependencies/@openzeppelin-contracts-5.1.0/
+forge-std/=dependencies/forge-std-1.9.4/src

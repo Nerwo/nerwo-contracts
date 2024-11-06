@@ -1,23 +1,18 @@
-node_modules
+# Compiler files
+cache/
+out/
+
+# Ignores development broadcast logs
+!/broadcast
+/broadcast/*/31337/
+/broadcast/**/dry-run/
+
+# Docs
+docs/
+
+# Dotenv file
 .env
-.env.*
-!.env.example
-coverage
-coverage.json
-typechain
-typechain-types
 
-# Hardhat files
-abi
-cache
-artifacts
 
-# deployments
-deployments
-
-# OpenZeppelin
-.openzeppelin/unknown-*.json
-
-# misc
-*.log
-*.diff
+# Soldeer
+/dependencies

@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.23;
+pragma solidity ^0.8.28;
 
 import {Test} from "forge-std/Test.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {NerwoTetherToken} from "@nerwo/contracts/NerwoTetherToken.sol";
-import {NerwoEscrow} from "@nerwo/contracts/NerwoEscrow.sol";
-import {RandomGenerator} from "@nerwo/test/RandomGenerator.sol";
+import {IERC20} from "@openzeppelin-contracts/token/ERC20/IERC20.sol";
+import {NerwoTetherToken} from "../src/NerwoTetherToken.sol";
+import {NerwoEscrow} from "../src/NerwoEscrow.sol";
 
 contract NerwoTest is Test {
     IERC20 internal constant NATIVE_TOKEN = IERC20(address(0));
@@ -14,7 +13,6 @@ contract NerwoTest is Test {
     address internal client;
     address internal freelancer;
     address internal feeRecipient;
-    RandomGenerator internal random;
     NerwoEscrow internal escrow;
     NerwoTetherToken internal nerwoTestToken;
 
@@ -23,8 +21,6 @@ contract NerwoTest is Test {
         client = makeAddr("client");
         freelancer = makeAddr("freelancer");
         feeRecipient = makeAddr("feeRecipent");
-        random = new RandomGenerator();
-        random.srand(vm.unixTime());
 
         NerwoEscrow.TokenAllow[] memory supportedTokens = new NerwoEscrow.TokenAllow[](1);
         address[] memory arbitrators = new address[](2);
@@ -43,15 +39,13 @@ contract NerwoTest is Test {
     }
 
     function randomAmount() internal returns (uint256) {
-        return random.randrange(1e17, 1e18);
+        return vm.randomUint(1e17, 1e18);
     }
 
-    function createTransaction(
-        address from,
-        address to,
-        IERC20 token,
-        uint256 amount
-    ) internal returns (uint256 transactionID) {
+    function createTransaction(address from, address to, IERC20 token, uint256 amount)
+        internal
+        returns (uint256 transactionID)
+    {
         uint256 value = 0;
         NerwoTetherToken testToken = NerwoTetherToken(address(token));
 

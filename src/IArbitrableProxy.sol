@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.21;
+pragma solidity ^0.8.28;
 
 import {IArbitrator} from "@kleros/erc-792/contracts/IArbitrator.sol";
 
@@ -26,9 +26,10 @@ interface IArbitrableProxy {
 
     function externalIDtoLocalID(uint256 _externalID) external view returns (uint256 localID);
 
-    function disputes(
-        uint256 _localID
-    ) external view returns (bytes memory extraData, bool isRuled, uint256 ruling, uint256 disputeIDOnArbitratorSide);
+    function disputes(uint256 _localID)
+        external
+        view
+        returns (bytes memory extraData, bool isRuled, uint256 ruling, uint256 disputeIDOnArbitratorSide);
 
     function submitEvidence(uint256 _localDisputeID, string calldata _evidenceURI) external;
 }

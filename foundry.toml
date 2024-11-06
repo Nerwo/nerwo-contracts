@@ -1,4 +1,12 @@
 [profile.default]
-src = "contracts"
-out = "artifacts"
-libs = ["lib"]
+src = "src"
+out = "out"
+libs = ["lib", "dependencies"]
+
+[dependencies]
+forge-std = "1.9.4"
+"@openzeppelin-contracts" = "5.1.0"
+"@kleros/erc-792" = { version = "8.0.0", git = "https://github.com/kleros/erc-792.git", tag = "v8.0.0" }
+
+[soldeer]
+remappings_version = false

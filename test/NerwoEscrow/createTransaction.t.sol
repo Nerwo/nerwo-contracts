@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.23;
+pragma solidity ^0.8.28;
 
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {IERC20Errors} from "@openzeppelin/contracts/interfaces/draft-IERC6093.sol";
+import {IERC20} from "@openzeppelin-contracts/token/ERC20/IERC20.sol";
+import {IERC20Errors} from "@openzeppelin-contracts/interfaces/draft-IERC6093.sol";
 
-import {NerwoEscrow} from "@nerwo/contracts/NerwoEscrow.sol";
+import {NerwoEscrow} from "../../src/NerwoEscrow.sol";
 
-import {NerwoTest} from "@nerwo/test/NerwoTest.sol";
+import {NerwoTest} from "../NerwoTest.sol";
 import {console} from "forge-std/console.sol";
 
 contract NerwoEscrowTest is NerwoTest {
