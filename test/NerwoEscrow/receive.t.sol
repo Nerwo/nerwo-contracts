@@ -8,7 +8,7 @@ import {NerwoTest} from "../NerwoTest.sol";
 contract NerwoEscrowTest is NerwoTest {
     function test_sendNativeFromOwner() public {
         uint256 escrowBalance = address(escrow).balance;
-        startHoax(owner, 2 ether);
+        startHoax(owner, 1 ether);
         payable(escrow).transfer(1 ether);
         vm.stopPrank();
         assertEq(address(escrow).balance, escrowBalance + 1 ether);
