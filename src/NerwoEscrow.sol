@@ -291,8 +291,7 @@ contract NerwoEscrow is Ownable, ReentrancyGuard {
      * e.g. to unblock if the arbitrator cost changes in between (possible?)
      *  @notice It's harmless and there is no withdraw function.
      */
-    receive() external payable onlyOwner {
-    }
+    receive() external payable onlyOwner {}
 
     /**
      * @dev Calculate the amount to be paid in wei according to feeRecipientBasisPoint for a particular amount.
