@@ -193,13 +193,6 @@ contract NerwoEscrow is Ownable, ReentrancyGuard {
      */
     event WhitelistChanged(IERC20 indexed token, bool allow);
 
-    /**
-     * @dev To be emitted when the contract if funded with ether by admin.
-     *  @param funder The address that funded.
-     *  @param amount The amount funded.
-     */
-    event ContractFunded(address indexed funder, uint256 amount);
-
     function _requireValidTransaction(uint256 transactionID) internal view {
         if (_transactions[transactionID].freelancer == address(0)) {
             revert InvalidTransaction();
@@ -294,16 +287,11 @@ contract NerwoEscrow is Ownable, ReentrancyGuard {
     }
 
     /**
-     * @dev Admin function to fund the contract with ether, e.g. to unblock if the arbitrator cost changes in between (possible?)
+     * @dev Admin function to fund the contract with ether,
+     * e.g. to unblock if the arbitrator cost changes in between (possible?)
      *  @notice It's harmless and there is no withdraw function.
      */
-    // solhint-disable-next-line no-complex-fallback
-    receive() external payable {
-        // using onlyOwner modifier trips hardhat
-        if (owner() != msg.sender) {
-            revert OwnableUnauthorizedAccount(msg.sender);
-        }
-        emit ContractFunded(msg.sender, msg.value);
+    receive() external payable onlyOwner {
     }
 
     /**
