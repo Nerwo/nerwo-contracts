@@ -14,6 +14,49 @@ The main features of the contract include:
 - Raising disputes
 - Ruling
 
+## Operational policy
+
+### Token whitelist
+
+`changeWhitelist` is an admin-only function. Only ERC20 implementations
+that satisfy **all** of the following may be added:
+
+- Standard `transfer`/`transferFrom` semantics — the amount received by
+  the recipient must equal the amount specified by the sender.
+- No fee-on-transfer behavior. The escrow re-reads the balance after
+  `transferFrom` and rejects transactions that fall below `MIN_AMOUNT`
+  after fees, but the sanity check is not a substitute for a clean token.
+- No rebasing or supply-elastic mechanics that would cause the escrowed
+  balance to drift between `createTransaction` and payout.
+- No transfer hooks (ERC777 `tokensReceived`/`tokensToSend`, ERC1363
+  callbacks, or any custom callback that re-enters the caller).
+- No blacklist that the contract owner does not control or is not aware
+  of. If the token can blacklist arbitrary addresses, payouts to a
+  blacklisted party will fall through to `pendingWithdrawals` rather
+  than reverting — the funds are recoverable but only once the address
+  is unblocked.
+
+In short: the whitelist is for plain, stateless ERC20 tokens. Anything
+exotic (fee-on-transfer, rebasing, hookable, upgradeable proxies the
+team does not control) must not be added.
+
+### Fee recipient
+
+`setFeeRecipientAndBasisPoint` may set the fee recipient to a contract
+address. If that address cannot receive funds (rejecting `receive()`,
+blacklist on the relevant token, etc.) the fee is credited to
+`pendingWithdrawals` and the recipient can claim it later via
+`claimWithdrawal`. The rest of the payout flow is unaffected, so a
+broken fee recipient cannot brick the contract.
+
+### Arbitrator
+
+The arbitrator is set at construction. The contract assumes the
+arbitrator returns rulings in `[0, 2]`; any out-of-range ruling is
+treated as a 50/50 split so a misbehaving arbitrator cannot lock
+escrowed funds. Mid-dispute price changes are tolerated: the
+arbitration cost is frozen on the first `payArbitrationFee` call.
+
 ## Functions
 
 ### createTransaction
