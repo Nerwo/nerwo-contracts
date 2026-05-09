@@ -113,26 +113,29 @@ contract NerwoTest is Test {
         arbitrator.giveRuling(disputeID, ruling);
     }
 
-    function assertTokenBalanceDelta(
+    function assertTokenBalanceIncrease(
         IERC20 token,
         address account,
-        int256 expectedDelta,
+        uint256 magnitude,
         uint256 balanceBefore
     ) internal view {
-        uint256 balanceAfter = token.balanceOf(account);
-        if (expectedDelta < 0) {
-            assertEq(balanceBefore - balanceAfter, uint256(-expectedDelta));
-        } else {
-            assertEq(balanceAfter - balanceBefore, uint256(expectedDelta));
-        }
+        assertEq(token.balanceOf(account) - balanceBefore, magnitude);
     }
 
-    function assertEthBalanceDelta(address account, int256 expectedDelta, uint256 balanceBefore) internal view {
-        uint256 balanceAfter = account.balance;
-        if (expectedDelta < 0) {
-            assertEq(balanceBefore - balanceAfter, uint256(-expectedDelta));
-        } else {
-            assertEq(balanceAfter - balanceBefore, uint256(expectedDelta));
-        }
+    function assertTokenBalanceDecrease(
+        IERC20 token,
+        address account,
+        uint256 magnitude,
+        uint256 balanceBefore
+    ) internal view {
+        assertEq(balanceBefore - token.balanceOf(account), magnitude);
+    }
+
+    function assertEthBalanceIncrease(address account, uint256 magnitude, uint256 balanceBefore) internal view {
+        assertEq(account.balance - balanceBefore, magnitude);
+    }
+
+    function assertEthBalanceDecrease(address account, uint256 magnitude, uint256 balanceBefore) internal view {
+        assertEq(balanceBefore - account.balance, magnitude);
     }
 }

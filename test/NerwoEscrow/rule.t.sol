@@ -41,9 +41,9 @@ contract NerwoEscrowRuleTest is NerwoTest {
         vm.prank(client);
         escrow.acceptRuling(transactionID);
 
-        assertEthBalanceDelta(client, int256(ARBITRATION_PRICE), clientEthBefore);
-        assertTokenBalanceDelta(nerwoTestToken, client, int256(amount), clientTokenBefore);
-        assertTokenBalanceDelta(nerwoTestToken, address(escrow), -int256(amount), escrowTokenBefore);
+        assertEthBalanceIncrease(client, ARBITRATION_PRICE, clientEthBefore);
+        assertTokenBalanceIncrease(nerwoTestToken, client, amount, clientTokenBefore);
+        assertTokenBalanceDecrease(nerwoTestToken, address(escrow), amount, escrowTokenBefore);
     }
 
     function test_acceptRulingFreelancerWinsErc20() public {
@@ -61,11 +61,11 @@ contract NerwoEscrowRuleTest is NerwoTest {
         vm.prank(freelancer);
         escrow.acceptRuling(transactionID);
 
-        assertEthBalanceDelta(address(escrow), -int256(ARBITRATION_PRICE), escrowEthBefore);
-        assertEthBalanceDelta(freelancer, int256(ARBITRATION_PRICE), freelancerEthBefore);
-        assertTokenBalanceDelta(nerwoTestToken, address(escrow), -int256(amount), escrowTokenBefore);
-        assertTokenBalanceDelta(nerwoTestToken, feeRecipient, int256(feeAmount), feeRecipientBefore);
-        assertTokenBalanceDelta(nerwoTestToken, freelancer, int256(amount - feeAmount), freelancerBefore);
+        assertEthBalanceDecrease(address(escrow), ARBITRATION_PRICE, escrowEthBefore);
+        assertEthBalanceIncrease(freelancer, ARBITRATION_PRICE, freelancerEthBefore);
+        assertTokenBalanceDecrease(nerwoTestToken, address(escrow), amount, escrowTokenBefore);
+        assertTokenBalanceIncrease(nerwoTestToken, feeRecipient, feeAmount, feeRecipientBefore);
+        assertTokenBalanceIncrease(nerwoTestToken, freelancer, amount - feeAmount, freelancerBefore);
     }
 
     function test_acceptRulingSplitErc20() public {
@@ -87,13 +87,13 @@ contract NerwoEscrowRuleTest is NerwoTest {
         vm.prank(client);
         escrow.acceptRuling(transactionID);
 
-        assertEthBalanceDelta(address(escrow), -int256(ARBITRATION_PRICE), escrowEthBefore);
-        assertEthBalanceDelta(client, int256(splitArbitration), clientEthBefore);
-        assertEthBalanceDelta(freelancer, int256(splitArbitration), freelancerEthBefore);
-        assertTokenBalanceDelta(nerwoTestToken, address(escrow), -int256(splitAmount * 2), escrowTokenBefore);
-        assertTokenBalanceDelta(nerwoTestToken, feeRecipient, int256(splitFeeAmount), feeRecipientBefore);
-        assertTokenBalanceDelta(nerwoTestToken, client, int256(splitAmount), clientTokenBefore);
-        assertTokenBalanceDelta(nerwoTestToken, freelancer, int256(splitAmount - splitFeeAmount), freelancerTokenBefore);
+        assertEthBalanceDecrease(address(escrow), ARBITRATION_PRICE, escrowEthBefore);
+        assertEthBalanceIncrease(client, splitArbitration, clientEthBefore);
+        assertEthBalanceIncrease(freelancer, splitArbitration, freelancerEthBefore);
+        assertTokenBalanceDecrease(nerwoTestToken, address(escrow), splitAmount * 2, escrowTokenBefore);
+        assertTokenBalanceIncrease(nerwoTestToken, feeRecipient, splitFeeAmount, feeRecipientBefore);
+        assertTokenBalanceIncrease(nerwoTestToken, client, splitAmount, clientTokenBefore);
+        assertTokenBalanceIncrease(nerwoTestToken, freelancer, splitAmount - splitFeeAmount, freelancerTokenBefore);
     }
 
     function test_acceptRulingClientWinsNative() public {
@@ -107,8 +107,8 @@ contract NerwoEscrowRuleTest is NerwoTest {
         vm.prank(client);
         escrow.acceptRuling(transactionID);
 
-        assertEthBalanceDelta(address(escrow), -int256(ARBITRATION_PRICE + amount), escrowBefore);
-        assertEthBalanceDelta(client, int256(ARBITRATION_PRICE + amount), clientBefore);
+        assertEthBalanceDecrease(address(escrow), ARBITRATION_PRICE + amount, escrowBefore);
+        assertEthBalanceIncrease(client, ARBITRATION_PRICE + amount, clientBefore);
     }
 
     function test_acceptRulingFreelancerWinsNative() public {
@@ -124,9 +124,9 @@ contract NerwoEscrowRuleTest is NerwoTest {
         vm.prank(freelancer);
         escrow.acceptRuling(transactionID);
 
-        assertEthBalanceDelta(address(escrow), -int256(ARBITRATION_PRICE + amount), escrowBefore);
-        assertEthBalanceDelta(feeRecipient, int256(feeAmount), feeRecipientBefore);
-        assertEthBalanceDelta(freelancer, int256(ARBITRATION_PRICE + amount - feeAmount), freelancerBefore);
+        assertEthBalanceDecrease(address(escrow), ARBITRATION_PRICE + amount, escrowBefore);
+        assertEthBalanceIncrease(feeRecipient, feeAmount, feeRecipientBefore);
+        assertEthBalanceIncrease(freelancer, ARBITRATION_PRICE + amount - feeAmount, freelancerBefore);
     }
 
     function test_acceptRulingSplitNative() public {
@@ -145,9 +145,9 @@ contract NerwoEscrowRuleTest is NerwoTest {
         vm.prank(client);
         escrow.acceptRuling(transactionID);
 
-        assertEthBalanceDelta(address(escrow), -int256(ARBITRATION_PRICE + (splitAmount * 2)), escrowBefore);
-        assertEthBalanceDelta(feeRecipient, int256(splitFeeAmount), feeRecipientBefore);
-        assertEthBalanceDelta(client, int256(splitAmount + splitArbitration), clientBefore);
-        assertEthBalanceDelta(freelancer, int256(splitAmount + splitArbitration - splitFeeAmount), freelancerBefore);
+        assertEthBalanceDecrease(address(escrow), ARBITRATION_PRICE + (splitAmount * 2), escrowBefore);
+        assertEthBalanceIncrease(feeRecipient, splitFeeAmount, feeRecipientBefore);
+        assertEthBalanceIncrease(client, splitAmount + splitArbitration, clientBefore);
+        assertEthBalanceIncrease(freelancer, splitAmount + splitArbitration - splitFeeAmount, freelancerBefore);
     }
 }

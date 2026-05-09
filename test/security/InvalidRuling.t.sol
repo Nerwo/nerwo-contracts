@@ -50,7 +50,7 @@ contract InvalidRulingTest is Test {
 
     function _createDispute(uint256 amount) internal returns (uint256 transactionID, uint256 disputeID) {
         token.mint(amount);
-        token.transfer(client, amount);
+        assertTrue(token.transfer(client, amount));
 
         vm.startPrank(client);
         token.approve(address(escrow), amount);

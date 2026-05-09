@@ -48,7 +48,7 @@ contract FeeRecipientDoSTest is NerwoTest {
         escrow.pay(transactionID);
 
         assertEq(escrow.pendingWithdrawals(NATIVE_TOKEN, rejecting), feeAmount, "fee should be credited");
-        assertEthBalanceDelta(freelancer, int256(amount - feeAmount), freelancerBefore);
+        assertEthBalanceIncrease(freelancer, amount - feeAmount, freelancerBefore);
     }
 
     /* ------------------------------------------------------------ T-C1b */

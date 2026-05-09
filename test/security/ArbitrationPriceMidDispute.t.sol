@@ -69,8 +69,8 @@ contract ArbitrationPriceMidDisputeTest is NerwoTest {
         escrow.timeOut(transactionID);
 
         // Client gets the original arbitration deposit back.
-        assertEthBalanceDelta(client, int256(ARBITRATION_PRICE), clientEthBefore);
-        assertEthBalanceDelta(address(escrow), -int256(ARBITRATION_PRICE), escrowEthBefore);
+        assertEthBalanceIncrease(client, ARBITRATION_PRICE, clientEthBefore);
+        assertEthBalanceDecrease(address(escrow), ARBITRATION_PRICE, escrowEthBefore);
     }
 
     function test_C2_happyPath_bothFeesEqualWhenPriceIsStable() public {
@@ -90,6 +90,6 @@ contract ArbitrationPriceMidDisputeTest is NerwoTest {
         uint256 freelancerEthBefore = freelancer.balance;
         vm.prank(freelancer);
         escrow.acceptRuling(transactionID);
-        assertEthBalanceDelta(freelancer, int256(ARBITRATION_PRICE), freelancerEthBefore);
+        assertEthBalanceIncrease(freelancer, ARBITRATION_PRICE, freelancerEthBefore);
     }
 }

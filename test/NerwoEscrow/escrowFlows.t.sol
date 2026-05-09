@@ -79,9 +79,9 @@ contract NerwoEscrowFlowsTest is NerwoTest {
         vm.prank(client);
         escrow.pay(transactionID);
 
-        assertTokenBalanceDelta(nerwoTestToken, feeRecipient, int256(snapshottedFeeAmount), oldFeeRecipientBefore);
+        assertTokenBalanceIncrease(nerwoTestToken, feeRecipient, snapshottedFeeAmount, oldFeeRecipientBefore);
         assertEq(nerwoTestToken.balanceOf(newFeeRecipient), newFeeRecipientBefore);
-        assertTokenBalanceDelta(nerwoTestToken, freelancer, int256(amount - snapshottedFeeAmount), freelancerBefore);
+        assertTokenBalanceIncrease(nerwoTestToken, freelancer, amount - snapshottedFeeAmount, freelancerBefore);
     }
 
     function test_payCreditsPendingWithdrawalWhenNativeTransferFails() public {
@@ -108,7 +108,7 @@ contract NerwoEscrowFlowsTest is NerwoTest {
 
         assertEq(escrow.pendingWithdrawals(NATIVE_TOKEN, address(receiver)), 0);
         assertEq(address(receiver).balance, expectedPending);
-        assertEthBalanceDelta(address(escrow), -int256(expectedPending), escrowBefore);
+        assertEthBalanceDecrease(address(escrow), expectedPending, escrowBefore);
     }
 
     function test_receiveAcceptsEthOnlyFromOwner() public {
@@ -147,9 +147,9 @@ contract NerwoEscrowFlowsTest is NerwoTest {
         vm.prank(client);
         escrow.pay(transactionID);
 
-        assertTokenBalanceDelta(nerwoTestToken, address(escrow), -int256(amount), escrowBefore);
-        assertTokenBalanceDelta(nerwoTestToken, feeRecipient, int256(feeAmount), feeRecipientBefore);
-        assertTokenBalanceDelta(nerwoTestToken, freelancer, int256(amount - feeAmount), freelancerBefore);
+        assertTokenBalanceDecrease(nerwoTestToken, address(escrow), amount, escrowBefore);
+        assertTokenBalanceIncrease(nerwoTestToken, feeRecipient, feeAmount, feeRecipientBefore);
+        assertTokenBalanceIncrease(nerwoTestToken, freelancer, amount - feeAmount, freelancerBefore);
 
         vm.prank(client);
         vm.expectRevert(NerwoEscrow.InvalidAmount.selector);
@@ -173,9 +173,9 @@ contract NerwoEscrowFlowsTest is NerwoTest {
         vm.prank(client);
         escrow.pay(transactionID);
 
-        assertEthBalanceDelta(address(escrow), -int256(amount), escrowBefore);
-        assertEthBalanceDelta(feeRecipient, int256(feeAmount), feeRecipientBefore);
-        assertEthBalanceDelta(freelancer, int256(amount - feeAmount), freelancerBefore);
+        assertEthBalanceDecrease(address(escrow), amount, escrowBefore);
+        assertEthBalanceIncrease(feeRecipient, feeAmount, feeRecipientBefore);
+        assertEthBalanceIncrease(freelancer, amount - feeAmount, freelancerBefore);
 
         vm.prank(client);
         vm.expectRevert(NerwoEscrow.InvalidAmount.selector);
@@ -195,8 +195,8 @@ contract NerwoEscrowFlowsTest is NerwoTest {
         vm.prank(freelancer);
         escrow.reimburse(transactionID);
 
-        assertTokenBalanceDelta(nerwoTestToken, address(escrow), -int256(amount), escrowBefore);
-        assertTokenBalanceDelta(nerwoTestToken, client, int256(amount), clientBefore);
+        assertTokenBalanceDecrease(nerwoTestToken, address(escrow), amount, escrowBefore);
+        assertTokenBalanceIncrease(nerwoTestToken, client, amount, clientBefore);
 
         vm.prank(freelancer);
         vm.expectRevert(NerwoEscrow.InvalidAmount.selector);
@@ -216,8 +216,8 @@ contract NerwoEscrowFlowsTest is NerwoTest {
         vm.prank(freelancer);
         escrow.reimburse(transactionID);
 
-        assertEthBalanceDelta(address(escrow), -int256(amount), escrowBefore);
-        assertEthBalanceDelta(client, int256(amount), clientBefore);
+        assertEthBalanceDecrease(address(escrow), amount, escrowBefore);
+        assertEthBalanceIncrease(client, amount, clientBefore);
 
         vm.prank(freelancer);
         vm.expectRevert(NerwoEscrow.InvalidAmount.selector);
@@ -248,10 +248,10 @@ contract NerwoEscrowFlowsTest is NerwoTest {
         vm.prank(client);
         escrow.timeOut(transactionID);
 
-        assertEthBalanceDelta(address(escrow), -int256(ARBITRATION_PRICE), escrowEthBefore);
-        assertEthBalanceDelta(client, int256(ARBITRATION_PRICE), clientEthBefore);
-        assertTokenBalanceDelta(nerwoTestToken, address(escrow), -int256(amount), escrowTokenBefore);
-        assertTokenBalanceDelta(nerwoTestToken, client, int256(amount), clientTokenBefore);
+        assertEthBalanceDecrease(address(escrow), ARBITRATION_PRICE, escrowEthBefore);
+        assertEthBalanceIncrease(client, ARBITRATION_PRICE, clientEthBefore);
+        assertTokenBalanceDecrease(nerwoTestToken, address(escrow), amount, escrowTokenBefore);
+        assertTokenBalanceIncrease(nerwoTestToken, client, amount, clientTokenBefore);
     }
 
     function test_timeoutByFreelancer() public {
@@ -280,11 +280,11 @@ contract NerwoEscrowFlowsTest is NerwoTest {
         vm.prank(freelancer);
         escrow.timeOut(transactionID);
 
-        assertEthBalanceDelta(address(escrow), -int256(ARBITRATION_PRICE), escrowEthBefore);
-        assertEthBalanceDelta(freelancer, int256(ARBITRATION_PRICE), freelancerEthBefore);
-        assertTokenBalanceDelta(nerwoTestToken, address(escrow), -int256(amount), escrowTokenBefore);
-        assertTokenBalanceDelta(nerwoTestToken, feeRecipient, int256(feeAmount), feeRecipientBefore);
-        assertTokenBalanceDelta(nerwoTestToken, freelancer, int256(amount - feeAmount), freelancerTokenBefore);
+        assertEthBalanceDecrease(address(escrow), ARBITRATION_PRICE, escrowEthBefore);
+        assertEthBalanceIncrease(freelancer, ARBITRATION_PRICE, freelancerEthBefore);
+        assertTokenBalanceDecrease(nerwoTestToken, address(escrow), amount, escrowTokenBefore);
+        assertTokenBalanceIncrease(nerwoTestToken, feeRecipient, feeAmount, feeRecipientBefore);
+        assertTokenBalanceIncrease(nerwoTestToken, freelancer, amount - feeAmount, freelancerTokenBefore);
     }
 
     function test_timeoutInvalidStatus() public {
