@@ -123,6 +123,7 @@ contract NerwoCentralizedArbitrator is Ownable, ReentrancyGuard, IArbitrable, IA
         }
 
         arbitratorDisputes[disputeID] =
+        // forge-lint: disable-next-line(unsafe-typecast)
             ArbitratorDispute({arbitrated: this, choices: uint8(_choices), ruling: 0, status: DisputeStatus.Waiting});
 
         emit DisputeCreation(disputeID, this);
@@ -242,6 +243,7 @@ contract NerwoCentralizedArbitrator is Ownable, ReentrancyGuard, IArbitrable, IA
         }
 
         dispute.status = DisputeStatus.Solved;
+        // forge-lint: disable-next-line(unsafe-typecast)
         dispute.ruling = uint8(_ruling);
 
         emit Ruling(this, _disputeID, dispute.ruling);

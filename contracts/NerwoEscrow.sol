@@ -537,6 +537,7 @@ contract NerwoEscrow is Ownable, ReentrancyGuard {
     function timeOut(uint256 transactionID) external nonReentrant onlyValidTransaction(transactionID) {
         Transaction storage transaction = _transactions[transactionID];
 
+        // forge-lint: disable-next-line(block-timestamp)
         if (block.timestamp - transaction.lastInteraction < arbitratorData.feeTimeout) {
             revert NoTimeout();
         }
