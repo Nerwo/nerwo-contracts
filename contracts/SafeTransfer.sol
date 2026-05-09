@@ -14,14 +14,16 @@ library SafeTransfer {
 
     error TransferFailed(address recipient, IERC20 token, uint256 amount);
 
-    /** @dev To be emitted if a transfer to a party fails.
+    /**
+     * @dev To be emitted if a transfer to a party fails.
      *  @param recipient The target of the failed operation.
      *  @param token The token address.
      *  @param amount The amount.
      */
     event SendFailed(address indexed recipient, IERC20 indexed token, uint256 amount);
 
-    /** @dev Send amount to recipent, emit a log when fails.
+    /**
+     * @dev Send amount to recipent, emit a log when fails.
      *  @param to To address to send to.
      *  @param amount Transaction amount.
      *  @param revertOnError Whether the operation should revert on error.
@@ -45,7 +47,8 @@ library SafeTransfer {
         emit SendFailed(to, NATIVE_TOKEN, amount);
     }
 
-    /** @dev Send tokens to recipent, emit a log when fails.
+    /**
+     * @dev Send tokens to recipent, emit a log when fails.
      *  @param to To address to send to.
      *  @param token The token address.
      *  @param amount The amount to be transferred.
@@ -102,7 +105,8 @@ library SafeTransfer {
         emit SendFailed(to, token, amount);
     }
 
-    /** @dev Send tokens from recipent, emit a log when fails.
+    /**
+     * @dev Send tokens from recipent, emit a log when fails.
      *  @param token The token address.
      *  @param from From address (previously approved).
      *  @param to To address to send to.

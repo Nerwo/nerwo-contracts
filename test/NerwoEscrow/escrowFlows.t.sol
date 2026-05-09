@@ -49,14 +49,14 @@ contract NerwoEscrowFlowsTest is NerwoTest {
         emit NerwoEscrow.ContractFunded(owner, amount);
 
         vm.prank(owner);
-        (bool success, ) = address(escrow).call{value: amount}("");
+        (bool success,) = address(escrow).call{value: amount}("");
         assertTrue(success);
         assertEq(address(escrow).balance, amount);
 
         vm.deal(client, amount);
         vm.prank(client);
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, client));
-        (success, ) = address(escrow).call{value: amount}("");
+        (success,) = address(escrow).call{value: amount}("");
         success;
     }
 

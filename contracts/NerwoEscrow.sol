@@ -118,7 +118,8 @@ contract NerwoEscrow is Ownable, ReentrancyGuard {
     // *          Events          * //
     // **************************** //
 
-    /** @dev To be emitted when the client pays the freelancer.
+    /**
+     * @dev To be emitted when the client pays the freelancer.
      *  @param transactionID The index of the transaction.
      *  @param from The address that paid.
      *  @param to The address that received the payment.
@@ -126,14 +127,11 @@ contract NerwoEscrow is Ownable, ReentrancyGuard {
      *  @param amount The amount paid.
      */
     event Payment(
-        uint256 indexed transactionID,
-        address indexed from,
-        address indexed to,
-        IERC20 token,
-        uint256 amount
+        uint256 indexed transactionID, address indexed from, address indexed to, IERC20 token, uint256 amount
     );
 
-    /** @dev To be emitted when the freelancer reimburses the client.
+    /**
+     * @dev To be emitted when the freelancer reimburses the client.
      *  @param transactionID The index of the transaction.
      *  @param from The address that paid.
      *  @param to The address that received the payment.
@@ -141,14 +139,11 @@ contract NerwoEscrow is Ownable, ReentrancyGuard {
      *  @param amount The amount paid.
      */
     event Reimburse(
-        uint256 indexed transactionID,
-        address indexed from,
-        address indexed to,
-        IERC20 token,
-        uint256 amount
+        uint256 indexed transactionID, address indexed from, address indexed to, IERC20 token, uint256 amount
     );
 
-    /** @dev Indicate that a party has to pay a fee or would otherwise be considered as losing.
+    /**
+     * @dev Indicate that a party has to pay a fee or would otherwise be considered as losing.
      *  @param transactionID The index of the transaction.
      *  @param party The party who has to pay.
      */
@@ -162,7 +157,8 @@ contract NerwoEscrow is Ownable, ReentrancyGuard {
      */
     event DisputeCreated(uint256 indexed transactionID, uint256 indexed disputeID, address indexed plaintiff);
 
-    /** @dev Emitted when a transaction is created.
+    /**
+     * @dev Emitted when a transaction is created.
      *  @param transactionID The index of the transaction.
      *  @param client The address of the client.
      *  @param freelancer The address of the freelancer.
@@ -170,39 +166,36 @@ contract NerwoEscrow is Ownable, ReentrancyGuard {
      *  @param amount The initial amount in the transaction.
      */
     event TransactionCreated(
-        uint256 indexed transactionID,
-        address indexed client,
-        address indexed freelancer,
-        IERC20 token,
-        uint256 amount
+        uint256 indexed transactionID, address indexed client, address indexed freelancer, IERC20 token, uint256 amount
     );
 
-    /** @dev To be emitted when a fee is received by the feeRecipient.
+    /**
+     * @dev To be emitted when a fee is received by the feeRecipient.
      *  @param transactionID The index of the transaction.
      *  @param recipient The fee recipient.
      *  @param token The Token Address.
      *  @param amount The amount paid.
      */
     event FeeRecipientPayment(
-        uint256 indexed transactionID,
-        address indexed recipient,
-        IERC20 indexed token,
-        uint256 amount
+        uint256 indexed transactionID, address indexed recipient, IERC20 indexed token, uint256 amount
     );
 
-    /** @dev To be emitted when a feeRecipient is changed.
+    /**
+     * @dev To be emitted when a feeRecipient is changed.
      *  @param newFeeRecipient new fee Recipient.
      *  @param newBasisPoint new fee BasisPoint.
      */
     event FeeRecipientChanged(address indexed newFeeRecipient, uint256 newBasisPoint);
 
-    /** @dev To be emitted when the whitelist was changed.
+    /**
+     * @dev To be emitted when the whitelist was changed.
      *  @param token The token that was either added or removed from whitelist.
      *  @param allow Whether added or removed.
      */
     event WhitelistChanged(IERC20 indexed token, bool allow);
 
-    /** @dev To be emitted when the contract if funded with ether by admin.
+    /**
+     * @dev To be emitted when the contract if funded with ether by admin.
      *  @param funder The address that funded.
      *  @param amount The amount funded.
      */
@@ -219,7 +212,8 @@ contract NerwoEscrow is Ownable, ReentrancyGuard {
         _;
     }
 
-    /** @dev contructor
+    /**
+     * @dev contructor
      *  @param newOwner The initial owner
      *  @param arbitrators arbitrator and arbitratorProxy addresses.
      *  @param metaEvidenceURI Meta Evidence json IPFS URI
@@ -242,8 +236,8 @@ contract NerwoEscrow is Ownable, ReentrancyGuard {
         arbitratorData.feeTimeout = 604800;
         arbitratorData.arbitrator = IArbitrator(arbitrators[0]);
         arbitratorData.proxy = IArbitrableProxy(arbitrators[1]);
-        arbitratorData
-            .extraData = hex"00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003";
+        arbitratorData.extraData =
+            hex"00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003";
         arbitratorData.metaEvidenceURI = metaEvidenceURI;
 
         if (owner() != newOwner) {
@@ -300,7 +294,8 @@ contract NerwoEscrow is Ownable, ReentrancyGuard {
         }
     }
 
-    /** @dev Admin function to fund the contract with ether, e.g. to unblock if the arbitrator cost changes in between (possible?)
+    /**
+     * @dev Admin function to fund the contract with ether, e.g. to unblock if the arbitrator cost changes in between (possible?)
      *  @notice It's harmless and there is no withdraw function.
      */
     // solhint-disable-next-line no-complex-fallback
@@ -311,24 +306,26 @@ contract NerwoEscrow is Ownable, ReentrancyGuard {
         emit ContractFunded(msg.sender, msg.value);
     }
 
-    /** @dev Calculate the amount to be paid in wei according to feeRecipientBasisPoint for a particular amount.
+    /**
+     * @dev Calculate the amount to be paid in wei according to feeRecipientBasisPoint for a particular amount.
      *  @param amount Amount to pay in wei.
      */
     function calculateFeeRecipientAmount(uint256 amount) public view returns (uint256) {
         return (amount * feeRecipientData.feeRecipientBasisPoint) / MULTIPLIER_DIVISOR;
     }
 
-    /** @dev Create a transaction.
+    /**
+     * @dev Create a transaction.
      *  @param token The ERC20 token contract.
      *  @param amount The amount of tokens in this transaction.
      *  @param freelancer The recipient of the transaction.
      *  @return transactionID The index of the transaction.
      */
-    function createTransaction(
-        IERC20 token,
-        uint256 amount,
-        address freelancer
-    ) external payable returns (uint256 transactionID) {
+    function createTransaction(IERC20 token, uint256 amount, address freelancer)
+        external
+        payable
+        returns (uint256 transactionID)
+    {
         if (freelancer == address(0)) {
             revert NullAddress();
         }
@@ -379,7 +376,8 @@ contract NerwoEscrow is Ownable, ReentrancyGuard {
         emit TransactionCreated(transactionID, msg.sender, freelancer, token, amount);
     }
 
-    /** @dev Pay receiver. To be called if the good or service is provided.
+    /**
+     * @dev Pay receiver. To be called if the good or service is provided.
      *  @param transactionID The index of the transaction
      */
     function pay(uint256 transactionID) external nonReentrant onlyValidTransaction(transactionID) {
@@ -410,7 +408,8 @@ contract NerwoEscrow is Ownable, ReentrancyGuard {
         emit Payment(transactionID, msg.sender, transaction.freelancer, transaction.token, amount - feeAmount);
     }
 
-    /** @dev Reimburse sender. To be called if the good or service can't be fully provided.
+    /**
+     * @dev Reimburse sender. To be called if the good or service can't be fully provided.
      *  @param transactionID The index of the transaction.
      */
     function reimburse(uint256 transactionID) external nonReentrant onlyValidTransaction(transactionID) {
@@ -435,14 +434,18 @@ contract NerwoEscrow is Ownable, ReentrancyGuard {
         emit Reimburse(transactionID, msg.sender, transaction.client, transaction.token, amountReimbursed);
     }
 
-    /** @dev Pay the arbitration fee to raise a dispute. To be called by the client or freelancer. UNTRUSTED.
+    /**
+     * @dev Pay the arbitration fee to raise a dispute. To be called by the client or freelancer. UNTRUSTED.
      *  Note that the arbitrator can have createDispute throw,
      *  which will make this function throw and therefore lead to a party being timed-out.
      *  @param transactionID The index of the transaction.
      */
-    function payArbitrationFee(
-        uint256 transactionID
-    ) external payable nonReentrant onlyValidTransaction(transactionID) {
+    function payArbitrationFee(uint256 transactionID)
+        external
+        payable
+        nonReentrant
+        onlyValidTransaction(transactionID)
+    {
         Transaction storage transaction = _transactions[transactionID];
 
         if (transaction.status >= Status.DisputeCreated) {
@@ -476,14 +479,12 @@ contract NerwoEscrow is Ownable, ReentrancyGuard {
         address other = msg.sender == transaction.client ? transaction.freelancer : transaction.client;
 
         if (
-            ((msg.sender == transaction.client) && (transaction.freelancerFee != 0)) ||
-            ((msg.sender == transaction.freelancer) && (transaction.clientFee != 0))
+            ((msg.sender == transaction.client) && (transaction.freelancerFee != 0))
+                || ((msg.sender == transaction.freelancer) && (transaction.clientFee != 0))
         ) {
             transaction.status = Status.DisputeCreated;
             transaction.disputeID = arbitratorData.proxy.createDispute{value: arbitrationCost_}(
-                arbitratorData.extraData,
-                arbitratorData.metaEvidenceURI,
-                AMOUNT_OF_CHOICES
+                arbitratorData.extraData, arbitratorData.metaEvidenceURI, AMOUNT_OF_CHOICES
             );
             emit DisputeCreated(transactionID, transaction.disputeID, other);
         } else {
@@ -492,7 +493,8 @@ contract NerwoEscrow is Ownable, ReentrancyGuard {
         }
     }
 
-    /** @dev A function to handle a scenario where a party fails to pay the fee within the defined time limit.
+    /**
+     * @dev A function to handle a scenario where a party fails to pay the fee within the defined time limit.
      *  It allows for a timeout period and then reimburses the other party.
      *  Only a valid transaction can call this function.
      *  @param transactionID The ID of the transaction where a party failed to pay the fee.
@@ -505,8 +507,8 @@ contract NerwoEscrow is Ownable, ReentrancyGuard {
         }
 
         if (
-            ((msg.sender == transaction.client) && (transaction.status == Status.WaitingFreelancer)) ||
-            ((msg.sender == transaction.freelancer) && (transaction.status == Status.WaitingClient))
+            ((msg.sender == transaction.client) && (transaction.status == Status.WaitingFreelancer))
+                || ((msg.sender == transaction.freelancer) && (transaction.status == Status.WaitingClient))
         ) {
             _executeRuling(transactionID, msg.sender == transaction.client ? CLIENT_WINS : FREELANCER_WINS);
         } else {
@@ -514,7 +516,8 @@ contract NerwoEscrow is Ownable, ReentrancyGuard {
         }
     }
 
-    /** @dev Accept ruling for a dispute.
+    /**
+     * @dev Accept ruling for a dispute.
      *  @param transactionID the transaction the dispute was created from.
      */
     function acceptRuling(uint256 transactionID) external nonReentrant onlyValidTransaction(transactionID) {
@@ -525,7 +528,7 @@ contract NerwoEscrow is Ownable, ReentrancyGuard {
         }
 
         uint256 localID = arbitratorData.proxy.externalIDtoLocalID(transaction.disputeID);
-        (, bool isRuled, uint256 ruling, ) = arbitratorData.proxy.disputes(localID);
+        (, bool isRuled, uint256 ruling,) = arbitratorData.proxy.disputes(localID);
 
         if (!isRuled) {
             revert NotRuled();
@@ -534,7 +537,8 @@ contract NerwoEscrow is Ownable, ReentrancyGuard {
         _executeRuling(transactionID, ruling);
     }
 
-    /** @dev A function to execute the ruling provided by the arbitrator. It distributes the funds based on the ruling.
+    /**
+     * @dev A function to execute the ruling provided by the arbitrator. It distributes the funds based on the ruling.
      *  The ruling is executed in a way that it prevents reentrancy attacks.
      *  After executing the ruling, the status of the transaction is set to Resolved.
      *  @param transactionID The ID of the transaction where a ruling needs to be executed.
@@ -599,9 +603,12 @@ contract NerwoEscrow is Ownable, ReentrancyGuard {
      *  @param transactionID The index of the transaction.
      *  @return transaction The specified transaction if does exist.
      */
-    function getTransaction(
-        uint256 transactionID
-    ) external view onlyValidTransaction(transactionID) returns (Transaction memory) {
+    function getTransaction(uint256 transactionID)
+        external
+        view
+        onlyValidTransaction(transactionID)
+        returns (Transaction memory)
+    {
         return _transactions[transactionID];
     }
 
@@ -613,12 +620,16 @@ contract NerwoEscrow is Ownable, ReentrancyGuard {
         return arbitratorData.arbitrator.arbitrationCost(arbitratorData.extraData);
     }
 
-    /** @dev Get the ruling for the dispute of given transaction
+    /**
+     * @dev Get the ruling for the dispute of given transaction
      *  @param transactionID the transaction the dispute was created from.
      */
-    function fetchRuling(
-        uint256 transactionID
-    ) external view onlyValidTransaction(transactionID) returns (bool isRuled, uint256 ruling) {
+    function fetchRuling(uint256 transactionID)
+        external
+        view
+        onlyValidTransaction(transactionID)
+        returns (bool isRuled, uint256 ruling)
+    {
         Transaction storage transaction = _transactions[transactionID];
 
         if (transaction.status < Status.DisputeCreated) {
@@ -626,6 +637,6 @@ contract NerwoEscrow is Ownable, ReentrancyGuard {
         }
 
         uint256 localID = arbitratorData.proxy.externalIDtoLocalID(transaction.disputeID);
-        (, isRuled, ruling, ) = arbitratorData.proxy.disputes(localID);
+        (, isRuled, ruling,) = arbitratorData.proxy.disputes(localID);
     }
 }
