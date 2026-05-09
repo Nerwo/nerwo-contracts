@@ -83,6 +83,7 @@ contract NerwoEscrow is Ownable, ReentrancyGuard {
         uint256 disputeID; // If dispute exists, the ID of the dispute.
         uint256 clientFee; // Total fees paid by the client.
         uint256 freelancerFee; // Total fees paid by the freelancer.
+        uint256 arbitrationCost; // Frozen at the first payArbitrationFee call.
     }
 
     uint256 public lastTransaction;
@@ -395,7 +396,8 @@ contract NerwoEscrow is Ownable, ReentrancyGuard {
             amount: transactionAmount,
             disputeID: 0,
             clientFee: 0,
-            freelancerFee: 0
+            freelancerFee: 0,
+            arbitrationCost: 0
         });
 
         emit TransactionCreated(transactionID, msg.sender, freelancer, token, transactionAmount);
@@ -483,7 +485,15 @@ contract NerwoEscrow is Ownable, ReentrancyGuard {
             revert InvalidCaller();
         }
 
-        uint256 arbitrationCost_ = arbitratorData.arbitrator.arbitrationCost(arbitratorData.extraData);
+        // Freeze the arbitration cost at the first payArbitrationFee so a mid-dispute
+        // price change cannot leave the contract unable to refund the winner.
+        uint256 arbitrationCost_;
+        if (transaction.clientFee == 0 && transaction.freelancerFee == 0) {
+            arbitrationCost_ = arbitratorData.arbitrator.arbitrationCost(arbitratorData.extraData);
+            transaction.arbitrationCost = arbitrationCost_;
+        } else {
+            arbitrationCost_ = transaction.arbitrationCost;
+        }
 
         if (msg.value != arbitrationCost_) {
             revert InvalidAmount();
