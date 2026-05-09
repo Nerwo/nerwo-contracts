@@ -49,7 +49,6 @@ contract NerwoEscrow is Ownable, ReentrancyGuard {
     error InvalidTransaction();
     error InvalidToken();
     error InvalidFeeBasisPoint();
-    error InvalidRuling();
     error NotRuled();
 
     // **************************** //
@@ -583,8 +582,10 @@ contract NerwoEscrow is Ownable, ReentrancyGuard {
     function _executeRuling(uint256 transactionID, uint256 ruling) internal {
         Transaction storage transaction = _transactions[transactionID];
 
+        // An out-of-range ruling from the arbitrator is treated as a 50/50 split
+        // so a misbehaving arbitrator cannot lock the escrowed funds.
         if (ruling > FREELANCER_WINS) {
-            revert InvalidRuling();
+            ruling = 0;
         }
 
         uint256 amount = transaction.amount;
