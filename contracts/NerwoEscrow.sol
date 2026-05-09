@@ -427,9 +427,7 @@ contract NerwoEscrow is Ownable, ReentrancyGuard {
 
         uint256 feeAmount = _calculateFeeRecipientAmount(amount, transaction.feeRecipientBasisPoint);
         if (feeAmount != 0) {
-            if (!transaction.feeRecipient.sendToken(transaction.token, feeAmount, true)) {
-                revert TokenTransferFailed();
-            }
+            _sendOrCredit(transaction.feeRecipient, transaction.token, feeAmount);
             emit FeeRecipientPayment(transactionID, transaction.feeRecipient, transaction.token, feeAmount);
         }
 
@@ -612,9 +610,7 @@ contract NerwoEscrow is Ownable, ReentrancyGuard {
         } else if (ruling == FREELANCER_WINS) {
             feeAmount = _calculateFeeRecipientAmount(amount, transaction.feeRecipientBasisPoint);
             if (feeAmount != 0) {
-                if (!transaction.feeRecipient.sendToken(transaction.token, feeAmount, true)) {
-                    revert TokenTransferFailed();
-                }
+                _sendOrCredit(transaction.feeRecipient, transaction.token, feeAmount);
                 emit FeeRecipientPayment(transactionID, transaction.feeRecipient, transaction.token, feeAmount);
             }
 
@@ -626,9 +622,7 @@ contract NerwoEscrow is Ownable, ReentrancyGuard {
 
             feeAmount = _calculateFeeRecipientAmount(splitAmount, transaction.feeRecipientBasisPoint);
             if (feeAmount != 0) {
-                if (!transaction.feeRecipient.sendToken(transaction.token, feeAmount, true)) {
-                    revert TokenTransferFailed();
-                }
+                _sendOrCredit(transaction.feeRecipient, transaction.token, feeAmount);
                 emit FeeRecipientPayment(transactionID, transaction.feeRecipient, transaction.token, feeAmount);
             }
 
