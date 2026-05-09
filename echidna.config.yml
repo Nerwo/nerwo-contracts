@@ -1,0 +1,9 @@
+format: text
+testMode: property
+coverage: true
+testLimit: 5000
+seqLen: 64
+cryticArgs:
+  - "--compile-force-framework"
+  - "foundry"
+  - "--foundry-compile-all"
