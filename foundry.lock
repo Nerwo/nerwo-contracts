@@ -1,0 +1,11 @@
+{
+  "lib/erc-792": {
+    "rev": "87bea72ec0a4c92ce7f62e596e84f24be7662dd7"
+  },
+  "lib/forge-std": {
+    "rev": "e4aef94c1768803a16fe19f7ce8b65defd027cfd"
+  },
+  "lib/openzeppelin-contracts": {
+    "rev": "f8c2e1035e1cb7f511f7037df850a29c3a1f6955"
+  }
+}

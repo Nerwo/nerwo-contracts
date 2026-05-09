@@ -9,6 +9,10 @@
       }
     ],
     "not-rely-on-time": "off",
-    "no-inline-assembly": "off"
+    "no-inline-assembly": "off",
+    "compiler-version": [
+      "error",
+      ">=0.8.0"
+    ]
   }
 }

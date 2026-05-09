@@ -12,6 +12,10 @@ abi
 cache
 artifacts
 
+# Foundry files
+out
+broadcast
+
 # deployments
 deployments
 

@@ -7,7 +7,6 @@ import {IERC20Errors} from "@openzeppelin/contracts/interfaces/draft-IERC6093.so
 import {NerwoEscrow} from "@nerwo/contracts/NerwoEscrow.sol";
 
 import {NerwoTest} from "@nerwo/test/NerwoTest.sol";
-import {console} from "forge-std/console.sol";
 
 contract NerwoEscrowTest is NerwoTest {
     // Creating a simple transaction

@@ -2,7 +2,7 @@
 
 /**
  *  @title NerwoCentralizedArbitrator
- *  @author: [@ferittuncer, @hbarcelos, @sherpya]
+ *  @author @ferittuncer, @hbarcelos, @sherpya
  *
  *                         ////////                 ////////
  *                       ////////////             ////////////

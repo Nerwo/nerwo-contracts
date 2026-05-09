@@ -305,7 +305,6 @@ contract NerwoEscrow is Ownable, ReentrancyGuard {
      */
     // solhint-disable-next-line no-complex-fallback
     receive() external payable {
-        // using onlyOwner modifier trips hardhat
         if (owner() != msg.sender) {
             revert OwnableUnauthorizedAccount(msg.sender);
         }

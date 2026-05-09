@@ -1,4 +1,10 @@
 [profile.default]
 src = "contracts"
-out = "artifacts"
+test = "test"
+script = "script"
+out = "out"
 libs = ["lib"]
+solc_version = "0.8.23"
+evm_version = "shanghai"
+optimizer = true
+optimizer_runs = 200
