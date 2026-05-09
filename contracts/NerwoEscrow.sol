@@ -49,6 +49,7 @@ contract NerwoEscrow is Ownable, ReentrancyGuard {
     error InvalidTransaction();
     error InvalidToken();
     error InvalidFeeBasisPoint();
+    error InvalidRuling();
     error NotRuled();
 
     // **************************** //
@@ -75,7 +76,9 @@ contract NerwoEscrow is Ownable, ReentrancyGuard {
         uint32 lastInteraction; // Last interaction for the dispute procedure.
         address client;
         address freelancer;
+        address feeRecipient;
         IERC20 token;
+        uint16 feeRecipientBasisPoint;
         uint256 amount;
         uint256 disputeID; // If dispute exists, the ID of the dispute.
         uint256 clientFee; // Total fees paid by the client.
@@ -113,6 +116,7 @@ contract NerwoEscrow is Ownable, ReentrancyGuard {
     FeeRecipientData public feeRecipientData;
 
     mapping(uint256 => Transaction) private _transactions;
+    mapping(IERC20 => mapping(address => uint256)) public pendingWithdrawals;
 
     // **************************** //
     // *          Events          * //
@@ -201,6 +205,9 @@ contract NerwoEscrow is Ownable, ReentrancyGuard {
      */
     event ContractFunded(address indexed funder, uint256 amount);
 
+    event WithdrawalCredited(address indexed recipient, IERC20 indexed token, uint256 amount);
+    event WithdrawalClaimed(address indexed recipient, IERC20 indexed token, uint256 amount);
+
     function _requireValidTransaction(uint256 transactionID) internal view {
         if (_transactions[transactionID].freelancer == address(0)) {
             revert InvalidTransaction();
@@ -259,11 +266,12 @@ contract NerwoEscrow is Ownable, ReentrancyGuard {
             revert NullAddress();
         }
 
-        uint16 feeRecipientBasisPoint_ = uint16(feeRecipientBasisPoint);
-        if (feeRecipientBasisPoint_ > MAX_FEEBASISPOINT) {
+        if (feeRecipientBasisPoint > MAX_FEEBASISPOINT) {
             revert InvalidFeeBasisPoint();
         }
 
+        // forge-lint: disable-next-line(unsafe-typecast)
+        uint16 feeRecipientBasisPoint_ = uint16(feeRecipientBasisPoint);
         feeRecipientData.feeRecipient = payable(newFeeRecipient);
         feeRecipientData.feeRecipientBasisPoint = feeRecipientBasisPoint_;
 
@@ -311,7 +319,15 @@ contract NerwoEscrow is Ownable, ReentrancyGuard {
      *  @param amount Amount to pay in wei.
      */
     function calculateFeeRecipientAmount(uint256 amount) public view returns (uint256) {
-        return (amount * feeRecipientData.feeRecipientBasisPoint) / MULTIPLIER_DIVISOR;
+        return _calculateFeeRecipientAmount(amount, feeRecipientData.feeRecipientBasisPoint);
+    }
+
+    function _calculateFeeRecipientAmount(uint256 amount, uint16 feeRecipientBasisPoint)
+        internal
+        pure
+        returns (uint256)
+    {
+        return (amount * feeRecipientBasisPoint) / MULTIPLIER_DIVISOR;
     }
 
     /**
@@ -326,6 +342,8 @@ contract NerwoEscrow is Ownable, ReentrancyGuard {
         payable
         returns (uint256 transactionID)
     {
+        uint256 transactionAmount = amount;
+
         if (freelancer == address(0)) {
             revert NullAddress();
         }
@@ -351,8 +369,13 @@ contract NerwoEscrow is Ownable, ReentrancyGuard {
             }
             // first transfer tokens to the contract
             // NOTE: user must have approved the allowance
+            uint256 balanceBefore = token.balanceOf(address(this));
             if (!token.safeTransferFrom(msg.sender, address(this), amount)) {
                 revert TokenTransferFailed();
+            }
+            transactionAmount = token.balanceOf(address(this)) - balanceBefore;
+            if (transactionAmount < MIN_AMOUNT) {
+                revert InvalidAmount();
             }
         }
 
@@ -366,14 +389,16 @@ contract NerwoEscrow is Ownable, ReentrancyGuard {
             lastInteraction: uint32(block.timestamp),
             client: msg.sender,
             freelancer: freelancer,
+            feeRecipient: feeRecipientData.feeRecipient,
             token: token,
-            amount: amount,
+            feeRecipientBasisPoint: feeRecipientData.feeRecipientBasisPoint,
+            amount: transactionAmount,
             disputeID: 0,
             clientFee: 0,
             freelancerFee: 0
         });
 
-        emit TransactionCreated(transactionID, msg.sender, freelancer, token, amount);
+        emit TransactionCreated(transactionID, msg.sender, freelancer, token, transactionAmount);
     }
 
     /**
@@ -398,13 +423,15 @@ contract NerwoEscrow is Ownable, ReentrancyGuard {
         uint256 amount = transaction.amount;
         transaction.amount = 0;
 
-        uint256 feeAmount = calculateFeeRecipientAmount(amount);
+        uint256 feeAmount = _calculateFeeRecipientAmount(amount, transaction.feeRecipientBasisPoint);
         if (feeAmount != 0) {
-            feeRecipientData.feeRecipient.sendToken(transaction.token, feeAmount, true);
-            emit FeeRecipientPayment(transactionID, feeRecipientData.feeRecipient, transaction.token, feeAmount);
+            if (!transaction.feeRecipient.sendToken(transaction.token, feeAmount, true)) {
+                revert TokenTransferFailed();
+            }
+            emit FeeRecipientPayment(transactionID, transaction.feeRecipient, transaction.token, feeAmount);
         }
 
-        transaction.freelancer.sendToken(transaction.token, amount - feeAmount, false);
+        _sendOrCredit(transaction.freelancer, transaction.token, amount - feeAmount);
         emit Payment(transactionID, msg.sender, transaction.freelancer, transaction.token, amount - feeAmount);
     }
 
@@ -430,7 +457,7 @@ contract NerwoEscrow is Ownable, ReentrancyGuard {
         uint256 amountReimbursed = transaction.amount;
         transaction.amount = 0;
 
-        transaction.client.sendToken(transaction.token, amountReimbursed, false);
+        _sendOrCredit(transaction.client, transaction.token, amountReimbursed);
         emit Reimburse(transactionID, msg.sender, transaction.client, transaction.token, amountReimbursed);
     }
 
@@ -528,6 +555,7 @@ contract NerwoEscrow is Ownable, ReentrancyGuard {
         }
 
         uint256 localID = arbitratorData.proxy.externalIDtoLocalID(transaction.disputeID);
+        // slither-disable-next-line unused-return
         (, bool isRuled, uint256 ruling,) = arbitratorData.proxy.disputes(localID);
 
         if (!isRuled) {
@@ -547,6 +575,10 @@ contract NerwoEscrow is Ownable, ReentrancyGuard {
     function _executeRuling(uint256 transactionID, uint256 ruling) internal {
         Transaction storage transaction = _transactions[transactionID];
 
+        if (ruling > FREELANCER_WINS) {
+            revert InvalidRuling();
+        }
+
         uint256 amount = transaction.amount;
         uint256 clientArbitrationFee = transaction.clientFee;
         uint256 freelancerArbitrationFee = transaction.freelancerFee;
@@ -554,6 +586,7 @@ contract NerwoEscrow is Ownable, ReentrancyGuard {
         transaction.amount = 0;
         transaction.clientFee = 0;
         transaction.freelancerFee = 0;
+        // forge-lint: disable-next-line(unsafe-typecast)
         transaction.ruling = uint8(ruling);
         transaction.status = Status.Resolved;
 
@@ -564,34 +597,64 @@ contract NerwoEscrow is Ownable, ReentrancyGuard {
         // Give the arbitration fee back.
         // Note that we use send to prevent a party from blocking the execution.
         if (ruling == CLIENT_WINS) {
-            client.sendToken(transaction.token, amount, false);
-            client.sendETH(clientArbitrationFee, false);
+            _sendOrCredit(client, transaction.token, amount);
+            _sendOrCredit(client, SafeTransfer.NATIVE_TOKEN, clientArbitrationFee);
         } else if (ruling == FREELANCER_WINS) {
-            feeAmount = calculateFeeRecipientAmount(amount);
+            feeAmount = _calculateFeeRecipientAmount(amount, transaction.feeRecipientBasisPoint);
             if (feeAmount != 0) {
-                feeRecipientData.feeRecipient.sendToken(transaction.token, feeAmount, true);
-                emit FeeRecipientPayment(transactionID, feeRecipientData.feeRecipient, transaction.token, feeAmount);
+                if (!transaction.feeRecipient.sendToken(transaction.token, feeAmount, true)) {
+                    revert TokenTransferFailed();
+                }
+                emit FeeRecipientPayment(transactionID, transaction.feeRecipient, transaction.token, feeAmount);
             }
 
-            freelancer.sendToken(transaction.token, amount - feeAmount, false);
-            freelancer.sendETH(freelancerArbitrationFee, false);
+            _sendOrCredit(freelancer, transaction.token, amount - feeAmount);
+            _sendOrCredit(freelancer, SafeTransfer.NATIVE_TOKEN, freelancerArbitrationFee);
         } else {
             uint256 splitArbitration = clientArbitrationFee / 2;
             uint256 splitAmount = amount / 2;
 
-            feeAmount = calculateFeeRecipientAmount(splitAmount);
+            feeAmount = _calculateFeeRecipientAmount(splitAmount, transaction.feeRecipientBasisPoint);
             if (feeAmount != 0) {
-                feeRecipientData.feeRecipient.sendToken(transaction.token, feeAmount, true);
-                emit FeeRecipientPayment(transactionID, feeRecipientData.feeRecipient, transaction.token, feeAmount);
+                if (!transaction.feeRecipient.sendToken(transaction.token, feeAmount, true)) {
+                    revert TokenTransferFailed();
+                }
+                emit FeeRecipientPayment(transactionID, transaction.feeRecipient, transaction.token, feeAmount);
             }
 
             // In the case of an uneven token amount, one basic token unit can be burnt.
-            client.sendToken(transaction.token, splitAmount, false);
-            freelancer.sendToken(transaction.token, splitAmount - feeAmount, false);
+            _sendOrCredit(client, transaction.token, splitAmount);
+            _sendOrCredit(freelancer, transaction.token, splitAmount - feeAmount);
 
-            client.sendETH(splitArbitration, false);
-            freelancer.sendETH(splitArbitration, false);
+            _sendOrCredit(client, SafeTransfer.NATIVE_TOKEN, splitArbitration);
+            _sendOrCredit(freelancer, SafeTransfer.NATIVE_TOKEN, splitArbitration);
         }
+    }
+
+    function _sendOrCredit(address recipient, IERC20 token, uint256 amount) internal {
+        if (amount == 0) {
+            return;
+        }
+
+        if (recipient.sendToken(token, amount, false)) {
+            return;
+        }
+
+        pendingWithdrawals[token][recipient] += amount;
+        emit WithdrawalCredited(recipient, token, amount);
+    }
+
+    function claimWithdrawal(IERC20 token) external nonReentrant {
+        uint256 amount = pendingWithdrawals[token][msg.sender];
+        if (amount == 0) {
+            revert InvalidAmount();
+        }
+
+        pendingWithdrawals[token][msg.sender] = 0;
+        if (!msg.sender.sendToken(token, amount, true)) {
+            revert TokenTransferFailed();
+        }
+        emit WithdrawalClaimed(msg.sender, token, amount);
     }
 
     // **************************** //
@@ -637,6 +700,7 @@ contract NerwoEscrow is Ownable, ReentrancyGuard {
         }
 
         uint256 localID = arbitratorData.proxy.externalIDtoLocalID(transaction.disputeID);
+        // slither-disable-next-line unused-return
         (, isRuled, ruling,) = arbitratorData.proxy.disputes(localID);
     }
 }

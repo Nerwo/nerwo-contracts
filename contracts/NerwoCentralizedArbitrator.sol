@@ -271,7 +271,9 @@ contract NerwoCentralizedArbitrator is Ownable, ReentrancyGuard, IArbitrable, IA
 
         dispute.arbitrated.rule(_disputeID, _ruling);
 
-        SafeTransfer.sendETH(payable(msg.sender), arbitrationPrice, true);
+        if (!SafeTransfer.sendETH(payable(msg.sender), arbitrationPrice, true)) {
+            revert InsufficientPayment();
+        }
     }
 
     function getDispute(uint256 _disputeID)

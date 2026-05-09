@@ -28,16 +28,14 @@ library SafeTransfer {
      *  @param amount Transaction amount.
      *  @param revertOnError Whether the operation should revert on error.
      */
-    function sendETH(address to, uint256 amount, bool revertOnError) internal {
-        bool success;
-
+    function sendETH(address to, uint256 amount, bool revertOnError) internal returns (bool success) {
         /// @solidity memory-safe-assembly
         assembly {
             success := call(gas(), to, amount, 0, 0, 0, 0)
         }
 
         if (success) {
-            return;
+            return true;
         }
 
         if (revertOnError) {
@@ -54,9 +52,7 @@ library SafeTransfer {
      *  @param amount The amount to be transferred.
      *  @param revertOnError Whether the operation should revert on error.
      */
-    function sendToken(address to, IERC20 token, uint256 amount, bool revertOnError) internal {
-        bool success;
-
+    function sendToken(address to, IERC20 token, uint256 amount, bool revertOnError) internal returns (bool success) {
         /// @solidity memory-safe-assembly
         assembly {
             switch token
@@ -95,7 +91,7 @@ library SafeTransfer {
         }
 
         if (success) {
-            return;
+            return true;
         }
 
         if (revertOnError) {

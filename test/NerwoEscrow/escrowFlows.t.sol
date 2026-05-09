@@ -7,6 +7,22 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {NerwoEscrow} from "@nerwo/contracts/NerwoEscrow.sol";
 import {NerwoTest} from "@nerwo/test/NerwoTest.sol";
 
+contract ToggleETHReceiver {
+    bool public acceptETH;
+
+    receive() external payable {
+        require(acceptETH, "ETH rejected");
+    }
+
+    function setAcceptETH(bool acceptETH_) external {
+        acceptETH = acceptETH_;
+    }
+
+    function claimWithdrawal(NerwoEscrow escrow, IERC20 token) external {
+        escrow.claimWithdrawal(token);
+    }
+}
+
 contract NerwoEscrowFlowsTest is NerwoTest {
     function test_changeWhitelist() public {
         NerwoEscrow.TokenAllow[] memory supportedTokens = new NerwoEscrow.TokenAllow[](1);
@@ -39,6 +55,60 @@ contract NerwoEscrowFlowsTest is NerwoTest {
         vm.prank(owner);
         vm.expectRevert(NerwoEscrow.InvalidFeeBasisPoint.selector);
         escrow.setFeeRecipientAndBasisPoint(client, 2001);
+    }
+
+    function test_setFeeRecipientAndBasisPointRejectsHugeValue() public {
+        vm.prank(owner);
+        vm.expectRevert(NerwoEscrow.InvalidFeeBasisPoint.selector);
+        escrow.setFeeRecipientAndBasisPoint(client, type(uint256).max);
+    }
+
+    function test_payUsesTransactionFeeSnapshot() public {
+        uint256 amount = randomAmount();
+        uint256 transactionID = createTransaction(client, freelancer, nerwoTestToken, amount);
+        uint256 snapshottedFeeAmount = (amount * FEE_RECIPIENT_BASIS_POINT) / 10_000;
+        address newFeeRecipient = makeAddr("newFeeRecipient");
+
+        vm.prank(owner);
+        escrow.setFeeRecipientAndBasisPoint(newFeeRecipient, 2_000);
+
+        uint256 oldFeeRecipientBefore = nerwoTestToken.balanceOf(feeRecipient);
+        uint256 newFeeRecipientBefore = nerwoTestToken.balanceOf(newFeeRecipient);
+        uint256 freelancerBefore = nerwoTestToken.balanceOf(freelancer);
+
+        vm.prank(client);
+        escrow.pay(transactionID);
+
+        assertTokenBalanceDelta(nerwoTestToken, feeRecipient, int256(snapshottedFeeAmount), oldFeeRecipientBefore);
+        assertEq(nerwoTestToken.balanceOf(newFeeRecipient), newFeeRecipientBefore);
+        assertTokenBalanceDelta(nerwoTestToken, freelancer, int256(amount - snapshottedFeeAmount), freelancerBefore);
+    }
+
+    function test_payCreditsPendingWithdrawalWhenNativeTransferFails() public {
+        ToggleETHReceiver receiver = new ToggleETHReceiver();
+        uint256 amount = randomAmount();
+        uint256 feeAmount = escrow.calculateFeeRecipientAmount(amount);
+        uint256 expectedPending = amount - feeAmount;
+        uint256 transactionID = createTransaction(client, address(receiver), NATIVE_TOKEN, amount);
+
+        vm.expectEmit(true, true, true, true, address(escrow));
+        emit NerwoEscrow.WithdrawalCredited(address(receiver), NATIVE_TOKEN, expectedPending);
+
+        vm.prank(client);
+        escrow.pay(transactionID);
+
+        assertEq(escrow.pendingWithdrawals(NATIVE_TOKEN, address(receiver)), expectedPending);
+        assertEq(address(receiver).balance, 0);
+
+        uint256 escrowBefore = address(escrow).balance;
+        receiver.setAcceptETH(true);
+        vm.expectEmit(true, true, true, true, address(escrow));
+        emit NerwoEscrow.WithdrawalClaimed(address(receiver), NATIVE_TOKEN, expectedPending);
+        receiver.claimWithdrawal(escrow, NATIVE_TOKEN);
+
+        assertEq(escrow.pendingWithdrawals(NATIVE_TOKEN, address(receiver)), 0);
+        assertEq(address(receiver).balance, expectedPending);
+        assertEthBalanceDelta(address(escrow), -int256(expectedPending), escrowBefore);
     }
 
     function test_receiveAcceptsEthOnlyFromOwner() public {
