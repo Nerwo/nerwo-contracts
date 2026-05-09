@@ -340,6 +340,7 @@ contract NerwoEscrow is Ownable, ReentrancyGuard {
     function createTransaction(IERC20 token, uint256 amount, address freelancer)
         external
         payable
+        nonReentrant
         returns (uint256 transactionID)
     {
         uint256 transactionAmount = amount;
