@@ -2,6 +2,8 @@ node_modules
 .env
 .env.*
 !.env.example
+!.env.base.example
+!.env.base-sepolia.example
 coverage
 coverage.json
 typechain
