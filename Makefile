@@ -1,6 +1,6 @@
 -include .env
 
-.PHONY: all test clean anvil anvil-base-sepolia deploy-anvil deploy-anvil-create2 deploy-sepolia deploy-base-sepolia deploy-base-sepolia-create2 deploy-base deploy-base-create2
+.PHONY: all test clean anvil anvil-persist anvil-base-sepolia anvil-base-sepolia-persist deploy-anvil deploy-anvil-create2 deploy-sepolia deploy-base-sepolia deploy-base-sepolia-create2 deploy-base deploy-base-create2
 
 all: clean remove install update build
 
@@ -30,9 +30,15 @@ lint :; solhint contracts/**/*.sol && solhint contracts/*.sol
 
 anvil :; anvil -m 'test test test test test test test test test test test junk'
 
+# Persist anvil state to disk under .anvil/dev.
+anvil-persist :; anvil --state .anvil/dev --state-interval 10 -m 'test test test test test test test test test test test junk'
+
 # Fork Base Sepolia locally on :8545 with chain id 84532 and the standard
 # anvil test mnemonic. Requires BASE_SEPOLIA_RPC_URL in .env. See LOCAL_DEV.md.
 anvil-base-sepolia :; anvil --fork-url ${BASE_SEPOLIA_RPC_URL} --chain-id 84532 -m 'test test test test test test test test test test test junk'
+
+# Persist forked Base Sepolia local state under .anvil/base-sepolia.
+anvil-base-sepolia-persist :; anvil --state .anvil/base-sepolia --state-interval 10 --fork-url ${BASE_SEPOLIA_RPC_URL} --chain-id 84532 -m 'test test test test test test test test test test test junk'
 
 # use the "@" to hide the command from your shell
 deploy-sepolia :; @forge script script/DeployAll.s.sol:DeployAll --rpc-url ${SEPOLIA_RPC_URL} --broadcast --verify --etherscan-api-key ${ETHERSCAN_API_KEY} -vvvv

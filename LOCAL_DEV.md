@@ -9,6 +9,8 @@ Two flavors:
 | --- | --- | --- |
 | Plain anvil | `make anvil` | You only need a fresh dev chain. Chain id `31337`. |
 | Forked Base Sepolia | `make anvil-base-sepolia` | You want the existing Base Sepolia state available locally (real tokens, real arbitrator, etc). Chain id `84532`. |
+| Plain anvil (persistent) | `make anvil-persist` | You want local state to survive stop/start. Chain id `31337`. |
+| Forked Base Sepolia (persistent) | `make anvil-base-sepolia-persist` | You want fork + local writes to survive stop/start. Chain id `84532`. |
 
 Both use the standard test mnemonic, so the 10 dev accounts below are
 prefunded with 10 000 ETH each.
@@ -116,8 +118,14 @@ the broadcast JSON in step 2.
 
 ## 5. Reset
 
-Stop anvil (`Ctrl-C`) and start it again — state is in-memory and
-disappears with the process. Re-run `make deploy-anvil` to redeploy.
+If you started with `make anvil` / `make anvil-base-sepolia`, stop
+anvil (`Ctrl-C`) and start it again to reset in-memory state, then
+re-run `make deploy-anvil`.
+
+If you started with `make anvil-persist` /
+`make anvil-base-sepolia-persist`, stop/start reloads from
+`.anvil/dev/state.json` or `.anvil/base-sepolia/state.json`.
+Delete those files/directories when you want a clean reset.
 
 ## Test accounts (anvil default mnemonic)
 
