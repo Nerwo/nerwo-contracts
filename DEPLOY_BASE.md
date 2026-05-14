@@ -53,6 +53,8 @@ Optional overrides:
 | `NERWO_PLATFORM_ADDRESS` | owner | Fee recipient. |
 | `NERWO_FEE_RECIPIENT_BASISPOINT` | `550` | 550 = 5.5%. |
 | `NERWO_ARBITRATOR_METAEVIDENCEURI` | empty | IPFS URI, can also be set post-deploy via `setMetaEvidenceURI`. |
+| `NERWO_USE_CREATE2` | `false` | Set to `true` for deterministic CREATE2 address. |
+| `NERWO_ESCROW_SALT` | `0x...03` | CREATE2 salt for escrow deployment. |
 
 The script reverts with a custom error if any of `NERWO_ARBITRATOR_ADDRESS`,
 `NERWO_ARBITRATORPROXY_ADDRESS`, or a non-empty `NERWO_TOKENS_WHITELIST`
@@ -79,6 +81,13 @@ Confirm:
 ```sh
 source .env
 make deploy-base
+```
+
+Deterministic CREATE2 mode:
+
+```sh
+source .env
+make deploy-base-create2
 ```
 
 Equivalent raw command:

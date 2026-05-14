@@ -1,6 +1,6 @@
 -include .env
 
-.PHONY: all test clean anvil anvil-base-sepolia deploy-anvil deploy-sepolia deploy-base-sepolia deploy-base
+.PHONY: all test clean anvil anvil-base-sepolia deploy-anvil deploy-anvil-create2 deploy-sepolia deploy-base-sepolia deploy-base-sepolia-create2 deploy-base deploy-base-create2
 
 all: clean remove install update build
 
@@ -46,5 +46,10 @@ deploy-base :; @forge script script/DeployEscrow.s.sol:DeployEscrow --rpc-url ba
 
 # This is the private key of account from the mnemonic from the "make anvil" command
 deploy-anvil :; @forge script script/DeployAll.s.sol:DeployAll --rpc-url http://localhost:8545 --broadcast
+
+# Deterministic deployment mode using CREATE2 (salt-driven).
+deploy-anvil-create2 :; @NERWO_USE_CREATE2=true forge script script/DeployAll.s.sol:DeployAll --rpc-url http://localhost:8545 --broadcast
+deploy-base-sepolia-create2 :; @NERWO_USE_CREATE2=true forge script script/DeployAll.s.sol:DeployAll --rpc-url base_sepolia --broadcast --verify --verifier etherscan -vvvv
+deploy-base-create2 :; @NERWO_USE_CREATE2=true forge script script/DeployEscrow.s.sol:DeployEscrow --rpc-url base --broadcast --verify --verifier etherscan -vvvv
 
 -include ${FCT_PLUGIN_PATH}/makefile-external

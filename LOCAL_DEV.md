@@ -39,6 +39,23 @@ deploys, in order: `NerwoCentralizedArbitrator`, `NerwoTetherToken`
 deployer is anvil account `#0`; ownership stays on `#0` unless you
 override `NERWO_OWNER_ADDRESS`.
 
+If you need deterministic addresses across chains and environments,
+use CREATE2 mode:
+
+```sh
+make deploy-anvil-create2
+```
+
+Salt env vars (optional):
+
+- `NERWO_ARBITRATOR_SALT` (defaults to `0x...01`)
+- `NERWO_TEST_TOKEN_SALT` (defaults to `0x...02`)
+- `NERWO_ESCROW_SALT` (defaults to `0x...03`)
+
+CREATE2 gives the same address when deployer address, constructor args,
+salt, and bytecode are the same. If any one of these changes, the
+resulting address changes too.
+
 Deployed addresses are printed at the end of the run and also saved
 under `broadcast/DeployAll.s.sol/<chainId>/run-latest.json`. Quick way
 to extract them:

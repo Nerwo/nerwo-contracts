@@ -14,6 +14,7 @@ import {NerwoTetherToken} from "@nerwo/contracts/NerwoTetherToken.sol";
  */
 contract DeployEscrow is Script {
     uint256 internal constant DEFAULT_FEE_RECIPIENT_BASIS_POINT = 550;
+    bytes32 internal constant DEFAULT_ESCROW_SALT = bytes32(uint256(3));
 
     error MissingArbitrator();
     error MissingArbitratorProxy();
@@ -44,6 +45,8 @@ contract DeployEscrow is Script {
 
         uint256 feeBasisPoint = vm.envOr("NERWO_FEE_RECIPIENT_BASISPOINT", DEFAULT_FEE_RECIPIENT_BASIS_POINT);
         string memory metaEvidenceURI = vm.envOr("NERWO_ARBITRATOR_METAEVIDENCEURI", string(""));
+        bool useCreate2 = vm.envOr("NERWO_USE_CREATE2", false);
+        bytes32 escrowSalt = vm.envOr("NERWO_ESCROW_SALT", DEFAULT_ESCROW_SALT);
 
         address[] memory arbitrators = new address[](2);
         arbitrators[0] = arbitrator;
@@ -55,7 +58,12 @@ contract DeployEscrow is Script {
         }
 
         vm.startBroadcast(deployerKey);
-        escrow = new NerwoEscrow(owner, arbitrators, metaEvidenceURI, platform, feeBasisPoint, supportedTokens);
+        if (useCreate2) {
+            escrow =
+                new NerwoEscrow{salt: escrowSalt}(owner, arbitrators, metaEvidenceURI, platform, feeBasisPoint, supportedTokens);
+        } else {
+            escrow = new NerwoEscrow(owner, arbitrators, metaEvidenceURI, platform, feeBasisPoint, supportedTokens);
+        }
         vm.stopBroadcast();
     }
 }

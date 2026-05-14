@@ -49,6 +49,10 @@ Optional overrides consumed by `DeployAll.s.sol`:
 | `NERWO_ARBITRATOR_ADDRESS` | unset | Reuse an existing arbitrator instead of deploying. |
 | `NERWO_ARBITRATORPROXY_ADDRESS` | unset | Reuse an existing arbitrator proxy. Both `*_ADDRESS` must be set together. |
 | `NERWO_TOKENS_WHITELIST` | empty | Comma-separated ERC20 addresses. If empty, the script also deploys `NerwoTetherToken` and whitelists it. |
+| `NERWO_USE_CREATE2` | `false` | Set to `true` for deterministic CREATE2 addresses. |
+| `NERWO_ARBITRATOR_SALT` | `0x...01` | CREATE2 salt for arbitrator deployment (when deployed by script). |
+| `NERWO_TEST_TOKEN_SALT` | `0x...02` | CREATE2 salt for test token deployment (when deployed by script). |
+| `NERWO_ESCROW_SALT` | `0x...03` | CREATE2 salt for escrow deployment. |
 
 The contract enforces that whitelisted tokens are plain ERC20s — see
 the *Token whitelist* section of [README.md](README.md) before adding
@@ -70,6 +74,13 @@ Review the predicted addresses, gas usage, and constructor arguments.
 ```sh
 source .env
 make deploy-base-sepolia
+```
+
+Deterministic CREATE2 mode:
+
+```sh
+source .env
+make deploy-base-sepolia-create2
 ```
 
 Equivalent raw command:
