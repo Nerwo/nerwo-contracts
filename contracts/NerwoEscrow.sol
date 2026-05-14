@@ -358,7 +358,7 @@ contract NerwoEscrow is Ownable, ReentrancyGuard {
             revert InvalidCaller();
         }
 
-        if (token == SafeTransfer.NATIVE_TOKEN) {
+        if (address(token) == address(SafeTransfer.NATIVE_TOKEN)) {
             // Native Token
             if (msg.value != amount) {
                 revert InvalidAmount();
