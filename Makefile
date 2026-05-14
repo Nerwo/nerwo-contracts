@@ -1,6 +1,6 @@
 -include .env
 
-.PHONY: all test clean deploy-anvil deploy-sepolia deploy-base-sepolia deploy-base
+.PHONY: all test clean anvil anvil-base-sepolia deploy-anvil deploy-sepolia deploy-base-sepolia deploy-base
 
 all: clean remove install update build
 
@@ -29,6 +29,10 @@ format :; forge fmt
 lint :; solhint contracts/**/*.sol && solhint contracts/*.sol
 
 anvil :; anvil -m 'test test test test test test test test test test test junk'
+
+# Fork Base Sepolia locally on :8545 with chain id 84532 and the standard
+# anvil test mnemonic. Requires BASE_SEPOLIA_RPC_URL in .env. See LOCAL_DEV.md.
+anvil-base-sepolia :; anvil --fork-url ${BASE_SEPOLIA_RPC_URL} --chain-id 84532 -m 'test test test test test test test test test test test junk'
 
 # use the "@" to hide the command from your shell
 deploy-sepolia :; @forge script script/DeployAll.s.sol:DeployAll --rpc-url ${SEPOLIA_RPC_URL} --broadcast --verify --etherscan-api-key ${ETHERSCAN_API_KEY} -vvvv
