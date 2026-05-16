@@ -61,10 +61,11 @@ arbitration cost is frozen on the first `payArbitrationFee` call.
 
 ### createTransaction
 
-`createTransaction(IERC20 token, uint256 amount, address freelancer)`
+`createTransaction(bytes16 offerID, IERC20 token, uint256 amount, address freelancer)`
 
 Allows the client to create a new transaction by providing the ERC20 token,
-freelancer's address, the transaction amount.
+freelancer's address, the transaction amount, and the backend UUIDv7 offer ID as
+`bytes16`.
 The client must have approved the amount the ERC20 token transfer.
 
 ### pay
@@ -165,10 +166,11 @@ and the first party opened the dispute.
 
 ### TransactionCreated
 
-`event TransactionCreated(uint256 indexed transactionID, address indexed client, address indexed freelancer, IERC20 token, uint256 amount)`
+`event TransactionCreated(bytes16 indexed offerID, uint256 indexed transactionID, address indexed client, address freelancer, IERC20 token, uint256 amount)`
 
 Emitted when a new transaction is created (the Escrow).
-It provides all needed informations.
+It provides all needed informations, including the backend UUIDv7 offer ID used
+to correlate the funded offer.
 
 ### FeeRecipientPayment
 

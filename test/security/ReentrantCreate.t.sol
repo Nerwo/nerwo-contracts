@@ -46,6 +46,6 @@ contract ReentrantCreateTest is NerwoTest {
         // and surfaces as the raw selector at the outer call site.
         vm.prank(client);
         vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
-        escrow.createTransaction(reentrantToken, outerAmount, freelancer);
+        escrow.createTransaction(nextOfferID(), reentrantToken, outerAmount, freelancer);
     }
 }

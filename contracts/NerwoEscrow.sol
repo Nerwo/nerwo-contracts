@@ -50,6 +50,7 @@ contract NerwoEscrow is Ownable, ReentrancyGuard {
     error InvalidToken();
     error InvalidFeeBasisPoint();
     error NotRuled();
+    error OfferAlreadyFunded();
 
     // **************************** //
     // *    Contract variables    * //
@@ -116,6 +117,7 @@ contract NerwoEscrow is Ownable, ReentrancyGuard {
     FeeRecipientData public feeRecipientData;
 
     mapping(uint256 => Transaction) private _transactions;
+    mapping(bytes16 => uint256) public transactionIdByOfferId;
     mapping(IERC20 => mapping(address => uint256)) public pendingWithdrawals;
 
     // **************************** //
@@ -163,6 +165,7 @@ contract NerwoEscrow is Ownable, ReentrancyGuard {
 
     /**
      * @dev Emitted when a transaction is created.
+     *  @param offerID The UUIDv7 offer id this transaction funds.
      *  @param transactionID The index of the transaction.
      *  @param client The address of the client.
      *  @param freelancer The address of the freelancer.
@@ -170,7 +173,12 @@ contract NerwoEscrow is Ownable, ReentrancyGuard {
      *  @param amount The initial amount in the transaction.
      */
     event TransactionCreated(
-        uint256 indexed transactionID, address indexed client, address indexed freelancer, IERC20 token, uint256 amount
+        bytes16 indexed offerID,
+        uint256 indexed transactionID,
+        address indexed client,
+        address freelancer,
+        IERC20 token,
+        uint256 amount
     );
 
     /**
@@ -332,12 +340,13 @@ contract NerwoEscrow is Ownable, ReentrancyGuard {
 
     /**
      * @dev Create a transaction.
+     *  @param offerID The UUIDv7 offer id this transaction funds.
      *  @param token The ERC20 token contract.
      *  @param amount The amount of tokens in this transaction.
      *  @param freelancer The recipient of the transaction.
      *  @return transactionID The index of the transaction.
      */
-    function createTransaction(IERC20 token, uint256 amount, address freelancer)
+    function createTransaction(bytes16 offerID, IERC20 token, uint256 amount, address freelancer)
         external
         payable
         nonReentrant
@@ -356,6 +365,10 @@ contract NerwoEscrow is Ownable, ReentrancyGuard {
 
         if (msg.sender == freelancer) {
             revert InvalidCaller();
+        }
+
+        if (transactionIdByOfferId[offerID] != 0) {
+            revert OfferAlreadyFunded();
         }
 
         if (address(token) == address(SafeTransfer.NATIVE_TOKEN)) {
@@ -399,8 +412,9 @@ contract NerwoEscrow is Ownable, ReentrancyGuard {
             freelancerFee: 0,
             arbitrationCost: 0
         });
+        transactionIdByOfferId[offerID] = transactionID;
 
-        emit TransactionCreated(transactionID, msg.sender, freelancer, token, transactionAmount);
+        emit TransactionCreated(offerID, transactionID, msg.sender, freelancer, token, transactionAmount);
     }
 
     /**

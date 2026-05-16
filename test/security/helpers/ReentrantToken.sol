@@ -14,6 +14,7 @@ contract ReentrantToken is ERC20 {
     NerwoEscrow public escrow;
     address public reentryFreelancer;
     uint256 public reentryAmount;
+    bytes16 public reentryOfferID;
     bool public armed;
     uint256 public reentryTransactionID;
 
@@ -27,6 +28,7 @@ contract ReentrantToken is ERC20 {
         escrow = _escrow;
         reentryFreelancer = _freelancer;
         reentryAmount = _amount;
+        reentryOfferID = bytes16(uint128(1));
         armed = true;
     }
 
@@ -37,7 +39,8 @@ contract ReentrantToken is ERC20 {
             armed = false;
             _mint(address(this), reentryAmount);
             _approve(address(this), address(escrow), reentryAmount);
-            reentryTransactionID = escrow.createTransaction(IERC20(address(this)), reentryAmount, reentryFreelancer);
+            reentryTransactionID =
+                escrow.createTransaction(reentryOfferID, IERC20(address(this)), reentryAmount, reentryFreelancer);
         }
     }
 }

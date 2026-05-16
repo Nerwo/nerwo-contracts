@@ -159,6 +159,11 @@
     "name": "createTransaction",
     "inputs": [
       {
+        "name": "offerID",
+        "type": "bytes16",
+        "internalType": "bytes16"
+      },
+      {
         "name": "token",
         "type": "address",
         "internalType": "contract IERC20"
@@ -498,6 +503,25 @@
   },
   {
     "type": "function",
+    "name": "transactionIdByOfferId",
+    "inputs": [
+      {
+        "name": "",
+        "type": "bytes16",
+        "internalType": "bytes16"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "transferOwnership",
     "inputs": [
       {
@@ -745,6 +769,12 @@
     "name": "TransactionCreated",
     "inputs": [
       {
+        "name": "offerID",
+        "type": "bytes16",
+        "indexed": true,
+        "internalType": "bytes16"
+      },
+      {
         "name": "transactionID",
         "type": "uint256",
         "indexed": true,
@@ -759,7 +789,7 @@
       {
         "name": "freelancer",
         "type": "address",
-        "indexed": true,
+        "indexed": false,
         "internalType": "address"
       },
       {
@@ -894,6 +924,11 @@
   {
     "type": "error",
     "name": "NullAddress",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "OfferAlreadyFunded",
     "inputs": []
   },
   {

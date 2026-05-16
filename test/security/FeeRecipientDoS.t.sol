@@ -61,7 +61,7 @@ contract FeeRecipientDoSTest is NerwoTest {
         token.approve(address(escrow), amount);
 
         vm.prank(client);
-        uint256 transactionID = escrow.createTransaction(token, amount, freelancer);
+        uint256 transactionID = escrow.createTransaction(nextOfferID(), token, amount, freelancer);
 
         vm.deal(client, ARBITRATION_PRICE);
         vm.prank(client);
@@ -94,7 +94,7 @@ contract FeeRecipientDoSTest is NerwoTest {
         token.approve(address(escrow), amount);
 
         vm.prank(client);
-        uint256 transactionID = escrow.createTransaction(token, amount, freelancer);
+        uint256 transactionID = escrow.createTransaction(nextOfferID(), token, amount, freelancer);
 
         vm.deal(client, ARBITRATION_PRICE);
         vm.prank(client);

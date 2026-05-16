@@ -42,45 +42,78 @@ contract NerwoEscrowTest is NerwoTest {
     // Invalid Token
     function test_createTransactionInvalidToken() public {
         uint256 amount = randomAmount();
+        bytes16 offerID = nextOfferID();
         vm.startPrank(client);
         vm.expectRevert(NerwoEscrow.InvalidToken.selector);
-        escrow.createTransaction(IERC20(address(escrow)), amount, freelancer);
+        escrow.createTransaction(offerID, IERC20(address(escrow)), amount, freelancer);
         vm.stopPrank();
     }
 
     // Creating a transaction with badly mixed arguments
     function test_createTransactionMixedArguments() public {
         uint256 amount = randomAmount();
+        bytes16 offerID = nextOfferID();
         startHoax(client, amount);
         vm.expectRevert(NerwoEscrow.InvalidToken.selector);
-        escrow.createTransaction{value: amount}(nerwoTestToken, amount, freelancer);
+        escrow.createTransaction{value: amount}(offerID, nerwoTestToken, amount, freelancer);
         vm.stopPrank();
     }
 
     // Creating a transaction with myself
     function test_createTransactionWithMyself() public {
         uint256 amount = randomAmount();
+        bytes16 offerID = nextOfferID();
         startHoax(client, amount);
         vm.expectRevert(NerwoEscrow.InvalidCaller.selector);
-        escrow.createTransaction{value: amount}(NATIVE_TOKEN, amount, client);
+        escrow.createTransaction{value: amount}(offerID, NATIVE_TOKEN, amount, client);
         vm.stopPrank();
     }
 
     // Creating a transaction with null freelancer
     function test_createTransactionNullClient() public {
         uint256 amount = randomAmount();
+        bytes16 offerID = nextOfferID();
         startHoax(client, amount);
         vm.expectRevert(NerwoEscrow.NullAddress.selector);
-        escrow.createTransaction{value: amount}(NATIVE_TOKEN, amount, address(0));
+        escrow.createTransaction{value: amount}(offerID, NATIVE_TOKEN, amount, address(0));
         vm.stopPrank();
     }
 
     // Creating a transaction with invalid amount
     function test_createTransactionInvalidAmount() public {
         uint256 amount = 9999;
+        bytes16 offerID = nextOfferID();
         startHoax(client, amount);
         vm.expectRevert(NerwoEscrow.InvalidAmount.selector);
-        escrow.createTransaction{value: amount}(NATIVE_TOKEN, amount, freelancer);
+        escrow.createTransaction{value: amount}(offerID, NATIVE_TOKEN, amount, freelancer);
+        vm.stopPrank();
+    }
+
+    function test_createTransactionStoresOfferID() public {
+        uint256 amount = randomAmount();
+        bytes16 offerID = nextOfferID();
+
+        vm.startPrank(client);
+        nerwoTestToken.mint(amount);
+        nerwoTestToken.approve(address(escrow), amount);
+
+        uint256 transactionID = escrow.createTransaction(offerID, nerwoTestToken, amount, freelancer);
+        vm.stopPrank();
+
+        assertEq(escrow.transactionIdByOfferId(offerID), transactionID);
+    }
+
+    function test_createTransactionRejectsDuplicateOfferID() public {
+        uint256 amount = randomAmount();
+        bytes16 offerID = nextOfferID();
+
+        vm.startPrank(client);
+        nerwoTestToken.mint(amount * 2);
+        nerwoTestToken.approve(address(escrow), amount * 2);
+        escrow.createTransaction(offerID, nerwoTestToken, amount, freelancer);
+
+        vm.expectRevert(NerwoEscrow.OfferAlreadyFunded.selector);
+        escrow.createTransaction(offerID, nerwoTestToken, amount, freelancer);
         vm.stopPrank();
     }
 
@@ -99,9 +132,10 @@ contract NerwoEscrowTest is NerwoTest {
         feeToken.approve(address(escrow), amount);
 
         uint256 expectedTID = escrow.lastTransaction() + 1;
+        bytes16 offerID = nextOfferID();
         vm.expectEmit(true, true, true, true, address(escrow));
-        emit NerwoEscrow.TransactionCreated(expectedTID, client, freelancer, feeToken, expectedReceived);
-        uint256 transactionID = escrow.createTransaction(feeToken, amount, freelancer);
+        emit NerwoEscrow.TransactionCreated(offerID, expectedTID, client, freelancer, feeToken, expectedReceived);
+        uint256 transactionID = escrow.createTransaction(offerID, feeToken, amount, freelancer);
         vm.stopPrank();
 
         NerwoEscrow.Transaction memory transaction = escrow.getTransaction(transactionID);
@@ -112,11 +146,12 @@ contract NerwoEscrowTest is NerwoTest {
     // Creating a transaction with insufficient allowance
     function test_createTransactionInsufficentAllowance() public {
         uint256 amount = randomAmount();
+        bytes16 offerID = nextOfferID();
         startHoax(client, amount);
         vm.expectRevert(
             abi.encodeWithSelector(IERC20Errors.ERC20InsufficientAllowance.selector, address(escrow), 0, amount)
         );
-        escrow.createTransaction(nerwoTestToken, amount, freelancer);
+        escrow.createTransaction(offerID, nerwoTestToken, amount, freelancer);
         vm.stopPrank();
     }
 }

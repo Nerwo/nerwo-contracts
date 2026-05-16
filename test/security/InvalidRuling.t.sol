@@ -54,7 +54,7 @@ contract InvalidRulingTest is Test {
 
         vm.startPrank(client);
         token.approve(address(escrow), amount);
-        transactionID = escrow.createTransaction(token, amount, freelancer);
+        transactionID = escrow.createTransaction(bytes16(uint128(1)), token, amount, freelancer);
         vm.stopPrank();
 
         vm.deal(client, ARBITRATION_PRICE);

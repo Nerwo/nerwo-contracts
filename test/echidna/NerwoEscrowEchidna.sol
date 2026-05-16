@@ -39,6 +39,7 @@ contract NerwoEscrowEchidna {
     uint256 public trackedOpenTokenAmount;
     uint256 public trackedOpenNativeAmount;
     uint256 public trackedPendingNativeAmount;
+    uint128 internal nextOfferNonce = 1;
 
     constructor() payable {
         token = new NerwoTetherToken();
@@ -64,7 +65,9 @@ contract NerwoEscrowEchidna {
         token.mint(amount);
         token.approve(address(escrow), amount);
 
-        try escrow.createTransaction(token, amount, address(freelancer)) returns (uint256 transactionID) {
+        try escrow.createTransaction(_nextOfferID(), token, amount, address(freelancer)) returns (
+            uint256 transactionID
+        ) {
             tokenTransactions.push(transactionID);
             tokenOpenAmount[transactionID] = amount;
             trackedOpenTokenAmount += amount;
@@ -102,7 +105,9 @@ contract NerwoEscrowEchidna {
             return;
         }
 
-        try escrow.createTransaction{value: msg.value}(NATIVE_TOKEN, msg.value, address(rejectingFreelancer)) returns (
+        try escrow.createTransaction{value: msg.value}(
+            _nextOfferID(), NATIVE_TOKEN, msg.value, address(rejectingFreelancer)
+        ) returns (
             uint256 transactionID
         ) {
             nativeTransactions.push(transactionID);
@@ -140,6 +145,10 @@ contract NerwoEscrowEchidna {
 
     function _normalizeAmount(uint256 amount) internal pure returns (uint256) {
         return MIN_AMOUNT + (amount % MAX_AMOUNT);
+    }
+
+    function _nextOfferID() internal returns (bytes16 offerID) {
+        offerID = bytes16(nextOfferNonce++);
     }
 
     function _lastTokenTransaction() internal view returns (uint256) {

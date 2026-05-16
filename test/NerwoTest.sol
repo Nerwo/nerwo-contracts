@@ -26,6 +26,7 @@ contract NerwoTest is Test {
     NerwoEscrow internal escrow;
     NerwoCentralizedArbitrator internal arbitrator;
     NerwoTetherToken internal nerwoTestToken;
+    uint128 internal nextOfferNonce = 1;
 
     function setUp() public {
         owner = makeAddr("owner");
@@ -59,12 +60,14 @@ contract NerwoTest is Test {
         return random.randrange(1e17, 1e18);
     }
 
-    function createTransaction(
-        address from,
-        address to,
-        IERC20 token,
-        uint256 amount
-    ) internal returns (uint256 transactionID) {
+    function nextOfferID() internal returns (bytes16 offerID) {
+        offerID = bytes16(nextOfferNonce++);
+    }
+
+    function createTransaction(address from, address to, IERC20 token, uint256 amount)
+        internal
+        returns (uint256 transactionID)
+    {
         uint256 value = 0;
         NerwoTetherToken testToken = NerwoTetherToken(address(token));
 
@@ -79,9 +82,10 @@ contract NerwoTest is Test {
         }
 
         uint256 expectedTID = escrow.lastTransaction() + 1;
+        bytes16 offerID = nextOfferID();
         vm.expectEmit(true, true, true, true, address(escrow));
-        emit NerwoEscrow.TransactionCreated(expectedTID, from, to, testToken, amount);
-        transactionID = escrow.createTransaction{value: value}(testToken, amount, to);
+        emit NerwoEscrow.TransactionCreated(offerID, expectedTID, from, to, testToken, amount);
+        transactionID = escrow.createTransaction{value: value}(offerID, testToken, amount, to);
 
         vm.stopPrank();
     }
@@ -92,11 +96,10 @@ contract NerwoTest is Test {
         disputeID = payArbitrationFees(transactionID, client, freelancer);
     }
 
-    function payArbitrationFees(
-        uint256 transactionID,
-        address firstPayer,
-        address secondPayer
-    ) internal returns (uint256 disputeID) {
+    function payArbitrationFees(uint256 transactionID, address firstPayer, address secondPayer)
+        internal
+        returns (uint256 disputeID)
+    {
         vm.deal(firstPayer, ARBITRATION_PRICE);
         vm.prank(firstPayer);
         escrow.payArbitrationFee{value: ARBITRATION_PRICE}(transactionID);
@@ -113,21 +116,17 @@ contract NerwoTest is Test {
         arbitrator.giveRuling(disputeID, ruling);
     }
 
-    function assertTokenBalanceIncrease(
-        IERC20 token,
-        address account,
-        uint256 magnitude,
-        uint256 balanceBefore
-    ) internal view {
+    function assertTokenBalanceIncrease(IERC20 token, address account, uint256 magnitude, uint256 balanceBefore)
+        internal
+        view
+    {
         assertEq(token.balanceOf(account) - balanceBefore, magnitude);
     }
 
-    function assertTokenBalanceDecrease(
-        IERC20 token,
-        address account,
-        uint256 magnitude,
-        uint256 balanceBefore
-    ) internal view {
+    function assertTokenBalanceDecrease(IERC20 token, address account, uint256 magnitude, uint256 balanceBefore)
+        internal
+        view
+    {
         assertEq(balanceBefore - token.balanceOf(account), magnitude);
     }
 
