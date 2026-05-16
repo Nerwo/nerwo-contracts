@@ -28,3 +28,9 @@ deployments
 # misc
 *.log
 *.diff
+
+# profiles
+profiles/
+
+# anvil state
+.anvil
