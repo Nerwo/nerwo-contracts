@@ -28,6 +28,8 @@ contract DeployAll is Script {
         bytes32 escrowSalt;
     }
 
+    error ExistingCreate2CodeMismatch(address target, bytes32 expectedHash, bytes32 actualHash);
+
     function run()
         external
         returns (NerwoCentralizedArbitrator arbitrator, NerwoTetherToken testToken, NerwoEscrow escrow)
@@ -36,7 +38,8 @@ contract DeployAll is Script {
             "PRIVATE_KEY",
             uint256(0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80)
         );
-        DeployConfig memory cfg = _loadConfig(vm.addr(deployerKey));
+        address deployer = vm.addr(deployerKey);
+        DeployConfig memory cfg = _loadConfig(deployer);
         address[] memory whitelistedTokens = _whitelistedTokens();
 
         vm.startBroadcast(deployerKey);
@@ -82,17 +85,32 @@ contract DeployAll is Script {
         internal
         returns (NerwoCentralizedArbitrator)
     {
-        if (useCreate2) {
-            return new NerwoCentralizedArbitrator{salt: salt}(court, arbitrationPrice);
+        if (!useCreate2) {
+            return new NerwoCentralizedArbitrator(court, arbitrationPrice);
         }
-        return new NerwoCentralizedArbitrator(court, arbitrationPrice);
+
+        bytes memory initCode = abi.encodePacked(type(NerwoCentralizedArbitrator).creationCode, abi.encode(court, arbitrationPrice));
+        address predicted = vm.computeCreate2Address(salt, keccak256(initCode));
+        if (predicted.code.length != 0) {
+            return NerwoCentralizedArbitrator(predicted);
+        }
+        return new NerwoCentralizedArbitrator{salt: salt}(court, arbitrationPrice);
     }
 
     function _deployTestToken(bool useCreate2, bytes32 salt) internal returns (NerwoTetherToken) {
-        if (useCreate2) {
-            return new NerwoTetherToken{salt: salt}();
+        if (!useCreate2) {
+            return new NerwoTetherToken();
         }
-        return new NerwoTetherToken();
+
+        bytes memory initCode = type(NerwoTetherToken).creationCode;
+        address predicted = vm.computeCreate2Address(salt, keccak256(initCode));
+        bytes32 expectedHash = keccak256(type(NerwoTetherToken).runtimeCode);
+        _assertOrEmptyCode(predicted, expectedHash);
+
+        if (predicted.code.length != 0) {
+            return NerwoTetherToken(predicted);
+        }
+        return new NerwoTetherToken{salt: salt}();
     }
 
     function _deployEscrow(
@@ -105,10 +123,22 @@ contract DeployAll is Script {
         bool useCreate2,
         bytes32 salt
     ) internal returns (NerwoEscrow) {
-        if (useCreate2) {
-            return new NerwoEscrow{salt: salt}(owner, arbitrators, metaEvidenceURI, platform, feeBasisPoint, supportedTokens);
+        if (!useCreate2) {
+            return new NerwoEscrow(owner, arbitrators, metaEvidenceURI, platform, feeBasisPoint, supportedTokens);
         }
-        return new NerwoEscrow(owner, arbitrators, metaEvidenceURI, platform, feeBasisPoint, supportedTokens);
+
+        bytes memory initCode = abi.encodePacked(
+            type(NerwoEscrow).creationCode,
+            abi.encode(owner, arbitrators, metaEvidenceURI, platform, feeBasisPoint, supportedTokens)
+        );
+        address predicted = vm.computeCreate2Address(salt, keccak256(initCode));
+        bytes32 expectedHash = keccak256(type(NerwoEscrow).runtimeCode);
+        _assertOrEmptyCode(predicted, expectedHash);
+
+        if (predicted.code.length != 0) {
+            return NerwoEscrow(payable(predicted));
+        }
+        return new NerwoEscrow{salt: salt}(owner, arbitrators, metaEvidenceURI, platform, feeBasisPoint, supportedTokens);
     }
 
     function _whitelistedTokens() internal view returns (address[] memory tokens) {
@@ -129,5 +159,16 @@ contract DeployAll is Script {
         cfg.arbitratorSalt = vm.envOr("NERWO_ARBITRATOR_SALT", DEFAULT_ARBITRATOR_SALT);
         cfg.testTokenSalt = vm.envOr("NERWO_TEST_TOKEN_SALT", DEFAULT_TEST_TOKEN_SALT);
         cfg.escrowSalt = vm.envOr("NERWO_ESCROW_SALT", DEFAULT_ESCROW_SALT);
+    }
+
+    function _assertOrEmptyCode(address target, bytes32 expectedHash) internal view {
+        if (target.code.length == 0) {
+            return;
+        }
+
+        bytes32 actualHash = target.codehash;
+        if (actualHash != expectedHash) {
+            revert ExistingCreate2CodeMismatch(target, expectedHash, actualHash);
+        }
     }
 }

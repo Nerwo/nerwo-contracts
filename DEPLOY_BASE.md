@@ -90,6 +90,14 @@ source .env
 make deploy-base-create2
 ```
 
+Optional preflight check for CREATE2 deployments (verifies predicted
+address, deployed bytecode, and key on-chain config):
+
+```sh
+source .env
+make verify-base-create2
+```
+
 Equivalent raw command:
 
 ```sh

@@ -1,6 +1,6 @@
 -include .env
 
-.PHONY: all test clean anvil anvil-persist anvil-base-sepolia anvil-base-sepolia-persist deploy-anvil deploy-anvil-create2 deploy-sepolia deploy-base-sepolia deploy-base-sepolia-create2 deploy-base deploy-base-create2
+.PHONY: all test clean anvil anvil-persist anvil-base-sepolia anvil-base-sepolia-persist deploy-anvil deploy-anvil-create2 deploy-sepolia deploy-base-sepolia deploy-base-sepolia-create2 deploy-base deploy-base-create2 verify-base-create2
 
 all: clean remove install update build
 
@@ -59,5 +59,6 @@ deploy-anvil :; @forge script script/DeployAll.s.sol:DeployAll --rpc-url http://
 deploy-anvil-create2 :; @NERWO_USE_CREATE2=true forge script script/DeployAll.s.sol:DeployAll --rpc-url http://localhost:8545 --broadcast
 deploy-base-sepolia-create2 :; @NERWO_USE_CREATE2=true forge script script/DeployAll.s.sol:DeployAll --rpc-url base_sepolia --broadcast --verify --verifier etherscan -vvvv
 deploy-base-create2 :; @NERWO_USE_CREATE2=true forge script script/DeployEscrow.s.sol:DeployEscrow --rpc-url base --broadcast --verify --verifier etherscan -vvvv
+verify-base-create2 :; @forge script script/VerifyEscrowCreate2.s.sol:VerifyEscrowCreate2 --rpc-url base
 
 -include ${FCT_PLUGIN_PATH}/makefile-external
