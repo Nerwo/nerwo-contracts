@@ -10,6 +10,8 @@
     "deploy:sepolia": "forge script script/DeployAll.s.sol:DeployAll --rpc-url ${SEPOLIA_RPC_URL} --broadcast --verify --etherscan-api-key ${ETHERSCAN_API_KEY}",
     "export:abi": "forge build && node scripts/export-abi.mjs",
     "solhint": "solhint contracts/*.sol",
+    "chrome:client": "google-chrome --user-data-dir=profiles/client >/dev/null 2>&1 &",
+    "chrome:freelancer": "google-chrome --user-data-dir=profiles/freelancer >/dev/null 2>&1 &",
     "storage:escrow": "sol2uml storage contracts,lib/openzeppelin-contracts/contracts,lib/erc-792/contracts -c NerwoEscrow"
   },
   "author": "Gianluigi Tiesi <sherpya@gmail.com>",
