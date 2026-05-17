@@ -34,3 +34,6 @@ profiles/
 
 # anvil state
 .anvil
+
+# nested local indexer repo
+ponder/
