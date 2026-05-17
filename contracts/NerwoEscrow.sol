@@ -164,6 +164,22 @@ contract NerwoEscrow is Ownable, ReentrancyGuard {
     event DisputeCreated(uint256 indexed transactionID, uint256 indexed disputeID, address indexed plaintiff);
 
     /**
+     * @dev Emitted when a dispute fee timeout is executed.
+     * @param transactionID The transaction resolved by timeout.
+     * @param winner The party who won by timeout.
+     * @param ruling The ruling executed by timeout.
+     */
+    event TimeoutExecuted(uint256 indexed transactionID, address indexed winner, uint256 ruling);
+
+    /**
+     * @dev Emitted when an arbitrator ruling is accepted and executed.
+     * @param transactionID The transaction resolved by ruling.
+     * @param disputeID The arbitrator dispute id.
+     * @param ruling The accepted ruling.
+     */
+    event RulingAccepted(uint256 indexed transactionID, uint256 indexed disputeID, uint256 ruling);
+
+    /**
      * @dev Emitted when a transaction is created.
      *  @param offerID The UUIDv7 offer id this transaction funds.
      *  @param transactionID The index of the transaction.
@@ -560,7 +576,9 @@ contract NerwoEscrow is Ownable, ReentrancyGuard {
             ((msg.sender == transaction.client) && (transaction.status == Status.WaitingFreelancer))
                 || ((msg.sender == transaction.freelancer) && (transaction.status == Status.WaitingClient))
         ) {
-            _executeRuling(transactionID, msg.sender == transaction.client ? CLIENT_WINS : FREELANCER_WINS);
+            uint256 ruling = msg.sender == transaction.client ? CLIENT_WINS : FREELANCER_WINS;
+            _executeRuling(transactionID, ruling);
+            emit TimeoutExecuted(transactionID, msg.sender, ruling);
         } else {
             revert InvalidStatus();
         }
@@ -586,6 +604,7 @@ contract NerwoEscrow is Ownable, ReentrancyGuard {
         }
 
         _executeRuling(transactionID, ruling);
+        emit RulingAccepted(transactionID, transaction.disputeID, ruling);
     }
 
     /**
