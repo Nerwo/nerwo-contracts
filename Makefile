@@ -48,7 +48,7 @@ deploy-sepolia :; @forge script script/DeployAll.s.sol:DeployAll --rpc-url ${SEP
 # Base Sepolia (chain id 84532). See DEPLOY_BASE_SEPOLIA.md for setup.
 deploy-base-sepolia :; @forge script script/DeployAll.s.sol:DeployAll --rpc-url base_sepolia --broadcast --verify --verifier etherscan -vvvv
 
-# Base mainnet (chain id 8453). Escrow only — arbitrator + token whitelist
+# Base mainnet (chain id 8453). Escrow only — arbitrator + capped tokens
 # must already exist on-chain. See DEPLOY_BASE.md.
 deploy-base :; @forge script script/DeployEscrow.s.sol:DeployEscrow --rpc-url base --broadcast --verify --verifier etherscan -vvvv
 

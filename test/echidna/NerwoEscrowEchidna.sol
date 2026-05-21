@@ -47,15 +47,12 @@ contract NerwoEscrowEchidna {
         freelancer = new EchidnaFreelancer();
         rejectingFreelancer = new EchidnaRejectETH();
 
-        NerwoEscrow.TokenAllow[] memory supportedTokens = new NerwoEscrow.TokenAllow[](1);
         address[] memory arbitrators = new address[](2);
-        supportedTokens[0] = NerwoEscrow.TokenAllow(token, true);
         arbitrators[0] = address(arbitrator);
         arbitrators[1] = address(arbitrator);
 
-        escrow = new NerwoEscrow(
-            address(this), arbitrators, "/ipfs/echidna", address(0xBEEF), FEE_BASIS_POINT, supportedTokens
-        );
+        escrow = new NerwoEscrow(address(this), arbitrators, "/ipfs/echidna", address(0xBEEF), FEE_BASIS_POINT);
+        escrow.changeTokenCap(token, type(uint256).max);
     }
 
     receive() external payable {}

@@ -38,14 +38,13 @@ contract InvalidRulingTest is Test {
         token = new NerwoTetherToken();
         proxy = new MaliciousArbitratorProxy(ARBITRATION_PRICE);
 
-        NerwoEscrow.TokenAllow[] memory supportedTokens = new NerwoEscrow.TokenAllow[](1);
-        supportedTokens[0] = NerwoEscrow.TokenAllow(token, true);
-
         address[] memory arbitrators = new address[](2);
         arbitrators[0] = address(proxy);
         arbitrators[1] = address(proxy);
 
-        escrow = new NerwoEscrow(owner, arbitrators, "/ipfs/test", feeRecipient, FEE_BASIS_POINT, supportedTokens);
+        escrow = new NerwoEscrow(owner, arbitrators, "/ipfs/test", feeRecipient, FEE_BASIS_POINT);
+        vm.prank(owner);
+        escrow.changeTokenCap(token, type(uint256).max);
     }
 
     function _createDispute(uint256 amount) internal returns (uint256 transactionID, uint256 disputeID) {

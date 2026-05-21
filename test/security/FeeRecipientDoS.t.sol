@@ -28,10 +28,8 @@ contract FeeRecipientDoSTest is NerwoTest {
         blacklistToken = new BlacklistToken();
         blacklistToken.setBlacklisted(feeRecipient, true);
 
-        NerwoEscrow.TokenAllow[] memory list = new NerwoEscrow.TokenAllow[](1);
-        list[0] = NerwoEscrow.TokenAllow(blacklistToken, true);
         vm.prank(owner);
-        escrow.changeWhitelist(list);
+        escrow.changeTokenCap(blacklistToken, type(uint256).max);
         return blacklistToken;
     }
 

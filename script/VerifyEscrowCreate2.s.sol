@@ -4,6 +4,7 @@ pragma solidity ^0.8.23;
 import {Script} from "forge-std/Script.sol";
 import {NerwoEscrow} from "@nerwo/contracts/NerwoEscrow.sol";
 import {NerwoTetherToken} from "@nerwo/contracts/NerwoTetherToken.sol";
+import {SafeTransfer} from "@nerwo/contracts/SafeTransfer.sol";
 import {IArbitrator} from "@kleros/erc-792/contracts/IArbitrator.sol";
 import {IArbitrableProxy} from "@nerwo/contracts/IArbitrableProxy.sol";
 
@@ -23,7 +24,9 @@ contract VerifyEscrowCreate2 is Script {
 
     error MissingArbitrator();
     error MissingArbitratorProxy();
-    error MissingTokenWhitelist();
+    error MissingTokenCapTokens();
+    error MissingTokenCaps();
+    error TokenCapsLengthMismatch();
     error MissingOwner();
     error MissingPlatform();
     error ContractNotDeployed(address predicted);
@@ -35,7 +38,7 @@ contract VerifyEscrowCreate2 is Script {
     error ExtraDataMismatch(bytes expected, bytes actual);
     error FeeRecipientMismatch(address expected, address actual);
     error FeeBasisPointMismatch(uint256 expected, uint256 actual);
-    error TokenWhitelistMismatch(address token, bool expected, bool actual);
+    error TokenCapMismatch(address token, uint256 expected, uint256 actual);
 
     struct VerifyConfig {
         address deployer;
@@ -46,7 +49,8 @@ contract VerifyEscrowCreate2 is Script {
         uint256 feeBasisPoint;
         string metaEvidenceURI;
         bytes32 escrowSalt;
-        address[] whitelistedTokens;
+        address[] cappedTokens;
+        uint256[] tokenCaps;
     }
 
     function run() external view returns (address escrowAddress) {
@@ -77,11 +81,14 @@ contract VerifyEscrowCreate2 is Script {
         if (cfg.arbitrator == address(0)) revert MissingArbitrator();
         if (cfg.proxy == address(0)) revert MissingArbitratorProxy();
 
-        cfg.whitelistedTokens = vm.envAddress("NERWO_TOKENS_WHITELIST", ",");
-        if (cfg.whitelistedTokens.length == 0) revert MissingTokenWhitelist();
-        for (uint256 i = 0; i < cfg.whitelistedTokens.length; i++) {
-            if (cfg.whitelistedTokens[i] == address(0)) revert MissingTokenWhitelist();
+        cfg.cappedTokens = vm.envAddress("NERWO_TOKENS_WHITELIST", ",");
+        if (cfg.cappedTokens.length == 0) revert MissingTokenCapTokens();
+        for (uint256 i = 0; i < cfg.cappedTokens.length; i++) {
+            if (cfg.cappedTokens[i] == address(0)) revert MissingTokenCapTokens();
         }
+        cfg.tokenCaps = vm.envUint("NERWO_TOKEN_CAPS", ",");
+        if (cfg.tokenCaps.length == 0) revert MissingTokenCaps();
+        if (cfg.tokenCaps.length != cfg.cappedTokens.length) revert TokenCapsLengthMismatch();
 
         cfg.owner = vm.envOr("NERWO_OWNER_ADDRESS", cfg.deployer);
         if (cfg.owner == address(0)) revert MissingOwner();
@@ -94,19 +101,14 @@ contract VerifyEscrowCreate2 is Script {
         cfg.escrowSalt = vm.envOr("NERWO_ESCROW_SALT", DEFAULT_ESCROW_SALT);
     }
 
-    function _computePredictedEscrowAddress(VerifyConfig memory cfg) internal view returns (address) {
+    function _computePredictedEscrowAddress(VerifyConfig memory cfg) internal pure returns (address) {
         address[] memory arbitrators = new address[](2);
         arbitrators[0] = cfg.arbitrator;
         arbitrators[1] = cfg.proxy;
 
-        NerwoEscrow.TokenAllow[] memory supportedTokens = new NerwoEscrow.TokenAllow[](cfg.whitelistedTokens.length);
-        for (uint256 i = 0; i < cfg.whitelistedTokens.length; i++) {
-            supportedTokens[i] = NerwoEscrow.TokenAllow({token: NerwoTetherToken(cfg.whitelistedTokens[i]), allow: true});
-        }
-
         bytes memory initCode = abi.encodePacked(
             type(NerwoEscrow).creationCode,
-            abi.encode(cfg.owner, arbitrators, cfg.metaEvidenceURI, cfg.platform, cfg.feeBasisPoint, supportedTokens)
+            abi.encode(cfg.deployer, arbitrators, cfg.metaEvidenceURI, cfg.platform, cfg.feeBasisPoint)
         );
         return vm.computeCreate2Address(cfg.escrowSalt, keccak256(initCode));
     }
@@ -144,11 +146,16 @@ contract VerifyEscrowCreate2 is Script {
             revert FeeBasisPointMismatch(cfg.feeBasisPoint, uint256(liveFeeBasisPoint));
         }
 
-        for (uint256 i = 0; i < cfg.whitelistedTokens.length; i++) {
-            bool actual = escrow.tokens(NerwoTetherToken(cfg.whitelistedTokens[i]));
-            if (!actual) {
-                revert TokenWhitelistMismatch(cfg.whitelistedTokens[i], true, actual);
+        for (uint256 i = 0; i < cfg.cappedTokens.length; i++) {
+            uint256 actual = escrow.amountCaps(NerwoTetherToken(cfg.cappedTokens[i]));
+            if (actual != cfg.tokenCaps[i]) {
+                revert TokenCapMismatch(cfg.cappedTokens[i], cfg.tokenCaps[i], actual);
             }
+        }
+
+        uint256 nativeCap = escrow.amountCaps(SafeTransfer.NATIVE_TOKEN);
+        if (nativeCap != escrow.CAP_UNLIMITED()) {
+            revert TokenCapMismatch(address(SafeTransfer.NATIVE_TOKEN), escrow.CAP_UNLIMITED(), nativeCap);
         }
     }
 }

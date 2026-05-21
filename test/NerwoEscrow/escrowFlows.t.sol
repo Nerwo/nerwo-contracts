@@ -24,23 +24,100 @@ contract ToggleETHReceiver {
 }
 
 contract NerwoEscrowFlowsTest is NerwoTest {
-    function test_changeWhitelist() public {
-        NerwoEscrow.TokenAllow[] memory supportedTokens = new NerwoEscrow.TokenAllow[](1);
-        supportedTokens[0] = NerwoEscrow.TokenAllow(nerwoTestToken, true);
+    function test_constructorEnablesNativeTokenUnlimited() public {
+        address[] memory arbitrators = new address[](2);
+        arbitrators[0] = address(arbitrator);
+        arbitrators[1] = address(arbitrator);
 
-        vm.expectEmit(true, true, true, true, address(escrow));
-        emit NerwoEscrow.WhitelistChanged(nerwoTestToken, true);
+        NerwoEscrow freshEscrow =
+            new NerwoEscrow(owner, arbitrators, "/ipfs/something", feeRecipient, FEE_RECIPIENT_BASIS_POINT);
 
-        vm.prank(owner);
-        escrow.changeWhitelist(supportedTokens);
+        assertEq(freshEscrow.amountCaps(NATIVE_TOKEN), freshEscrow.CAP_UNLIMITED());
     }
 
-    function test_changeWhitelistOnlyOwner() public {
-        NerwoEscrow.TokenAllow[] memory supportedTokens = new NerwoEscrow.TokenAllow[](0);
+    function test_changeTokenCap() public {
+        uint256 cap = 5_000 * 10 ** nerwoTestToken.decimals();
 
+        vm.expectEmit(true, true, true, true, address(escrow));
+        emit NerwoEscrow.TokenCapChanged(nerwoTestToken, cap);
+
+        vm.prank(owner);
+        escrow.changeTokenCap(nerwoTestToken, cap);
+
+        assertEq(escrow.amountCaps(nerwoTestToken), cap);
+    }
+
+    function test_changeTokenCapOnlyOwner() public {
         vm.prank(client);
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, client));
-        escrow.changeWhitelist(supportedTokens);
+        escrow.changeTokenCap(nerwoTestToken, 0);
+    }
+
+    function test_changeTokenCapZeroDisablesToken() public {
+        uint256 amount = randomAmount();
+        bytes16 offerID = nextOfferID();
+
+        vm.prank(owner);
+        escrow.changeTokenCap(nerwoTestToken, 0);
+
+        vm.startPrank(client);
+        nerwoTestToken.mint(amount);
+        nerwoTestToken.approve(address(escrow), amount);
+        vm.expectRevert(NerwoEscrow.InvalidToken.selector);
+        escrow.createTransaction(offerID, nerwoTestToken, amount, freelancer);
+        vm.stopPrank();
+    }
+
+    function test_changeTokenCapZeroDisablesNativeToken() public {
+        uint256 amount = randomAmount();
+        bytes16 offerID = nextOfferID();
+
+        vm.prank(owner);
+        escrow.changeTokenCap(NATIVE_TOKEN, 0);
+
+        startHoax(client, amount);
+        vm.expectRevert(NerwoEscrow.InvalidToken.selector);
+        escrow.createTransaction{value: amount}(offerID, NATIVE_TOKEN, amount, freelancer);
+        vm.stopPrank();
+    }
+
+    function test_createTransactionAcceptsAmountAtTokenCap() public {
+        uint256 cap = randomAmount();
+
+        vm.prank(owner);
+        escrow.changeTokenCap(nerwoTestToken, cap);
+
+        createTransaction(client, freelancer, nerwoTestToken, cap);
+    }
+
+    function test_createTransactionRejectsAmountAboveTokenCap() public {
+        uint256 cap = randomAmount();
+        uint256 amount = cap + 1;
+        bytes16 offerID = nextOfferID();
+
+        vm.prank(owner);
+        escrow.changeTokenCap(nerwoTestToken, cap);
+
+        vm.startPrank(client);
+        nerwoTestToken.mint(amount);
+        nerwoTestToken.approve(address(escrow), amount);
+        vm.expectRevert(NerwoEscrow.InvalidAmount.selector);
+        escrow.createTransaction(offerID, nerwoTestToken, amount, freelancer);
+        vm.stopPrank();
+    }
+
+    function test_createTransactionAcceptsAmountAtNativeTokenCap() public {
+        createTransaction(client, freelancer, NATIVE_TOKEN, NATIVE_TOKEN_CAP);
+    }
+
+    function test_createTransactionRejectsAmountAboveNativeTokenCap() public {
+        uint256 amount = NATIVE_TOKEN_CAP + 1;
+        bytes16 offerID = nextOfferID();
+
+        startHoax(client, amount);
+        vm.expectRevert(NerwoEscrow.InvalidAmount.selector);
+        escrow.createTransaction{value: amount}(offerID, NATIVE_TOKEN, amount, freelancer);
+        vm.stopPrank();
     }
 
     function test_setFeeRecipientAndBasisPoint() public {

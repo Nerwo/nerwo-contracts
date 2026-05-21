@@ -16,10 +16,16 @@ The main features of the contract include:
 
 ## Operational policy
 
-### Token whitelist
+### Token caps
 
-`changeWhitelist` is an admin-only function. Only ERC20 implementations
-that satisfy **all** of the following may be added:
+`changeTokenCap` is an admin-only function that controls which tokens
+can fund escrow transactions and the maximum amount accepted per
+transaction. Unknown tokens have a cap of `0` and are rejected by
+default. Setting a token cap to `0` disables it; setting it to
+`CAP_UNLIMITED` enables it without a per-transaction amount limit.
+
+Only ERC20 implementations that satisfy **all** of the following may be
+enabled with a non-zero cap:
 
 - Standard `transfer`/`transferFrom` semantics — the amount received by
   the recipient must equal the amount specified by the sender.
@@ -36,9 +42,9 @@ that satisfy **all** of the following may be added:
   than reverting — the funds are recoverable but only once the address
   is unblocked.
 
-In short: the whitelist is for plain, stateless ERC20 tokens. Anything
+In short: token caps are for plain, stateless ERC20 tokens. Anything
 exotic (fee-on-transfer, rebasing, hookable, upgradeable proxies the
-team does not control) must not be added.
+team does not control) must not be enabled.
 
 ### Fee recipient
 
@@ -67,6 +73,7 @@ Allows the client to create a new transaction by providing the ERC20 token,
 freelancer's address, the transaction amount, and the backend UUIDv7 offer ID as
 `bytes16`.
 The client must have approved the amount the ERC20 token transfer.
+The token must have a non-zero cap and `amount` must not exceed it.
 
 ### pay
 
@@ -186,11 +193,12 @@ It provides the transaction ID, the ERC20 token address and the fee amount.
 Emitted when fee recipent is changed (admin function).
 It provides the old and new fee recipient.
 
-### WhitelistChanged
+### TokenCapChanged
 
-`event WhitelistChanged(IERC20 indexed token, bool allow)`
+`event TokenCapChanged(IERC20 indexed token, uint256 cap)`
 
-Emitted when a token whitelist is changed (admin function).
+Emitted when a token transaction cap is changed (admin function). A cap
+of `0` disables the token; `CAP_UNLIMITED` removes the amount limit.
 
 ### SendFailed (SafeTransfer)
 

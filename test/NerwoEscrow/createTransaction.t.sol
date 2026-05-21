@@ -119,13 +119,11 @@ contract NerwoEscrowTest is NerwoTest {
 
     function test_createTransactionStoresActualReceivedTokenAmount() public {
         FeeOnTransferToken feeToken = new FeeOnTransferToken();
-        NerwoEscrow.TokenAllow[] memory supportedTokens = new NerwoEscrow.TokenAllow[](1);
         uint256 amount = randomAmount();
         uint256 expectedReceived = amount - (amount / 10);
 
-        supportedTokens[0] = NerwoEscrow.TokenAllow(feeToken, true);
         vm.prank(owner);
-        escrow.changeWhitelist(supportedTokens);
+        escrow.changeTokenCap(feeToken, type(uint256).max);
 
         feeToken.mint(client, amount);
         vm.startPrank(client);

@@ -17,19 +17,17 @@ contract ReentrantCreateTest is NerwoTest {
     ReentrantToken internal reentrantToken;
     address internal secondFreelancer;
 
-    function _whitelistReentrantToken() internal {
+    function _enableReentrantToken() internal {
         reentrantToken = new ReentrantToken();
         secondFreelancer = makeAddr("secondFreelancer");
 
-        NerwoEscrow.TokenAllow[] memory list = new NerwoEscrow.TokenAllow[](1);
-        list[0] = NerwoEscrow.TokenAllow(reentrantToken, true);
         vm.prank(owner);
-        escrow.changeWhitelist(list);
+        escrow.changeTokenCap(reentrantToken, type(uint256).max);
     }
 
     /* ------------------------------------------------------------ T-H1 */
     function test_H1_reentrantTokenCannotReenterCreateTransaction() public {
-        _whitelistReentrantToken();
+        _enableReentrantToken();
 
         uint256 outerAmount = 1e18;
         uint256 innerAmount = 5e17;

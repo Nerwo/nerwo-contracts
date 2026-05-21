@@ -13,6 +13,7 @@ contract NerwoTest is Test {
     uint256 internal constant ARBITRATION_PRICE = 0.02 ether;
     uint256 internal constant FEE_TIMEOUT = 604800;
     uint256 internal constant FEE_RECIPIENT_BASIS_POINT = 500;
+    uint256 internal constant NATIVE_TOKEN_CAP = 5 ether;
     uint256 internal constant RULING_SPLIT = 0;
     uint256 internal constant RULING_CLIENT_WINS = 1;
     uint256 internal constant RULING_FREELANCER_WINS = 2;
@@ -37,12 +38,10 @@ contract NerwoTest is Test {
         random = new RandomGenerator();
         random.srand(vm.unixTime());
 
-        NerwoEscrow.TokenAllow[] memory supportedTokens = new NerwoEscrow.TokenAllow[](1);
         address[] memory arbitrators = new address[](2);
 
         nerwoTestToken = new NerwoTetherToken();
         arbitrator = new NerwoCentralizedArbitrator(court, ARBITRATION_PRICE);
-        supportedTokens[0] = NerwoEscrow.TokenAllow(nerwoTestToken, true);
         arbitrators[0] = address(arbitrator);
         arbitrators[1] = address(arbitrator);
 
@@ -51,9 +50,12 @@ contract NerwoTest is Test {
             arbitrators, // arbitrators
             "/ipfs/something", // metaEvidenceURI
             feeRecipient, // feeRecipient
-            500, // feeRecipientBasisPoint
-            supportedTokens // supportedTokens
+            500 // feeRecipientBasisPoint
         );
+        vm.prank(owner);
+        escrow.changeTokenCap(nerwoTestToken, type(uint256).max);
+        vm.prank(owner);
+        escrow.changeTokenCap(NATIVE_TOKEN, NATIVE_TOKEN_CAP);
     }
 
     function randomAmount() internal returns (uint256) {

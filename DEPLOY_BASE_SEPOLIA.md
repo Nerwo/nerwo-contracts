@@ -48,15 +48,16 @@ Optional overrides consumed by `DeployAll.s.sol`:
 | `NERWO_ARBITRATOR_METAEVIDENCEURI` | empty | IPFS URI of the meta-evidence JSON. |
 | `NERWO_ARBITRATOR_ADDRESS` | unset | Reuse an existing arbitrator instead of deploying. |
 | `NERWO_ARBITRATORPROXY_ADDRESS` | unset | Reuse an existing arbitrator proxy. Both `*_ADDRESS` must be set together. |
-| `NERWO_TOKENS_WHITELIST` | empty | Comma-separated ERC20 addresses. If empty, the script also deploys `NerwoTetherToken` and whitelists it. |
+| `NERWO_TOKENS_WHITELIST` | empty | Comma-separated ERC20 addresses. If empty, the script also deploys `NerwoTetherToken` and enables it. |
+| `NERWO_TOKEN_CAPS` | empty | Comma-separated raw-unit per-transaction caps, one per token. Required when `NERWO_TOKENS_WHITELIST` is set. The default deployed `NerwoTetherToken` cap is `5000000000` (5000 USDT.n). |
 | `NERWO_USE_CREATE2` | `false` | Set to `true` for deterministic CREATE2 addresses. |
 | `NERWO_ARBITRATOR_SALT` | `0x...01` | CREATE2 salt for arbitrator deployment (when deployed by script). |
 | `NERWO_TEST_TOKEN_SALT` | `0x...02` | CREATE2 salt for test token deployment (when deployed by script). |
 | `NERWO_ESCROW_SALT` | `0x...03` | CREATE2 salt for escrow deployment. |
 
-The contract enforces that whitelisted tokens are plain ERC20s — see
-the *Token whitelist* section of [README.md](README.md) before adding
-any token to `NERWO_TOKENS_WHITELIST`.
+The contract enforces token caps only for enabled tokens — see the
+*Token caps* section of [README.md](README.md) before adding any token
+to `NERWO_TOKENS_WHITELIST`.
 
 ## 3. Dry run
 

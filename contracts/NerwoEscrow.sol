@@ -61,6 +61,7 @@ contract NerwoEscrow is Ownable, ReentrancyGuard {
     uint256 private constant MAX_FEEBASISPOINT = 2_000; // 20%
     uint256 private constant MULTIPLIER_DIVISOR = 10_000; // Divisor parameter for multipliers.
     uint256 private constant MIN_AMOUNT = 10_000; // Minimal amount with non zero fee basis point for non zero fee
+    uint256 public constant CAP_UNLIMITED = type(uint256).max;
 
     enum Status {
         NoDispute,
@@ -88,12 +89,9 @@ contract NerwoEscrow is Ownable, ReentrancyGuard {
 
     uint256 public lastTransaction;
 
-    struct TokenAllow {
-        IERC20 token;
-        bool allow;
-    }
-
-    mapping(IERC20 => bool) public tokens; // whitelisted ERC20 tokens
+    /// @notice Maximum amount accepted per transaction for each token.
+    /// @dev A cap of 0 disables the token. CAP_UNLIMITED allows any amount.
+    mapping(IERC20 => uint256) public amountCaps;
 
     struct ArbitratorData {
         // Time in seconds a party can take to pay arbitration
@@ -216,11 +214,11 @@ contract NerwoEscrow is Ownable, ReentrancyGuard {
     event FeeRecipientChanged(address indexed newFeeRecipient, uint256 newBasisPoint);
 
     /**
-     * @dev To be emitted when the whitelist was changed.
-     *  @param token The token that was either added or removed from whitelist.
-     *  @param allow Whether added or removed.
+     * @dev Emitted when a token transaction amount cap is changed.
+     *  @param token Token whose cap changed. address(0) is the native token.
+     *  @param cap New per-transaction cap. 0 disables the token; CAP_UNLIMITED removes the limit.
      */
-    event WhitelistChanged(IERC20 indexed token, bool allow);
+    event TokenCapChanged(IERC20 indexed token, uint256 cap);
 
     /**
      * @dev To be emitted when the contract if funded with ether by admin.
@@ -244,25 +242,24 @@ contract NerwoEscrow is Ownable, ReentrancyGuard {
     }
 
     /**
-     * @dev contructor
+     * @dev Constructor. The native token is enabled without a per-transaction amount limit.
      *  @param newOwner The initial owner
      *  @param arbitrators arbitrator and arbitratorProxy addresses.
      *  @param metaEvidenceURI Meta Evidence json IPFS URI
      *  @param feeRecipient Address which receives a share of receiver payment.
      *  @param feeRecipientBasisPoint The share of fee to be received by the feeRecipient, down to 2 decimal places as 550 = 5.5%
-     *  @param supportedTokens List of whitelisted ERC20 tokens
      */
     constructor(
         address newOwner,
         address[] memory arbitrators,
         string memory metaEvidenceURI,
         address feeRecipient,
-        uint256 feeRecipientBasisPoint,
-        TokenAllow[] memory supportedTokens
+        uint256 feeRecipientBasisPoint
     ) Ownable(msg.sender) {
         // cannot set newOwner here because it would break guarded calls
         setFeeRecipientAndBasisPoint(feeRecipient, feeRecipientBasisPoint);
-        changeWhitelist(supportedTokens);
+        amountCaps[SafeTransfer.NATIVE_TOKEN] = CAP_UNLIMITED;
+        emit TokenCapChanged(SafeTransfer.NATIVE_TOKEN, CAP_UNLIMITED);
 
         arbitratorData.feeTimeout = 604800;
         arbitratorData.arbitrator = IArbitrator(arbitrators[0]);
@@ -311,19 +308,15 @@ contract NerwoEscrow is Ownable, ReentrancyGuard {
     }
 
     /**
-     * @dev Sets whitelisted ERC20 tokens
-     * @param supportedTokens An array of TokenAllow
+     * @dev Sets the maximum amount accepted per transaction for a token.
+     * @notice Setting `amountCap` to 0 disables the token. Setting it to
+     * `CAP_UNLIMITED` enables the token without an amount limit.
+     * @param token Token whose cap is being changed. Use address(0) for native token.
+     * @param amountCap New per-transaction cap in the token's smallest unit.
      */
-    function changeWhitelist(TokenAllow[] memory supportedTokens) public onlyOwner {
-        unchecked {
-            for (uint256 i = 0; i < supportedTokens.length; i++) {
-                if (address(supportedTokens[i].token) == address(0)) {
-                    revert InvalidToken();
-                }
-                tokens[supportedTokens[i].token] = supportedTokens[i].allow;
-                emit WhitelistChanged(supportedTokens[i].token, supportedTokens[i].allow);
-            }
-        }
+    function changeTokenCap(IERC20 token, uint256 amountCap) external onlyOwner {
+        amountCaps[token] = amountCap;
+        emit TokenCapChanged(token, amountCap);
     }
 
     /**
@@ -387,6 +380,17 @@ contract NerwoEscrow is Ownable, ReentrancyGuard {
             revert OfferAlreadyFunded();
         }
 
+        uint256 cap = amountCaps[token];
+
+        // Only tokens with a non-zero cap are accepted.
+        if (cap == 0) {
+            revert InvalidToken();
+        }
+
+        if (amount > cap) {
+            revert InvalidAmount();
+        }
+
         if (address(token) == address(SafeTransfer.NATIVE_TOKEN)) {
             // Native Token
             if (msg.value != amount) {
@@ -394,7 +398,7 @@ contract NerwoEscrow is Ownable, ReentrancyGuard {
             }
         } else {
             // ERC20
-            if (!tokens[token] || (msg.value != 0)) {
+            if (msg.value != 0) {
                 revert InvalidToken();
             }
             // first transfer tokens to the contract

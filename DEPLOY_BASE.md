@@ -1,7 +1,7 @@
 # Deploy NerwoEscrow to Base mainnet
 
 Production deploy of **`NerwoEscrow` only**. The arbitrator, arbitrable
-proxy, and any ERC20 tokens you intend to whitelist must already exist
+proxy, and any ERC20 tokens you intend to enable must already exist
 on Base mainnet — this profile refuses to deploy a centralized
 arbitrator or a test ERC20.
 
@@ -24,7 +24,7 @@ Base mainnet chain id: **8453**.
   - Arbitrator address (e.g. an `NerwoCentralizedArbitrator` already
     deployed and owned by the court multisig).
   - Arbitrable proxy address.
-  - At least one ERC20 token address compatible with the whitelist
+  - At least one ERC20 token address compatible with the token-cap
     policy in [README.md](README.md).
 
 ## 2. Configure environment
@@ -43,7 +43,8 @@ Required variables:
 | `BASESCAN_API_KEY` | Verification key. |
 | `NERWO_ARBITRATOR_ADDRESS` | Existing arbitrator. |
 | `NERWO_ARBITRATORPROXY_ADDRESS` | Existing arbitrable proxy. |
-| `NERWO_TOKENS_WHITELIST` | Comma-separated existing ERC20s. |
+| `NERWO_TOKENS_WHITELIST` | Comma-separated existing ERC20s to cap-enable. |
+| `NERWO_TOKEN_CAPS` | Comma-separated raw-unit per-transaction caps, one per token. Use `uint256.max` for unlimited. |
 
 Optional overrides:
 
@@ -57,8 +58,8 @@ Optional overrides:
 | `NERWO_ESCROW_SALT` | `0x...03` | CREATE2 salt for escrow deployment. |
 
 The script reverts with a custom error if any of `NERWO_ARBITRATOR_ADDRESS`,
-`NERWO_ARBITRATORPROXY_ADDRESS`, or a non-empty `NERWO_TOKENS_WHITELIST`
-is missing.
+`NERWO_ARBITRATORPROXY_ADDRESS`, a non-empty `NERWO_TOKENS_WHITELIST`,
+or matching `NERWO_TOKEN_CAPS` are missing.
 
 ## 3. Dry run
 
@@ -72,7 +73,8 @@ forge script script/DeployEscrow.s.sol:DeployEscrow --rpc-url base
 Confirm:
 
 - Constructor args (owner, arbitrator pair, fee recipient, basis point,
-  meta-evidence URI, token whitelist) match expectations.
+  meta-evidence URI) match expectations.
+- Follow-up `changeTokenCap` calls set the expected token caps.
 - Predicted gas cost is reasonable.
 - The deployer has enough Base ETH to cover it.
 
@@ -123,7 +125,7 @@ Broadcast artifacts land in `broadcast/DeployEscrow.s.sol/8453/`.
   `NERWO_OWNER_ADDRESS`).
 - `getArbitrationCost()` returns the expected value via the linked
   arbitrator.
-- Whitelist looks correct (`WhitelistChanged` events in the deploy
+- Token caps look correct (`TokenCapChanged` events in the deploy
   receipt).
 - If `NERWO_ARBITRATOR_METAEVIDENCEURI` was left blank, the owner
   should call `setMetaEvidenceURI(uri)` once the meta-evidence JSON is
@@ -131,8 +133,11 @@ Broadcast artifacts land in `broadcast/DeployEscrow.s.sol/8453/`.
 
 ## 6. Troubleshooting
 
-- **`MissingArbitrator` / `MissingArbitratorProxy` / `MissingTokenWhitelist`.**
+- **`MissingArbitrator` / `MissingArbitratorProxy` / `MissingTokenCapTokens` / `MissingTokenCaps`.**
   The script asserts these are set and non-zero — fill them in `.env`.
+- **`TokenCapsLengthMismatch`.** `NERWO_TOKENS_WHITELIST` and
+  `NERWO_TOKEN_CAPS` must have the same number of comma-separated
+  entries.
 - **Verification fails immediately.** BaseScan can lag by ~30s. Re-run
   verification standalone:
 

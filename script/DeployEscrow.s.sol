@@ -9,7 +9,7 @@ import {NerwoTetherToken} from "@nerwo/contracts/NerwoTetherToken.sol";
  * Mainnet-friendly deploy: only NerwoEscrow.
  *
  * Refuses to run unless the arbitrator + proxy + at least one
- * whitelisted token are provided via env. Never deploys an arbitrator
+ * capped token are provided via env. Never deploys an arbitrator
  * or a test ERC20 — both must already exist on-chain.
  */
 contract DeployEscrow is Script {
@@ -18,7 +18,9 @@ contract DeployEscrow is Script {
 
     error MissingArbitrator();
     error MissingArbitratorProxy();
-    error MissingTokenWhitelist();
+    error MissingTokenCapTokens();
+    error MissingTokenCaps();
+    error TokenCapsLengthMismatch();
     error MissingOwner();
     error MissingPlatform();
 
@@ -31,11 +33,14 @@ contract DeployEscrow is Script {
         if (arbitrator == address(0)) revert MissingArbitrator();
         if (proxy == address(0)) revert MissingArbitratorProxy();
 
-        address[] memory whitelistedTokens = vm.envAddress("NERWO_TOKENS_WHITELIST", ",");
-        if (whitelistedTokens.length == 0) revert MissingTokenWhitelist();
-        for (uint256 i = 0; i < whitelistedTokens.length; i++) {
-            if (whitelistedTokens[i] == address(0)) revert MissingTokenWhitelist();
+        address[] memory cappedTokens = vm.envAddress("NERWO_TOKENS_WHITELIST", ",");
+        if (cappedTokens.length == 0) revert MissingTokenCapTokens();
+        for (uint256 i = 0; i < cappedTokens.length; i++) {
+            if (cappedTokens[i] == address(0)) revert MissingTokenCapTokens();
         }
+        uint256[] memory tokenCaps = vm.envUint("NERWO_TOKEN_CAPS", ",");
+        if (tokenCaps.length == 0) revert MissingTokenCaps();
+        if (tokenCaps.length != cappedTokens.length) revert TokenCapsLengthMismatch();
 
         address owner = vm.envOr("NERWO_OWNER_ADDRESS", deployer);
         if (owner == address(0)) revert MissingOwner();
@@ -52,17 +57,19 @@ contract DeployEscrow is Script {
         arbitrators[0] = arbitrator;
         arbitrators[1] = proxy;
 
-        NerwoEscrow.TokenAllow[] memory supportedTokens = new NerwoEscrow.TokenAllow[](whitelistedTokens.length);
-        for (uint256 i = 0; i < whitelistedTokens.length; i++) {
-            supportedTokens[i] = NerwoEscrow.TokenAllow({token: NerwoTetherToken(whitelistedTokens[i]), allow: true});
-        }
-
         vm.startBroadcast(deployerKey);
         if (useCreate2) {
-            escrow =
-                new NerwoEscrow{salt: escrowSalt}(owner, arbitrators, metaEvidenceURI, platform, feeBasisPoint, supportedTokens);
+            escrow = new NerwoEscrow{salt: escrowSalt}(deployer, arbitrators, metaEvidenceURI, platform, feeBasisPoint);
         } else {
-            escrow = new NerwoEscrow(owner, arbitrators, metaEvidenceURI, platform, feeBasisPoint, supportedTokens);
+            escrow = new NerwoEscrow(deployer, arbitrators, metaEvidenceURI, platform, feeBasisPoint);
+        }
+
+        for (uint256 i = 0; i < cappedTokens.length; i++) {
+            escrow.changeTokenCap(NerwoTetherToken(cappedTokens[i]), tokenCaps[i]);
+        }
+
+        if (owner != deployer) {
+            escrow.transferOwnership(owner);
         }
         vm.stopBroadcast();
     }

@@ -37,7 +37,7 @@ make deploy-anvil
 
 This runs [`script/DeployAll.s.sol`](script/DeployAll.s.sol) and
 deploys, in order: `NerwoCentralizedArbitrator`, `NerwoTetherToken`
-(used as the whitelisted ERC20 for tests), and `NerwoEscrow`. The
+(enabled with a 5000 USDT.n per-transaction cap), and `NerwoEscrow`. The
 deployer is anvil account `#0`; ownership stays on `#0` unless you
 override `NERWO_OWNER_ADDRESS`.
 

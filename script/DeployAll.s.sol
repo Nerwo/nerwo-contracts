@@ -9,6 +9,7 @@ import {NerwoTetherToken} from "@nerwo/contracts/NerwoTetherToken.sol";
 contract DeployAll is Script {
     uint256 internal constant DEFAULT_ARBITRATION_PRICE = 0.02 ether;
     uint256 internal constant DEFAULT_FEE_RECIPIENT_BASIS_POINT = 550;
+    uint256 internal constant DEFAULT_TEST_TOKEN_CAP = 5_000 * 10 ** 6;
     bytes32 internal constant DEFAULT_ARBITRATOR_SALT = bytes32(uint256(1));
     bytes32 internal constant DEFAULT_TEST_TOKEN_SALT = bytes32(uint256(2));
     bytes32 internal constant DEFAULT_ESCROW_SALT = bytes32(uint256(3));
@@ -29,6 +30,7 @@ contract DeployAll is Script {
     }
 
     error ExistingCreate2CodeMismatch(address target, bytes32 expectedHash, bytes32 actualHash);
+    error TokenCapsLengthMismatch();
 
     function run()
         external
@@ -40,7 +42,11 @@ contract DeployAll is Script {
         );
         address deployer = vm.addr(deployerKey);
         DeployConfig memory cfg = _loadConfig(deployer);
-        address[] memory whitelistedTokens = _whitelistedTokens();
+        address[] memory cappedTokens = _cappedTokens();
+        uint256[] memory tokenCaps = _tokenCaps();
+        if (cappedTokens.length != 0 && tokenCaps.length != cappedTokens.length) {
+            revert TokenCapsLengthMismatch();
+        }
 
         vm.startBroadcast(deployerKey);
 
@@ -52,31 +58,35 @@ contract DeployAll is Script {
             arbitrator = NerwoCentralizedArbitrator(cfg.existingArbitrator);
         }
 
-        if (whitelistedTokens.length == 0) {
+        if (cappedTokens.length == 0) {
             testToken = _deployTestToken(cfg.useCreate2, cfg.testTokenSalt);
-            whitelistedTokens = new address[](1);
-            whitelistedTokens[0] = address(testToken);
+            cappedTokens = new address[](1);
+            cappedTokens[0] = address(testToken);
+            tokenCaps = new uint256[](1);
+            tokenCaps[0] = DEFAULT_TEST_TOKEN_CAP;
         }
 
         address[] memory arbitrators = new address[](2);
         arbitrators[0] = cfg.existingArbitrator;
         arbitrators[1] = cfg.existingProxy;
 
-        NerwoEscrow.TokenAllow[] memory supportedTokens = new NerwoEscrow.TokenAllow[](whitelistedTokens.length);
-        for (uint256 i = 0; i < whitelistedTokens.length; i++) {
-            supportedTokens[i] = NerwoEscrow.TokenAllow({token: NerwoTetherToken(whitelistedTokens[i]), allow: true});
-        }
-
         escrow = _deployEscrow(
-            cfg.owner,
+            deployer,
             arbitrators,
             cfg.metaEvidenceURI,
             cfg.platform,
             cfg.feeBasisPoint,
-            supportedTokens,
             cfg.useCreate2,
             cfg.escrowSalt
         );
+
+        for (uint256 i = 0; i < cappedTokens.length; i++) {
+            escrow.changeTokenCap(NerwoTetherToken(cappedTokens[i]), tokenCaps[i]);
+        }
+
+        if (cfg.owner != deployer && escrow.owner() == deployer) {
+            escrow.transferOwnership(cfg.owner);
+        }
 
         vm.stopBroadcast();
     }
@@ -119,17 +129,15 @@ contract DeployAll is Script {
         string memory metaEvidenceURI,
         address platform,
         uint256 feeBasisPoint,
-        NerwoEscrow.TokenAllow[] memory supportedTokens,
         bool useCreate2,
         bytes32 salt
     ) internal returns (NerwoEscrow) {
         if (!useCreate2) {
-            return new NerwoEscrow(owner, arbitrators, metaEvidenceURI, platform, feeBasisPoint, supportedTokens);
+            return new NerwoEscrow(owner, arbitrators, metaEvidenceURI, platform, feeBasisPoint);
         }
 
         bytes memory initCode = abi.encodePacked(
-            type(NerwoEscrow).creationCode,
-            abi.encode(owner, arbitrators, metaEvidenceURI, platform, feeBasisPoint, supportedTokens)
+            type(NerwoEscrow).creationCode, abi.encode(owner, arbitrators, metaEvidenceURI, platform, feeBasisPoint)
         );
         address predicted = vm.computeCreate2Address(salt, keccak256(initCode));
         bytes32 expectedHash = keccak256(type(NerwoEscrow).runtimeCode);
@@ -138,12 +146,17 @@ contract DeployAll is Script {
         if (predicted.code.length != 0) {
             return NerwoEscrow(payable(predicted));
         }
-        return new NerwoEscrow{salt: salt}(owner, arbitrators, metaEvidenceURI, platform, feeBasisPoint, supportedTokens);
+        return new NerwoEscrow{salt: salt}(owner, arbitrators, metaEvidenceURI, platform, feeBasisPoint);
     }
 
-    function _whitelistedTokens() internal view returns (address[] memory tokens) {
+    function _cappedTokens() internal view returns (address[] memory tokens) {
         address[] memory empty;
         return vm.envOr("NERWO_TOKENS_WHITELIST", ",", empty);
+    }
+
+    function _tokenCaps() internal view returns (uint256[] memory caps) {
+        uint256[] memory empty;
+        return vm.envOr("NERWO_TOKEN_CAPS", ",", empty);
     }
 
     function _loadConfig(address deployer) internal view returns (DeployConfig memory cfg) {
