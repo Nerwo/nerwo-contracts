@@ -9,7 +9,7 @@ import {IArbitrator} from "@kleros/erc-792/contracts/IArbitrator.sol";
  *  A general purpose arbitrable contract. Supports non-binary rulings.
  */
 interface IArbitrableProxy {
-    function arbitrator() external view returns (IArbitrator arbitrator);
+    function arbitrator() external view returns (IArbitrator arbitrator_);
 
     function createDispute(
         bytes calldata _arbitratorExtraData,

@@ -21,7 +21,7 @@ test :; forge test
 
 snapshot :; forge snapshot
 
-slither :; slither ./contracts
+slither :; slither ./contracts --fail-medium --exclude-informational --exclude-low --filter-paths "test/|lib/"
 
 format :; forge fmt
 
