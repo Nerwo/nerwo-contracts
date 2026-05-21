@@ -23,6 +23,8 @@ contract ToggleETHReceiver {
     }
 }
 
+contract NoERC20Surface {}
+
 contract NerwoEscrowFlowsTest is NerwoTest {
     function test_constructorEnablesNativeTokenUnlimited() public {
         address[] memory arbitrators = new address[](2);
@@ -51,6 +53,20 @@ contract NerwoEscrowFlowsTest is NerwoTest {
         vm.prank(client);
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, client));
         escrow.changeTokenCap(nerwoTestToken, 0);
+    }
+
+    function test_changeTokenCapRejectsNonContractToken() public {
+        vm.prank(owner);
+        vm.expectRevert(NerwoEscrow.InvalidToken.selector);
+        escrow.changeTokenCap(IERC20(client), 1);
+    }
+
+    function test_changeTokenCapRejectsContractWithoutBalanceOf() public {
+        NoERC20Surface token = new NoERC20Surface();
+
+        vm.prank(owner);
+        vm.expectRevert();
+        escrow.changeTokenCap(IERC20(address(token)), 1);
     }
 
     function test_changeTokenCapZeroDisablesToken() public {

@@ -315,6 +315,13 @@ contract NerwoEscrow is Ownable, ReentrancyGuard {
      * @param amountCap New per-transaction cap in the token's smallest unit.
      */
     function changeTokenCap(IERC20 token, uint256 amountCap) external onlyOwner {
+        if (address(token) != address(SafeTransfer.NATIVE_TOKEN)) {
+            if (address(token).code.length == 0) {
+                revert InvalidToken();
+            }
+            token.balanceOf(address(this));
+        }
+
         amountCaps[token] = amountCap;
         emit TokenCapChanged(token, amountCap);
     }
