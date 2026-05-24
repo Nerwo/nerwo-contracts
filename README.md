@@ -109,11 +109,12 @@ to pay the arbitration fee within the specified timeout.
 The function checks whether the transaction has a valid status and whether
 the timeout has been reached before proceeding.
 
-### acceptRuling
+### rule
 
-`function acceptRuling(uint256 transactionID) external`
+`function rule(uint256 disputeID, uint256 ruling) external`
 
-Accept ruling for a dispute.
+Receives and executes the final arbitrator ruling for a dispute.
+This function must be called by the configured arbitrator.
 
 ### _executeRuling
 
@@ -134,12 +135,6 @@ or raises an error if the transaction does not exist.
 `function getArbitrationCost() external view returns (uint256)`
 
 Ask arbitrator for abitration cost.
-
-### fetchRuling
-
-`function fetchRuling(uint256 transactionID) external view`
-
-Get the ruling for the dispute of given transaction.
 
 ## Events
 
@@ -302,7 +297,7 @@ flowchart LR
     F -->|payArbitrationFee| G{DisputeCreated}
     E -->|timeOut| C[Freelancer]
     F -->|timeOut| D[Client]
-    G -->|acceptRuling = 1| D[Client]
-    G -->|acceptRuling = 2| C[Freelancer]
-    G -->|acceptRuling = 0| H[Split Payment]
+    G -->|rule = 1| D[Client]
+    G -->|rule = 2| C[Freelancer]
+    G -->|rule = 0| H[Split Payment]
 ```

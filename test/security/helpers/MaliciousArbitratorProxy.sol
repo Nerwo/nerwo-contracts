@@ -24,6 +24,7 @@ contract MaliciousArbitratorProxy is IArbitrator, IArbitrableProxy {
     function setRuling(uint256 _disputeID, uint256 _ruling) external {
         rulings[_disputeID] = _ruling;
         ruled[_disputeID] = true;
+        arbitrated[_disputeID].rule(_disputeID, _ruling);
     }
 
     /* IArbitrator */

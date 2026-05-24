@@ -80,16 +80,15 @@ contract ArbitrationPriceMidDisputeTest is NerwoTest {
         uint256 transactionID = createTransaction(client, freelancer, nerwoTestToken, amount);
 
         uint256 disputeID = payArbitrationFees(transactionID, client, freelancer);
-        giveRuling(disputeID, RULING_FREELANCER_WINS);
-
         NerwoEscrow.Transaction memory tx_ = escrow.getTransaction(transactionID);
         assertEq(tx_.clientFee, ARBITRATION_PRICE, "clientFee equals frozen");
         assertEq(tx_.freelancerFee, ARBITRATION_PRICE, "freelancerFee equals frozen");
         assertEq(tx_.arbitrationCost, ARBITRATION_PRICE, "frozen cost stored");
 
         uint256 freelancerEthBefore = freelancer.balance;
-        vm.prank(freelancer);
-        escrow.acceptRuling(transactionID);
+
+        giveRuling(disputeID, RULING_FREELANCER_WINS);
+
         assertEthBalanceIncrease(freelancer, ARBITRATION_PRICE, freelancerEthBefore);
     }
 }

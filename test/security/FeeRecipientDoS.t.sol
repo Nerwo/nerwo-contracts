@@ -50,7 +50,7 @@ contract FeeRecipientDoSTest is NerwoTest {
     }
 
     /* ------------------------------------------------------------ T-C1b */
-    function test_C1b_acceptRulingFreelancerWins_creditsFeeRecipientWhenBlacklisted() public {
+    function test_C1b_ruleFreelancerWins_creditsFeeRecipientWhenBlacklisted() public {
         BlacklistToken token = _useBlacklistToken();
 
         uint256 amount = 1e18;
@@ -70,20 +70,17 @@ contract FeeRecipientDoSTest is NerwoTest {
         escrow.payArbitrationFee{value: ARBITRATION_PRICE}(transactionID);
 
         uint256 disputeID = arbitrator.lastDispute();
-        giveRuling(disputeID, RULING_FREELANCER_WINS);
-
         uint256 feeAmount = escrow.calculateFeeRecipientAmount(amount);
         uint256 freelancerBefore = token.balanceOf(freelancer);
 
-        vm.prank(freelancer);
-        escrow.acceptRuling(transactionID);
+        giveRuling(disputeID, RULING_FREELANCER_WINS);
 
         assertEq(escrow.pendingWithdrawals(token, feeRecipient), feeAmount, "fee should be credited");
         assertEq(token.balanceOf(freelancer) - freelancerBefore, amount - feeAmount, "freelancer paid net");
     }
 
     /* ------------------------------------------------------------ T-C1c */
-    function test_C1c_acceptRulingSplit_creditsFeeRecipientWhenBlacklisted() public {
+    function test_C1c_ruleSplit_creditsFeeRecipientWhenBlacklisted() public {
         BlacklistToken token = _useBlacklistToken();
 
         uint256 amount = 1e18;
@@ -103,15 +100,12 @@ contract FeeRecipientDoSTest is NerwoTest {
         escrow.payArbitrationFee{value: ARBITRATION_PRICE}(transactionID);
 
         uint256 disputeID = arbitrator.lastDispute();
-        giveRuling(disputeID, RULING_SPLIT);
-
         uint256 splitAmount = amount / 2;
         uint256 splitFee = escrow.calculateFeeRecipientAmount(splitAmount);
         uint256 freelancerBefore = token.balanceOf(freelancer);
         uint256 clientBefore = token.balanceOf(client);
 
-        vm.prank(client);
-        escrow.acceptRuling(transactionID);
+        giveRuling(disputeID, RULING_SPLIT);
 
         assertEq(escrow.pendingWithdrawals(token, feeRecipient), splitFee, "fee should be credited");
         assertEq(token.balanceOf(client) - clientBefore, splitAmount, "client gets half");

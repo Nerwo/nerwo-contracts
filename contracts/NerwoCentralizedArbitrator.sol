@@ -37,7 +37,7 @@ import {IArbitrableProxy} from "./IArbitrableProxy.sol";
 
 import {SafeTransfer} from "./SafeTransfer.sol";
 
-contract NerwoCentralizedArbitrator is Ownable, ReentrancyGuard, IArbitrable, IArbitrator, IArbitrableProxy, IEvidence {
+contract NerwoCentralizedArbitrator is Ownable, ReentrancyGuard, IArbitrator, IArbitrableProxy, IEvidence {
     error InsufficientPayment();
     error InvalidRuling(uint256 _ruling, uint256 _numberOfChoices);
     error InvalidStatus(DisputeStatus _expected);
@@ -122,11 +122,12 @@ contract NerwoCentralizedArbitrator is Ownable, ReentrancyGuard, IArbitrable, IA
             disputeID = ++lastDispute;
         }
 
-        arbitratorDisputes[disputeID] =
         // forge-lint: disable-next-line(unsafe-typecast)
-            ArbitratorDispute({arbitrated: this, choices: uint8(_choices), ruling: 0, status: DisputeStatus.Waiting});
+        uint8 choices = uint8(_choices);
+        arbitratorDisputes[disputeID] =
+            ArbitratorDispute({arbitrated: IArbitrable(msg.sender), choices: choices, ruling: 0, status: DisputeStatus.Waiting});
 
-        emit DisputeCreation(disputeID, this);
+        emit DisputeCreation(disputeID, IArbitrable(msg.sender));
     }
 
     /**
@@ -223,33 +224,6 @@ contract NerwoCentralizedArbitrator is Ownable, ReentrancyGuard, IArbitrable, IA
     }
 
     /**
-     * @dev To be called by the arbitrator of the dispute, to declare winning ruling.
-     *  @param _disputeID ID of the dispute in arbitrator contract.
-     *  @param _ruling The ruling choice of the arbitration.
-     */
-    function rule(uint256 _disputeID, uint256 _ruling) public override onlyValidDispute(_disputeID) {
-        if (msg.sender != address(this)) {
-            revert InvalidCaller(address(this));
-        }
-
-        ArbitratorDispute storage dispute = arbitratorDisputes[_disputeID];
-
-        if (dispute.status == DisputeStatus.Solved) {
-            revert AlreadyResolved();
-        }
-
-        if (_ruling > MAX_NUMBER_OF_CHOICES) {
-            revert InvalidRuling(_ruling, MAX_NUMBER_OF_CHOICES);
-        }
-
-        dispute.status = DisputeStatus.Solved;
-        // forge-lint: disable-next-line(unsafe-typecast)
-        dispute.ruling = uint8(_ruling);
-
-        emit Ruling(this, _disputeID, dispute.ruling);
-    }
-
-    /**
      * @dev Give a ruling.
      *  @param _disputeID ID of the dispute to rule.
      *  @param _ruling Ruling given by the arbitrator.
@@ -270,6 +244,10 @@ contract NerwoCentralizedArbitrator is Ownable, ReentrancyGuard, IArbitrable, IA
         if (dispute.status != DisputeStatus.Waiting) {
             revert InvalidStatus(DisputeStatus.Waiting);
         }
+
+        dispute.status = DisputeStatus.Solved;
+        // forge-lint: disable-next-line(unsafe-typecast)
+        dispute.ruling = uint8(_ruling);
 
         dispute.arbitrated.rule(_disputeID, _ruling);
 

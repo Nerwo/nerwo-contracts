@@ -31,11 +31,12 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IArbitrator} from "@kleros/erc-792/contracts/IArbitrator.sol";
+import {IArbitrable} from "@kleros/erc-792/contracts/IArbitrable.sol";
 
 import {IArbitrableProxy} from "./IArbitrableProxy.sol";
 import {SafeTransfer} from "./SafeTransfer.sol";
 
-contract NerwoEscrow is Ownable, ReentrancyGuard {
+contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable {
     using SafeTransfer for address;
     using SafeTransfer for IERC20;
 
@@ -49,7 +50,6 @@ contract NerwoEscrow is Ownable, ReentrancyGuard {
     error InvalidTransaction();
     error InvalidToken();
     error InvalidFeeBasisPoint();
-    error NotRuled();
     error OfferAlreadyFunded();
 
     // **************************** //
@@ -116,6 +116,7 @@ contract NerwoEscrow is Ownable, ReentrancyGuard {
 
     mapping(uint256 => Transaction) private _transactions;
     mapping(bytes16 => uint256) public transactionIdByOfferId;
+    mapping(uint256 => uint256) public transactionIdByDisputeId;
     mapping(IERC20 => mapping(address => uint256)) public pendingWithdrawals;
 
     // **************************** //
@@ -559,9 +560,10 @@ contract NerwoEscrow is Ownable, ReentrancyGuard {
                 || ((msg.sender == transaction.freelancer) && (transaction.clientFee != 0))
         ) {
             transaction.status = Status.DisputeCreated;
-            transaction.disputeID = arbitratorData.proxy.createDispute{value: arbitrationCost_}(
-                arbitratorData.extraData, arbitratorData.metaEvidenceURI, AMOUNT_OF_CHOICES
+            transaction.disputeID = arbitratorData.arbitrator.createDispute{value: arbitrationCost_}(
+                AMOUNT_OF_CHOICES, arbitratorData.extraData
             );
+            transactionIdByDisputeId[transaction.disputeID] = transactionID;
             emit DisputeCreated(transactionID, transaction.disputeID, other);
         } else {
             transaction.status = msg.sender == transaction.client ? Status.WaitingFreelancer : Status.WaitingClient;
@@ -596,26 +598,30 @@ contract NerwoEscrow is Ownable, ReentrancyGuard {
     }
 
     /**
-     * @dev Accept ruling for a dispute.
-     *  @param transactionID the transaction the dispute was created from.
+     * @dev Receives and executes the final arbitrator ruling for a dispute.
+     *  @param disputeID ID of the dispute in the arbitrator contract.
+     *  @param ruling Ruling given by the arbitrator.
      */
-    function acceptRuling(uint256 transactionID) external nonReentrant onlyValidTransaction(transactionID) {
+    function rule(uint256 disputeID, uint256 ruling) external override nonReentrant {
+        if (msg.sender != address(arbitratorData.arbitrator)) {
+            revert InvalidCaller();
+        }
+
+        uint256 transactionID = transactionIdByDisputeId[disputeID];
+        _requireValidTransaction(transactionID);
         Transaction storage transaction = _transactions[transactionID];
 
         if (transaction.status != Status.DisputeCreated) {
             revert InvalidStatus();
         }
 
-        uint256 localID = arbitratorData.proxy.externalIDtoLocalID(transaction.disputeID);
-        // slither-disable-next-line unused-return
-        (, bool isRuled, uint256 ruling,) = arbitratorData.proxy.disputes(localID);
-
-        if (!isRuled) {
-            revert NotRuled();
+        if (transaction.disputeID != disputeID) {
+            revert InvalidTransaction();
         }
 
         _executeRuling(transactionID, ruling);
-        emit RulingAccepted(transactionID, transaction.disputeID, ruling);
+        emit Ruling(arbitratorData.arbitrator, disputeID, ruling);
+        emit RulingAccepted(transactionID, disputeID, ruling);
     }
 
     /**
@@ -732,26 +738,5 @@ contract NerwoEscrow is Ownable, ReentrancyGuard {
      */
     function getArbitrationCost() external view returns (uint256) {
         return arbitratorData.arbitrator.arbitrationCost(arbitratorData.extraData);
-    }
-
-    /**
-     * @dev Get the ruling for the dispute of given transaction
-     *  @param transactionID the transaction the dispute was created from.
-     */
-    function fetchRuling(uint256 transactionID)
-        external
-        view
-        onlyValidTransaction(transactionID)
-        returns (bool isRuled, uint256 ruling)
-    {
-        Transaction storage transaction = _transactions[transactionID];
-
-        if (transaction.status < Status.DisputeCreated) {
-            revert InvalidStatus();
-        }
-
-        uint256 localID = arbitratorData.proxy.externalIDtoLocalID(transaction.disputeID);
-        // slither-disable-next-line unused-return
-        (, isRuled, ruling,) = arbitratorData.proxy.disputes(localID);
     }
 }

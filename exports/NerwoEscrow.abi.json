@@ -49,19 +49,6 @@
   },
   {
     "type": "function",
-    "name": "acceptRuling",
-    "inputs": [
-      {
-        "name": "transactionID",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
     "name": "amountCaps",
     "inputs": [
       {
@@ -210,30 +197,6 @@
         "name": "feeRecipientBasisPoint",
         "type": "uint16",
         "internalType": "uint16"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "fetchRuling",
-    "inputs": [
-      {
-        "name": "transactionID",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "isRuled",
-        "type": "bool",
-        "internalType": "bool"
-      },
-      {
-        "name": "ruling",
-        "type": "uint256",
-        "internalType": "uint256"
       }
     ],
     "stateMutability": "view"
@@ -435,6 +398,24 @@
   },
   {
     "type": "function",
+    "name": "rule",
+    "inputs": [
+      {
+        "name": "disputeID",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "ruling",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "setExtraData",
     "inputs": [
       {
@@ -489,6 +470,25 @@
     ],
     "outputs": [],
     "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "transactionIdByDisputeId",
+    "inputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -730,6 +730,31 @@
   },
   {
     "type": "event",
+    "name": "Ruling",
+    "inputs": [
+      {
+        "name": "_arbitrator",
+        "type": "address",
+        "indexed": true,
+        "internalType": "contract IArbitrator"
+      },
+      {
+        "name": "_disputeID",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "_ruling",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "RulingAccepted",
     "inputs": [
       {
@@ -953,11 +978,6 @@
   {
     "type": "error",
     "name": "NoTimeout",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "NotRuled",
     "inputs": []
   },
   {

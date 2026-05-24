@@ -72,9 +72,6 @@ contract InvalidRulingTest is Test {
         uint256 amount = 1e18;
         (uint256 transactionID, uint256 disputeID) = _createDispute(amount);
 
-        // Arbitrator returns a ruling outside [0, 2] — should not lock the funds.
-        proxy.setRuling(disputeID, 7);
-
         uint256 splitAmount = amount / 2;
         uint256 splitFee = escrow.calculateFeeRecipientAmount(splitAmount);
         uint256 splitArbitration = ARBITRATION_PRICE / 2;
@@ -85,8 +82,8 @@ contract InvalidRulingTest is Test {
         uint256 clientEthBefore = client.balance;
         uint256 freelancerEthBefore = freelancer.balance;
 
-        vm.prank(client);
-        escrow.acceptRuling(transactionID);
+        // Arbitrator returns a ruling outside [0, 2] — should not lock the funds.
+        proxy.setRuling(disputeID, 7);
 
         // Both parties get half of the escrowed tokens (minus fee on the freelancer side).
         assertEq(token.balanceOf(client) - clientTokenBefore, splitAmount, "client gets half tokens");
@@ -94,6 +91,7 @@ contract InvalidRulingTest is Test {
             token.balanceOf(freelancer) - freelancerTokenBefore, splitAmount - splitFee, "freelancer gets half net"
         );
         assertEq(token.balanceOf(feeRecipient) - feeRecipientBefore, splitFee, "fee recipient paid on split");
+        assertEq(uint256(escrow.getTransaction(transactionID).status), uint256(NerwoEscrow.Status.Resolved));
 
         // Both parties recover half of the arbitration deposit.
         assertEq(client.balance - clientEthBefore, splitArbitration, "client gets half arbitration");
