@@ -22,7 +22,6 @@ contract DeployAll is Script {
         uint256 feeBasisPoint;
         string metaEvidenceURI;
         address existingArbitrator;
-        address existingProxy;
         bool useCreate2;
         bytes32 arbitratorSalt;
         bytes32 testTokenSalt;
@@ -37,8 +36,7 @@ contract DeployAll is Script {
         returns (NerwoCentralizedArbitrator arbitrator, NerwoTetherToken testToken, NerwoEscrow escrow)
     {
         uint256 deployerKey = vm.envOr(
-            "PRIVATE_KEY",
-            uint256(0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80)
+            "PRIVATE_KEY", uint256(0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80)
         );
         address deployer = vm.addr(deployerKey);
         DeployConfig memory cfg = _loadConfig(deployer);
@@ -50,10 +48,9 @@ contract DeployAll is Script {
 
         vm.startBroadcast(deployerKey);
 
-        if (cfg.existingArbitrator == address(0) || cfg.existingProxy == address(0)) {
+        if (cfg.existingArbitrator == address(0)) {
             arbitrator = _deployArbitrator(cfg.court, cfg.arbitrationPrice, cfg.useCreate2, cfg.arbitratorSalt);
             cfg.existingArbitrator = address(arbitrator);
-            cfg.existingProxy = address(arbitrator);
         } else {
             arbitrator = NerwoCentralizedArbitrator(cfg.existingArbitrator);
         }
@@ -66,13 +63,9 @@ contract DeployAll is Script {
             tokenCaps[0] = DEFAULT_TEST_TOKEN_CAP;
         }
 
-        address[] memory arbitrators = new address[](2);
-        arbitrators[0] = cfg.existingArbitrator;
-        arbitrators[1] = cfg.existingProxy;
-
         escrow = _deployEscrow(
             deployer,
-            arbitrators,
+            cfg.existingArbitrator,
             cfg.metaEvidenceURI,
             cfg.platform,
             cfg.feeBasisPoint,
@@ -99,7 +92,8 @@ contract DeployAll is Script {
             return new NerwoCentralizedArbitrator(court, arbitrationPrice);
         }
 
-        bytes memory initCode = abi.encodePacked(type(NerwoCentralizedArbitrator).creationCode, abi.encode(court, arbitrationPrice));
+        bytes memory initCode =
+            abi.encodePacked(type(NerwoCentralizedArbitrator).creationCode, abi.encode(court, arbitrationPrice));
         address predicted = vm.computeCreate2Address(salt, keccak256(initCode));
         if (predicted.code.length != 0) {
             return NerwoCentralizedArbitrator(predicted);
@@ -125,7 +119,7 @@ contract DeployAll is Script {
 
     function _deployEscrow(
         address owner,
-        address[] memory arbitrators,
+        address arbitrator,
         string memory metaEvidenceURI,
         address platform,
         uint256 feeBasisPoint,
@@ -133,11 +127,11 @@ contract DeployAll is Script {
         bytes32 salt
     ) internal returns (NerwoEscrow) {
         if (!useCreate2) {
-            return new NerwoEscrow(owner, arbitrators, metaEvidenceURI, platform, feeBasisPoint);
+            return new NerwoEscrow(owner, arbitrator, metaEvidenceURI, platform, feeBasisPoint);
         }
 
         bytes memory initCode = abi.encodePacked(
-            type(NerwoEscrow).creationCode, abi.encode(owner, arbitrators, metaEvidenceURI, platform, feeBasisPoint)
+            type(NerwoEscrow).creationCode, abi.encode(owner, arbitrator, metaEvidenceURI, platform, feeBasisPoint)
         );
         address predicted = vm.computeCreate2Address(salt, keccak256(initCode));
         bytes32 expectedHash = keccak256(type(NerwoEscrow).runtimeCode);
@@ -146,7 +140,7 @@ contract DeployAll is Script {
         if (predicted.code.length != 0) {
             return NerwoEscrow(payable(predicted));
         }
-        return new NerwoEscrow{salt: salt}(owner, arbitrators, metaEvidenceURI, platform, feeBasisPoint);
+        return new NerwoEscrow{salt: salt}(owner, arbitrator, metaEvidenceURI, platform, feeBasisPoint);
     }
 
     function _cappedTokens() internal view returns (address[] memory tokens) {
@@ -167,7 +161,6 @@ contract DeployAll is Script {
         cfg.feeBasisPoint = vm.envOr("NERWO_FEE_RECIPIENT_BASISPOINT", DEFAULT_FEE_RECIPIENT_BASIS_POINT);
         cfg.metaEvidenceURI = vm.envOr("NERWO_ARBITRATOR_METAEVIDENCEURI", string(""));
         cfg.existingArbitrator = vm.envOr("NERWO_ARBITRATOR_ADDRESS", address(0));
-        cfg.existingProxy = vm.envOr("NERWO_ARBITRATORPROXY_ADDRESS", address(0));
         cfg.useCreate2 = vm.envOr("NERWO_USE_CREATE2", false);
         cfg.arbitratorSalt = vm.envOr("NERWO_ARBITRATOR_SALT", DEFAULT_ARBITRATOR_SALT);
         cfg.testTokenSalt = vm.envOr("NERWO_TEST_TOKEN_SALT", DEFAULT_TEST_TOKEN_SALT);

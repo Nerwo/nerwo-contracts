@@ -8,9 +8,9 @@
         "internalType": "address"
       },
       {
-        "name": "arbitrators",
-        "type": "address[]",
-        "internalType": "address[]"
+        "name": "arbitrator",
+        "type": "address",
+        "internalType": "address"
       },
       {
         "name": "metaEvidenceURI",
@@ -80,11 +80,6 @@
         "name": "arbitrator",
         "type": "address",
         "internalType": "contract IArbitrator"
-      },
-      {
-        "name": "proxy",
-        "type": "address",
-        "internalType": "contract IArbitrableProxy"
       },
       {
         "name": "metaEvidenceURI",

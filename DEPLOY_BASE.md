@@ -1,7 +1,7 @@
 # Deploy NerwoEscrow to Base mainnet
 
-Production deploy of **`NerwoEscrow` only**. The arbitrator, arbitrable
-proxy, and any ERC20 tokens you intend to enable must already exist
+Production deploy of **`NerwoEscrow` only**. The arbitrator and any ERC20
+tokens you intend to enable must already exist
 on Base mainnet — this profile refuses to deploy a centralized
 arbitrator or a test ERC20.
 
@@ -23,7 +23,6 @@ Base mainnet chain id: **8453**.
 - **Pre-existing on-chain**:
   - Arbitrator address (e.g. an `NerwoCentralizedArbitrator` already
     deployed and owned by the court multisig).
-  - Arbitrable proxy address.
   - At least one ERC20 token address compatible with the token-cap
     policy in [README.md](README.md).
 
@@ -42,7 +41,6 @@ Required variables:
 | `BASE_RPC_URL` | Base mainnet RPC. |
 | `BASESCAN_API_KEY` | Verification key. |
 | `NERWO_ARBITRATOR_ADDRESS` | Existing arbitrator. |
-| `NERWO_ARBITRATORPROXY_ADDRESS` | Existing arbitrable proxy. |
 | `NERWO_TOKENS_WHITELIST` | Comma-separated existing ERC20s to cap-enable. |
 | `NERWO_TOKEN_CAPS` | Comma-separated raw-unit per-transaction caps, one per token. Use `uint256.max` for unlimited. |
 
@@ -57,9 +55,9 @@ Optional overrides:
 | `NERWO_USE_CREATE2` | `false` | Set to `true` for deterministic CREATE2 address. |
 | `NERWO_ESCROW_SALT` | `0x...03` | CREATE2 salt for escrow deployment. |
 
-The script reverts with a custom error if any of `NERWO_ARBITRATOR_ADDRESS`,
-`NERWO_ARBITRATORPROXY_ADDRESS`, a non-empty `NERWO_TOKENS_WHITELIST`,
-or matching `NERWO_TOKEN_CAPS` are missing.
+The script reverts with a custom error if `NERWO_ARBITRATOR_ADDRESS`,
+a non-empty `NERWO_TOKENS_WHITELIST`, or matching `NERWO_TOKEN_CAPS`
+are missing.
 
 ## 3. Dry run
 
@@ -72,7 +70,7 @@ forge script script/DeployEscrow.s.sol:DeployEscrow --rpc-url base
 
 Confirm:
 
-- Constructor args (owner, arbitrator pair, fee recipient, basis point,
+- Constructor args (owner, arbitrator, fee recipient, basis point,
   meta-evidence URI) match expectations.
 - Follow-up `changeTokenCap` calls set the expected token caps.
 - Predicted gas cost is reasonable.
@@ -133,7 +131,7 @@ Broadcast artifacts land in `broadcast/DeployEscrow.s.sol/8453/`.
 
 ## 6. Troubleshooting
 
-- **`MissingArbitrator` / `MissingArbitratorProxy` / `MissingTokenCapTokens` / `MissingTokenCaps`.**
+- **`MissingArbitrator` / `MissingTokenCapTokens` / `MissingTokenCaps`.**
   The script asserts these are set and non-zero — fill them in `.env`.
 - **`TokenCapsLengthMismatch`.** `NERWO_TOKENS_WHITELIST` and
   `NERWO_TOKEN_CAPS` must have the same number of comma-separated

@@ -6,7 +6,6 @@ import {NerwoEscrow} from "@nerwo/contracts/NerwoEscrow.sol";
 import {NerwoTetherToken} from "@nerwo/contracts/NerwoTetherToken.sol";
 import {SafeTransfer} from "@nerwo/contracts/SafeTransfer.sol";
 import {IArbitrator} from "@kleros/erc-792/contracts/IArbitrator.sol";
-import {IArbitrableProxy} from "@nerwo/contracts/IArbitrableProxy.sol";
 
 /**
  * Read-only verification helper for CREATE2 escrow deployments.
@@ -23,7 +22,6 @@ contract VerifyEscrowCreate2 is Script {
         hex"00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003";
 
     error MissingArbitrator();
-    error MissingArbitratorProxy();
     error MissingTokenCapTokens();
     error MissingTokenCaps();
     error TokenCapsLengthMismatch();
@@ -33,7 +31,6 @@ contract VerifyEscrowCreate2 is Script {
     error DeployedCodeMismatch(address predicted, bytes32 expectedHash, bytes32 actualHash);
     error OwnerMismatch(address expected, address actual);
     error ArbitratorMismatch(address expected, address actual);
-    error ProxyMismatch(address expected, address actual);
     error MetaEvidenceMismatch(string expected, string actual);
     error ExtraDataMismatch(bytes expected, bytes actual);
     error FeeRecipientMismatch(address expected, address actual);
@@ -44,7 +41,6 @@ contract VerifyEscrowCreate2 is Script {
         address deployer;
         address owner;
         address arbitrator;
-        address proxy;
         address platform;
         uint256 feeBasisPoint;
         string metaEvidenceURI;
@@ -77,9 +73,7 @@ contract VerifyEscrowCreate2 is Script {
         cfg.deployer = vm.addr(deployerKey);
 
         cfg.arbitrator = vm.envAddress("NERWO_ARBITRATOR_ADDRESS");
-        cfg.proxy = vm.envAddress("NERWO_ARBITRATORPROXY_ADDRESS");
         if (cfg.arbitrator == address(0)) revert MissingArbitrator();
-        if (cfg.proxy == address(0)) revert MissingArbitratorProxy();
 
         cfg.cappedTokens = vm.envAddress("NERWO_TOKENS_WHITELIST", ",");
         if (cfg.cappedTokens.length == 0) revert MissingTokenCapTokens();
@@ -102,13 +96,9 @@ contract VerifyEscrowCreate2 is Script {
     }
 
     function _computePredictedEscrowAddress(VerifyConfig memory cfg) internal pure returns (address) {
-        address[] memory arbitrators = new address[](2);
-        arbitrators[0] = cfg.arbitrator;
-        arbitrators[1] = cfg.proxy;
-
         bytes memory initCode = abi.encodePacked(
             type(NerwoEscrow).creationCode,
-            abi.encode(cfg.deployer, arbitrators, cfg.metaEvidenceURI, cfg.platform, cfg.feeBasisPoint)
+            abi.encode(cfg.deployer, cfg.arbitrator, cfg.metaEvidenceURI, cfg.platform, cfg.feeBasisPoint)
         );
         return vm.computeCreate2Address(cfg.escrowSalt, keccak256(initCode));
     }
@@ -118,18 +108,10 @@ contract VerifyEscrowCreate2 is Script {
             revert OwnerMismatch(cfg.owner, escrow.owner());
         }
 
-        (
-            ,
-            IArbitrator liveArbitrator,
-            IArbitrableProxy liveProxy,
-            string memory liveMetaEvidenceURI,
-            bytes memory liveExtraData
-        ) = escrow.arbitratorData();
+        (, IArbitrator liveArbitrator, string memory liveMetaEvidenceURI, bytes memory liveExtraData) =
+            escrow.arbitratorData();
         if (address(liveArbitrator) != cfg.arbitrator) {
             revert ArbitratorMismatch(cfg.arbitrator, address(liveArbitrator));
-        }
-        if (address(liveProxy) != cfg.proxy) {
-            revert ProxyMismatch(cfg.proxy, address(liveProxy));
         }
         if (keccak256(bytes(liveMetaEvidenceURI)) != keccak256(bytes(cfg.metaEvidenceURI))) {
             revert MetaEvidenceMismatch(cfg.metaEvidenceURI, liveMetaEvidenceURI);

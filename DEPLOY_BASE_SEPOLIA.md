@@ -47,7 +47,6 @@ Optional overrides consumed by `DeployAll.s.sol`:
 | `NERWO_FEE_RECIPIENT_BASISPOINT` | `550` | 550 = 5.5%. |
 | `NERWO_ARBITRATOR_METAEVIDENCEURI` | empty | IPFS URI of the meta-evidence JSON. |
 | `NERWO_ARBITRATOR_ADDRESS` | unset | Reuse an existing arbitrator instead of deploying. |
-| `NERWO_ARBITRATORPROXY_ADDRESS` | unset | Reuse an existing arbitrator proxy. Both `*_ADDRESS` must be set together. |
 | `NERWO_TOKENS_WHITELIST` | empty | Comma-separated ERC20 addresses. If empty, the script also deploys `NerwoTetherToken` and enables it. |
 | `NERWO_TOKEN_CAPS` | empty | Comma-separated raw-unit per-transaction caps, one per token. Required when `NERWO_TOKENS_WHITELIST` is set. The default deployed `NerwoTetherToken` cap is `5000000000` (5000 USDT.n). |
 | `NERWO_USE_CREATE2` | `false` | Set to `true` for deterministic CREATE2 addresses. |

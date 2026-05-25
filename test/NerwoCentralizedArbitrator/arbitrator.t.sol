@@ -9,7 +9,7 @@ contract NerwoCentralizedArbitratorTest is NerwoTest {
     function test_createDisputeInsufficientPayment() public {
         vm.prank(client);
         vm.expectRevert(NerwoCentralizedArbitrator.InsufficientPayment.selector);
-        arbitrator.createDispute(bytes(""), "", 2);
+        arbitrator.createDispute(2, bytes(""));
     }
 
     function test_setArbitrationPrice() public {

@@ -33,7 +33,6 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IArbitrator} from "@kleros/erc-792/contracts/IArbitrator.sol";
 import {IArbitrable} from "@kleros/erc-792/contracts/IArbitrable.sol";
 
-import {IArbitrableProxy} from "./IArbitrableProxy.sol";
 import {SafeTransfer} from "./SafeTransfer.sol";
 
 contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable {
@@ -98,7 +97,6 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable {
         // fees before being considered unresponding and lose the dispute.
         uint32 feeTimeout;
         IArbitrator arbitrator; // Address of the arbitrator contract.
-        IArbitrableProxy proxy; // Address of the arbitrator proxy contract.
         string metaEvidenceURI; // metaEvidence uri to set up the arbitration.
         bytes extraData; // Extra data to set up the arbitration.
     }
@@ -245,14 +243,14 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable {
     /**
      * @dev Constructor. The native token is enabled without a per-transaction amount limit.
      *  @param newOwner The initial owner
-     *  @param arbitrators arbitrator and arbitratorProxy addresses.
+     *  @param arbitrator arbitrator address.
      *  @param metaEvidenceURI Meta Evidence json IPFS URI
      *  @param feeRecipient Address which receives a share of receiver payment.
      *  @param feeRecipientBasisPoint The share of fee to be received by the feeRecipient, down to 2 decimal places as 550 = 5.5%
      */
     constructor(
         address newOwner,
-        address[] memory arbitrators,
+        address arbitrator,
         string memory metaEvidenceURI,
         address feeRecipient,
         uint256 feeRecipientBasisPoint
@@ -263,8 +261,7 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable {
         emit TokenCapChanged(SafeTransfer.NATIVE_TOKEN, CAP_UNLIMITED);
 
         arbitratorData.feeTimeout = 604800;
-        arbitratorData.arbitrator = IArbitrator(arbitrators[0]);
-        arbitratorData.proxy = IArbitrableProxy(arbitrators[1]);
+        arbitratorData.arbitrator = IArbitrator(arbitrator);
         arbitratorData.extraData =
             hex"00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003";
         arbitratorData.metaEvidenceURI = metaEvidenceURI;
@@ -320,7 +317,11 @@ contract NerwoEscrow is Ownable, ReentrancyGuard, IArbitrable {
             if (address(token).code.length == 0) {
                 revert InvalidToken();
             }
-            token.balanceOf(address(this));
+            (bool success, bytes memory data) =
+                address(token).staticcall(abi.encodeCall(IERC20.balanceOf, (address(this))));
+            if (!success || data.length < 32) {
+                revert InvalidToken();
+            }
         }
 
         amountCaps[token] = amountCap;

@@ -3,13 +3,12 @@ pragma solidity ^0.8.23;
 
 import {IArbitrator} from "@kleros/erc-792/contracts/IArbitrator.sol";
 import {IArbitrable} from "@kleros/erc-792/contracts/IArbitrable.sol";
-import {IArbitrableProxy} from "@nerwo/contracts/IArbitrableProxy.sol";
 
 /**
- * @notice Proxy/arbitrator dual-role mock that lets tests force any ruling value,
- *         including out-of-range values (>2) to exercise InvalidRuling paths.
+ * @notice Arbitrator mock that lets tests force any ruling value, including
+ *         out-of-range values (>2) to exercise InvalidRuling paths.
  */
-contract MaliciousArbitratorProxy is IArbitrator, IArbitrableProxy {
+contract MaliciousArbitrator is IArbitrator {
     uint256 public arbitrationPrice;
     uint256 public lastDisputeID;
 
@@ -27,7 +26,6 @@ contract MaliciousArbitratorProxy is IArbitrator, IArbitrableProxy {
         arbitrated[_disputeID].rule(_disputeID, _ruling);
     }
 
-    /* IArbitrator */
     function arbitrationCost(bytes calldata) external view returns (uint256) {
         return arbitrationPrice;
     }
@@ -59,31 +57,4 @@ contract MaliciousArbitratorProxy is IArbitrator, IArbitrableProxy {
     function currentRuling(uint256 _disputeID) external view returns (uint256) {
         return rulings[_disputeID];
     }
-
-    /* IArbitrableProxy */
-    function arbitrator() external view returns (IArbitrator) {
-        return IArbitrator(address(this));
-    }
-
-    function createDispute(bytes calldata extraData, string calldata, uint256)
-        external
-        payable
-        returns (uint256 disputeID)
-    {
-        return this.createDispute{value: msg.value}(0, extraData);
-    }
-
-    function externalIDtoLocalID(uint256 _externalID) external pure returns (uint256) {
-        return _externalID;
-    }
-
-    function disputes(uint256 _localID)
-        external
-        view
-        returns (bytes memory extraData, bool isRuled, uint256 ruling, uint256 disputeIDOnArbitratorSide)
-    {
-        return ("", ruled[_localID], rulings[_localID], _localID);
-    }
-
-    function submitEvidence(uint256, string calldata) external {}
 }

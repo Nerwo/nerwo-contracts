@@ -47,11 +47,7 @@ contract NerwoEscrowEchidna {
         freelancer = new EchidnaFreelancer();
         rejectingFreelancer = new EchidnaRejectETH();
 
-        address[] memory arbitrators = new address[](2);
-        arbitrators[0] = address(arbitrator);
-        arbitrators[1] = address(arbitrator);
-
-        escrow = new NerwoEscrow(address(this), arbitrators, "/ipfs/echidna", address(0xBEEF), FEE_BASIS_POINT);
+        escrow = new NerwoEscrow(address(this), address(arbitrator), "/ipfs/echidna", address(0xBEEF), FEE_BASIS_POINT);
         escrow.changeTokenCap(token, type(uint256).max);
     }
 

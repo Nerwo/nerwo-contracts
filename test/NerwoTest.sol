@@ -38,16 +38,12 @@ contract NerwoTest is Test {
         random = new RandomGenerator();
         random.srand(vm.unixTime());
 
-        address[] memory arbitrators = new address[](2);
-
         nerwoTestToken = new NerwoTetherToken();
         arbitrator = new NerwoCentralizedArbitrator(court, ARBITRATION_PRICE);
-        arbitrators[0] = address(arbitrator);
-        arbitrators[1] = address(arbitrator);
 
         escrow = new NerwoEscrow(
             owner, // newOwner
-            arbitrators, // arbitrators
+            address(arbitrator), // arbitrator
             "/ipfs/something", // metaEvidenceURI
             feeRecipient, // feeRecipient
             500 // feeRecipientBasisPoint

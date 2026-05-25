@@ -27,12 +27,8 @@ contract NoERC20Surface {}
 
 contract NerwoEscrowFlowsTest is NerwoTest {
     function test_constructorEnablesNativeTokenUnlimited() public {
-        address[] memory arbitrators = new address[](2);
-        arbitrators[0] = address(arbitrator);
-        arbitrators[1] = address(arbitrator);
-
         NerwoEscrow freshEscrow =
-            new NerwoEscrow(owner, arbitrators, "/ipfs/something", feeRecipient, FEE_RECIPIENT_BASIS_POINT);
+            new NerwoEscrow(owner, address(arbitrator), "/ipfs/something", feeRecipient, FEE_RECIPIENT_BASIS_POINT);
 
         assertEq(freshEscrow.amountCaps(NATIVE_TOKEN), freshEscrow.CAP_UNLIMITED());
     }

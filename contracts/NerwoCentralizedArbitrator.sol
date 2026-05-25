@@ -20,8 +20,8 @@
  *                       ////////////             ////////////
  *                         ////////                 ////////
  *
- *  @notice This contract implement a simple not appealable Centralized Arbitrator
- *  and Arbitrator Proxy, mainly used for test units.
+ *  @notice This contract implement a simple not appealable Centralized Arbitrator,
+ *  mainly used for test units.
  */
 
 pragma solidity ^0.8.21;
@@ -31,13 +31,10 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 import {IArbitrator} from "@kleros/erc-792/contracts/IArbitrator.sol";
 import {IArbitrable} from "@kleros/erc-792/contracts/IArbitrable.sol";
-import {IEvidence} from "@kleros/erc-792/contracts/erc-1497/IEvidence.sol";
-
-import {IArbitrableProxy} from "./IArbitrableProxy.sol";
 
 import {SafeTransfer} from "./SafeTransfer.sol";
 
-contract NerwoCentralizedArbitrator is Ownable, ReentrancyGuard, IArbitrator, IArbitrableProxy, IEvidence {
+contract NerwoCentralizedArbitrator is Ownable, ReentrancyGuard, IArbitrator {
     error InsufficientPayment();
     error InvalidRuling(uint256 _ruling, uint256 _numberOfChoices);
     error InvalidStatus(DisputeStatus _expected);
@@ -53,9 +50,6 @@ contract NerwoCentralizedArbitrator is Ownable, ReentrancyGuard, IArbitrator, IA
         uint8 ruling;
         DisputeStatus status;
     }
-
-    /* solhint-disable immutable-vars-naming */
-    IArbitrator public immutable arbitrator = IArbitrator(this);
 
     uint256 public lastDispute;
     mapping(uint256 => ArbitratorDispute) private arbitratorDisputes;
@@ -124,8 +118,9 @@ contract NerwoCentralizedArbitrator is Ownable, ReentrancyGuard, IArbitrator, IA
 
         // forge-lint: disable-next-line(unsafe-typecast)
         uint8 choices = uint8(_choices);
-        arbitratorDisputes[disputeID] =
-            ArbitratorDispute({arbitrated: IArbitrable(msg.sender), choices: choices, ruling: 0, status: DisputeStatus.Waiting});
+        arbitratorDisputes[disputeID] = ArbitratorDispute({
+            arbitrated: IArbitrable(msg.sender), choices: choices, ruling: 0, status: DisputeStatus.Waiting
+        });
 
         emit DisputeCreation(disputeID, IArbitrable(msg.sender));
     }
@@ -263,57 +258,5 @@ contract NerwoCentralizedArbitrator is Ownable, ReentrancyGuard, IArbitrator, IA
         returns (ArbitratorDispute memory)
     {
         return arbitratorDisputes[_disputeID];
-    }
-
-    /* Proxy */
-    function createDispute(
-        bytes calldata _arbitratorExtraData,
-        string calldata _metaevidenceURI,
-        uint256 _numberOfRulingOptions
-    ) external payable override returns (uint256 disputeID) {
-        if (_numberOfRulingOptions > MAX_NUMBER_OF_CHOICES) {
-            revert InvalidArguments();
-        }
-
-        if (_numberOfRulingOptions == 0) {
-            _numberOfRulingOptions = MAX_NUMBER_OF_CHOICES;
-        }
-
-        disputeID = createDispute(_numberOfRulingOptions, _arbitratorExtraData);
-
-        emit MetaEvidence(disputeID, _metaevidenceURI);
-        emit Dispute(this, disputeID, disputeID, disputeID);
-    }
-
-    /**
-     * @dev Submit a reference to evidence. EVENT.
-     *  @param _localDisputeID The index of the transaction.
-     *  @param _evidenceURI Link to evidence.
-     */
-    function submitEvidence(uint256 _localDisputeID, string calldata _evidenceURI)
-        external
-        override
-        onlyValidDispute(_localDisputeID)
-    {
-        ArbitratorDispute storage dispute = arbitratorDisputes[_localDisputeID];
-        if (dispute.status == DisputeStatus.Solved) {
-            revert AlreadyResolved();
-        }
-
-        emit Evidence(this, _localDisputeID, msg.sender, _evidenceURI);
-    }
-
-    function externalIDtoLocalID(uint256 _externalID) external pure override returns (uint256 localID) {
-        return _externalID;
-    }
-
-    function disputes(uint256 _localID)
-        external
-        view
-        onlyValidDispute(_localID)
-        returns (bytes memory extraData, bool isRuled, uint256 ruling, uint256 disputeIDOnArbitratorSide)
-    {
-        ArbitratorDispute storage dispute = arbitratorDisputes[_localID];
-        return ("", dispute.status == DisputeStatus.Solved, dispute.ruling, _localID);
     }
 }

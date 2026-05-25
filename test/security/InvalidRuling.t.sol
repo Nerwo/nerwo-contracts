@@ -8,7 +8,7 @@ import {NerwoEscrow} from "@nerwo/contracts/NerwoEscrow.sol";
 import {NerwoTetherToken} from "@nerwo/contracts/NerwoTetherToken.sol";
 import {SafeTransfer} from "@nerwo/contracts/SafeTransfer.sol";
 
-import {MaliciousArbitratorProxy} from "@nerwo/test/security/helpers/MaliciousArbitratorProxy.sol";
+import {MaliciousArbitrator} from "@nerwo/test/security/helpers/MaliciousArbitrator.sol";
 
 /**
  * @notice PoC for finding C3: an arbitrator that returns a ruling > 2 must not
@@ -26,7 +26,7 @@ contract InvalidRulingTest is Test {
     address internal feeRecipient;
 
     NerwoEscrow internal escrow;
-    MaliciousArbitratorProxy internal proxy;
+    MaliciousArbitrator internal arbitrator;
     NerwoTetherToken internal token;
 
     function setUp() public {
@@ -36,13 +36,9 @@ contract InvalidRulingTest is Test {
         feeRecipient = makeAddr("feeRecipient");
 
         token = new NerwoTetherToken();
-        proxy = new MaliciousArbitratorProxy(ARBITRATION_PRICE);
+        arbitrator = new MaliciousArbitrator(ARBITRATION_PRICE);
 
-        address[] memory arbitrators = new address[](2);
-        arbitrators[0] = address(proxy);
-        arbitrators[1] = address(proxy);
-
-        escrow = new NerwoEscrow(owner, arbitrators, "/ipfs/test", feeRecipient, FEE_BASIS_POINT);
+        escrow = new NerwoEscrow(owner, address(arbitrator), "/ipfs/test", feeRecipient, FEE_BASIS_POINT);
         vm.prank(owner);
         escrow.changeTokenCap(token, type(uint256).max);
     }
@@ -64,7 +60,7 @@ contract InvalidRulingTest is Test {
         vm.prank(freelancer);
         escrow.payArbitrationFee{value: ARBITRATION_PRICE}(transactionID);
 
-        disputeID = proxy.lastDisputeID();
+        disputeID = arbitrator.lastDisputeID();
     }
 
     /* ------------------------------------------------------------ T-C3 */
@@ -83,7 +79,7 @@ contract InvalidRulingTest is Test {
         uint256 freelancerEthBefore = freelancer.balance;
 
         // Arbitrator returns a ruling outside [0, 2] — should not lock the funds.
-        proxy.setRuling(disputeID, 7);
+        arbitrator.setRuling(disputeID, 7);
 
         // Both parties get half of the escrowed tokens (minus fee on the freelancer side).
         assertEq(token.balanceOf(client) - clientTokenBefore, splitAmount, "client gets half tokens");

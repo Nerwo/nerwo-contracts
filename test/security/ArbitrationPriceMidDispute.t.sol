@@ -9,7 +9,7 @@ import {NerwoTest} from "@nerwo/test/NerwoTest.sol";
  * @notice PoC for finding C2: arbitration cost must be frozen at the first
  *         payArbitrationFee. After the fix:
  *         - paying the inflated current price reverts (cost is frozen);
- *         - if the proxy rejects the frozen value, the second payment reverts
+ *         - if the arbitrator rejects the frozen value, the second payment reverts
  *           cleanly so no funds are lost and the first party can still timeout.
  *
  *         Without the fix the freelancer could pay the new price, the dispute
@@ -47,7 +47,7 @@ contract ArbitrationPriceMidDisputeTest is NerwoTest {
         uint256 transactionID = _stuckTransaction(newPrice);
 
         // Freelancer pays the FROZEN cost. The escrow accepts it, but createDispute
-        // bubbles up InsufficientPayment from the proxy because the proxy still
+        // bubbles up InsufficientPayment from the arbitrator because it still
         // checks the current (now higher) price. The whole call reverts and the
         // freelancer's ETH is fully refunded by the EVM.
         uint256 freelancerEthBefore = ARBITRATION_PRICE;
