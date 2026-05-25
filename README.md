@@ -14,6 +14,11 @@ The main features of the contract include:
 - Raising disputes
 - Ruling
 
+## Gas and deployment costs
+
+See [GAS_COSTS.md](GAS_COSTS.md) for Forge commands, deployment gas estimates,
+and gwei-to-ETH conversion examples.
+
 ## Operational policy
 
 ### Token caps
