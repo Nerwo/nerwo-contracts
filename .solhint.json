@@ -11,6 +11,7 @@
     ],
     "not-rely-on-time": "off",
     "no-inline-assembly": "off",
+    "import-path-check": "off",
     "compiler-version": [
       "error",
       ">=0.8.0"

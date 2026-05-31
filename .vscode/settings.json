@@ -5,5 +5,17 @@
     "search.exclude": {
         "**/node_modules": true,
         "**/deployments": true
-    }
+    },
+    "solidity.formatter": "forge",
+    "solidity.packageDefaultDependenciesDirectory": "",
+    "solidity.packageDefaultDependenciesContractsDirectory": "",
+    "solidity.remappings": [
+        "ds-test/=lib/forge-std/lib/ds-test/src/",
+        "forge-std/=lib/forge-std/src/",
+        "@kleros/erc-792/contracts/=lib/erc-792/contracts/",
+        "@kleros/erc-792/=lib/erc-792/",
+        "@nerwo/contracts/=contracts/",
+        "@nerwo/test/=test/",
+        "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/"
+    ]
 }

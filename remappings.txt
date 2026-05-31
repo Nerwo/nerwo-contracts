@@ -3,3 +3,6 @@ forge-std/=lib/forge-std/src/
 @kleros/erc-792/=lib/erc-792/
 @nerwo/contracts/=contracts/
 @nerwo/test/=test/
+@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/
+erc-792/=lib/erc-792/contracts/
+openzeppelin-contracts/=lib/openzeppelin-contracts/
