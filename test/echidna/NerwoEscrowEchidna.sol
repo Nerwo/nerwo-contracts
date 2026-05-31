@@ -43,7 +43,7 @@ contract NerwoEscrowEchidna {
 
     constructor() payable {
         token = new NerwoTetherToken();
-        arbitrator = new NerwoCentralizedArbitrator(address(this), 0.02 ether);
+        arbitrator = new NerwoCentralizedArbitrator(0.02 ether);
         freelancer = new EchidnaFreelancer();
         rejectingFreelancer = new EchidnaRejectETH();
 

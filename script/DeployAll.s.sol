@@ -16,7 +16,6 @@ contract DeployAll is Script {
 
     struct DeployConfig {
         address owner;
-        address court;
         address platform;
         uint256 arbitrationPrice;
         uint256 feeBasisPoint;
@@ -49,7 +48,7 @@ contract DeployAll is Script {
         vm.startBroadcast(deployerKey);
 
         if (cfg.existingArbitrator == address(0)) {
-            arbitrator = _deployArbitrator(cfg.court, cfg.arbitrationPrice, cfg.useCreate2, cfg.arbitratorSalt);
+            arbitrator = _deployArbitrator(cfg.arbitrationPrice, cfg.useCreate2, cfg.arbitratorSalt);
             cfg.existingArbitrator = address(arbitrator);
         } else {
             arbitrator = NerwoCentralizedArbitrator(cfg.existingArbitrator);
@@ -84,21 +83,21 @@ contract DeployAll is Script {
         vm.stopBroadcast();
     }
 
-    function _deployArbitrator(address court, uint256 arbitrationPrice, bool useCreate2, bytes32 salt)
+    function _deployArbitrator(uint256 arbitrationPrice, bool useCreate2, bytes32 salt)
         internal
         returns (NerwoCentralizedArbitrator)
     {
         if (!useCreate2) {
-            return new NerwoCentralizedArbitrator(court, arbitrationPrice);
+            return new NerwoCentralizedArbitrator(arbitrationPrice);
         }
 
         bytes memory initCode =
-            abi.encodePacked(type(NerwoCentralizedArbitrator).creationCode, abi.encode(court, arbitrationPrice));
+            abi.encodePacked(type(NerwoCentralizedArbitrator).creationCode, abi.encode(arbitrationPrice));
         address predicted = vm.computeCreate2Address(salt, keccak256(initCode));
         if (predicted.code.length != 0) {
             return NerwoCentralizedArbitrator(predicted);
         }
-        return new NerwoCentralizedArbitrator{salt: salt}(court, arbitrationPrice);
+        return new NerwoCentralizedArbitrator{salt: salt}(arbitrationPrice);
     }
 
     function _deployTestToken(bool useCreate2, bytes32 salt) internal returns (NerwoTetherToken) {
@@ -155,7 +154,6 @@ contract DeployAll is Script {
 
     function _loadConfig(address deployer) internal view returns (DeployConfig memory cfg) {
         cfg.owner = vm.envOr("NERWO_OWNER_ADDRESS", deployer);
-        cfg.court = vm.envOr("NERWO_COURT_ADDRESS", cfg.owner);
         cfg.platform = vm.envOr("NERWO_PLATFORM_ADDRESS", cfg.owner);
         cfg.arbitrationPrice = vm.envOr("NERWO_ARBITRATION_PRICE_WEI", DEFAULT_ARBITRATION_PRICE);
         cfg.feeBasisPoint = vm.envOr("NERWO_FEE_RECIPIENT_BASISPOINT", DEFAULT_FEE_RECIPIENT_BASIS_POINT);

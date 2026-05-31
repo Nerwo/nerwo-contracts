@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 import {NerwoCentralizedArbitrator} from "@nerwo/contracts/NerwoCentralizedArbitrator.sol";
 import {NerwoTest} from "@nerwo/test/NerwoTest.sol";
 
@@ -16,8 +16,12 @@ contract NerwoCentralizedArbitratorTest is NerwoTest {
         uint256 newPrice = 0.005 ether;
         uint256 previousPrice = arbitrator.arbitrationCost("");
 
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector, client, arbitrator.ADMIN_ROLE()
+            )
+        );
         vm.prank(client);
-        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, client));
         arbitrator.setArbitrationPrice(newPrice);
 
         vm.expectEmit(true, true, true, true, address(arbitrator));

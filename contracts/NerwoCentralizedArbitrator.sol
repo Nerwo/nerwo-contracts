@@ -27,14 +27,14 @@
 pragma solidity ^0.8.21;
 
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 
 import {IArbitrator} from "@kleros/erc-792/contracts/IArbitrator.sol";
 import {IArbitrable} from "@kleros/erc-792/contracts/IArbitrable.sol";
 
 import {SafeTransfer} from "./SafeTransfer.sol";
 
-contract NerwoCentralizedArbitrator is Ownable, ReentrancyGuard, IArbitrator {
+contract NerwoCentralizedArbitrator is AccessControl, ReentrancyGuard, IArbitrator {
     error InsufficientPayment();
     error InvalidRuling(uint256 _ruling, uint256 _numberOfChoices);
     error InvalidStatus(DisputeStatus _expected);
@@ -57,9 +57,10 @@ contract NerwoCentralizedArbitrator is Ownable, ReentrancyGuard, IArbitrator {
     uint256 private arbitrationPrice; // Not public because arbitrationCost already acts as an accessor.
     uint256 private constant NOT_PAYABLE_VALUE = type(uint256).max; // High value to be sure that the appeal is too expensive.
     uint256 public constant MAX_NUMBER_OF_CHOICES = 2;
+    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
 
     /**
-     * @dev Emitted when the arbitration price is updated by the owner.
+     * @dev Emitted when the arbitration price is updated by an admin.
      * @param previousPrice The previous arbitration price.
      * @param newPrice The updated arbitration price.
      */
@@ -74,22 +75,19 @@ contract NerwoCentralizedArbitrator is Ownable, ReentrancyGuard, IArbitrator {
 
     /**
      * @dev contructor
-     *  @param newOwner The initial owner
      *  @param _arbitrationPrice Amount to be paid for arbitration.
      */
-    constructor(address newOwner, uint256 _arbitrationPrice) Ownable(msg.sender) {
+    constructor(uint256 _arbitrationPrice) {
         arbitrationPrice = _arbitrationPrice;
-
-        if (owner() != newOwner) {
-            _transferOwnership(newOwner);
-        }
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _grantRole(ADMIN_ROLE, msg.sender);
     }
 
     /**
-     * @dev Set the arbitration price. Only callable by the owner.
+     * @dev Set the arbitration price. Only callable by an admin.
      *  @param _arbitrationPrice Amount to be paid for arbitration.
      */
-    function setArbitrationPrice(uint256 _arbitrationPrice) external onlyOwner {
+    function setArbitrationPrice(uint256 _arbitrationPrice) external onlyRole(ADMIN_ROLE) {
         uint256 previousPrice = arbitrationPrice;
         arbitrationPrice = _arbitrationPrice;
         emit ArbitrationPriceChanged(previousPrice, _arbitrationPrice);
@@ -226,7 +224,7 @@ contract NerwoCentralizedArbitrator is Ownable, ReentrancyGuard, IArbitrator {
      */
     function giveRuling(uint256 _disputeID, uint256 _ruling)
         external
-        onlyOwner
+        onlyRole(ADMIN_ROLE)
         onlyValidDispute(_disputeID)
         nonReentrant
     {

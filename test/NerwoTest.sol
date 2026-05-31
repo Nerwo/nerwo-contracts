@@ -39,7 +39,8 @@ contract NerwoTest is Test {
         random.srand(vm.unixTime());
 
         nerwoTestToken = new NerwoTetherToken();
-        arbitrator = new NerwoCentralizedArbitrator(court, ARBITRATION_PRICE);
+        arbitrator = new NerwoCentralizedArbitrator(ARBITRATION_PRICE);
+        arbitrator.grantRole(arbitrator.ADMIN_ROLE(), court);
 
         escrow = new NerwoEscrow(
             owner, // newOwner
